@@ -6,7 +6,7 @@ Deno.serve((req) => {
   const pathName = new URL(req.url).pathname;
   if (pathName === '/') {
     return serveFile(req, INDEX_HTML_PATH);
-  } else if (pathName.startsWith('/static')) {
+  } else if (pathName.startsWith('/public')) {
     return serveDir(req, {
       fsRoot: './public',
       urlRoot: 'public',
