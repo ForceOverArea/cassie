@@ -1,0 +1,29 @@
+cabal-version:      3.0
+name:               cassie-wasm
+version:            0.1.0.0
+synopsis:           A simple home-brewed CAS... for the web!
+-- description:
+license:            MIT
+license-file:       LICENSE
+author:             Grant
+maintainer:         christiansengrant18@gmail.com
+-- copyright:
+category:           Math
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+
+executable cassie-wasm
+    import:             warnings
+    ghc-options:        -no-hs-main -optl-Wl,--export=solvedForHs,--export=solvedForValueHs -optl-mexec-model=reactor
+    main-is:            WasmBindings.hs
+    -- other-modules:
+    -- other-extensions:
+    build-depends:      base                ^>= 4.21.0.0,
+                        cassie-hs           >=  0.1.0.0,
+                        ghc-experimental    >=  9.1202.0,
+    hs-source-dirs:     app
+    default-language:   Haskell2010
