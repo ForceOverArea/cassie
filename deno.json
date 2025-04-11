@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read deno_server.ts"
+  }
+}

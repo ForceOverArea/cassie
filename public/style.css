@@ -1,0 +1,48 @@
+:root {
+    background-color: #3b3b3b;
+}
+
+/* .debug {
+    border: 1px dashed red;
+} */
+
+.outermost {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+
+    height: 100vh;
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+
+.titlebar {
+    height: 50px;
+    width: 100%;
+}
+
+.title {
+    font-family: monospace bold;
+    font-size: 40px;
+    color: #557260;
+}
+
+.app-view {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+}
+
+.editor-pane {
+    width: 60%;
+
+    text-align: left;
+}
+
+.soln-pane {
+    flex: 1;
+}
