@@ -1,7 +1,7 @@
 import { WASI } from 'https://cdn.jsdelivr.net/npm/@runno/wasi@0.7.0/dist/wasi.js';
 import ghc_wasm_jsffi from './ghc_wasm_jsffi.js';
 
-const WASM_MODULE_PATH = '/static/wasm/cassie-wasm.wasm';
+const WASM_MODULE_PATH = '/public/wasm/cassie-wasm.wasm';
 const jsffiExports = {};
 const wasi = new WASI({});
 
