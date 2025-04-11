@@ -25,7 +25,7 @@ function main() {
   
   editor.oninput = async () => { 
     const solns = await solveEquations(editor.innerText);
-    soln_pane.innerHTML = solns.join("\n"); 
+    soln_pane.innerHTML = solns.join("<br>"); 
   }
 }
 
