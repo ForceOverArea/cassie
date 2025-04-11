@@ -1,6 +1,6 @@
 import { serveDir, serveFile } from 'jsr:@std/http/file-server';
 
-const INDEX_HTML_PATH = './public/index.html'
+const INDEX_HTML_PATH = './index.html'
 
 Deno.serve((req) => {
   const pathName = new URL(req.url).pathname;
