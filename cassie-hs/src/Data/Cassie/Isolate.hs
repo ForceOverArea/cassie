@@ -61,10 +61,14 @@ isolate eqn sym = do
 
 isolateMain :: Solver ()
 isolateMain = do
-    lhs <- getLhs
+    Equation (lhs, rhs) <- get
     sym <- ask
     logStep
-    case lhs of
+    if rhs ~? sym && not (lhs ~? sym) then do -- swap sides if needed
+        setLhs rhs
+        modifyRhs (const lhs)
+        isolateMain
+    else case lhs of
         Sum ts -> isolateSum ts
         Difference ss -> isolateDiff ss
         Product fs -> isolateProd fs
@@ -72,7 +76,7 @@ isolateMain = do
         Exponent b e -> isolateExp b e
         Logarithm b l -> isolateLog b l
         Function _ _ -> lift $ throwError FunctionNotUnderstood
-        Group g -> setLhs g
+        Group g -> setLhs g >> isolateMain
         Value _ -> lift $ throwError IsolationErrorOccurred
         Symbol s -> if s == sym then 
                 return () -- terminate recursive loop
@@ -162,11 +166,6 @@ logStep :: Solver ()
 logStep = do
     step <- show <$> get
     tell [step]
-
-getLhs :: Solver AlgebraicStruct
-getLhs = do
-    Equation (lhs, _) <- get
-    return lhs
 
 setLhs :: AlgebraicStruct -> Solver ()
 setLhs lhs = do

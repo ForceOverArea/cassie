@@ -13,7 +13,7 @@ import safe Text.Parsec.Language (haskell)
 import safe Text.Parsec.Token (GenTokenParser(..)) 
 
 -- | Parser type for reading algebraic structures from plain text
-type AbSolve = Parsec String () AlgebraicStruct
+type CassieParser = Parsec String () AlgebraicStruct
 
 parseExpression :: String -> Either ParseError AlgebraicStruct
 parseExpression expr = runParser expression () expr expr
@@ -29,10 +29,10 @@ parseEquation eqn
         preprocess :: String -> [String]
         preprocess = map (unpack . strip) . split (== '=') . pack 
 
-expression :: AbSolve
+expression :: CassieParser
 expression = sum
 
-polyTerm :: Char -> ([AlgebraicStruct] -> AlgebraicStruct) -> AbSolve -> String -> AbSolve
+polyTerm :: Char -> ([AlgebraicStruct] -> AlgebraicStruct) -> CassieParser -> String -> CassieParser
 polyTerm c cnstrctr p name = do
     elements <- p `sepBy1` char c <?> name
     if length elements == 1 then
@@ -40,16 +40,16 @@ polyTerm c cnstrctr p name = do
     else
         return $ cnstrctr elements
 
-sum :: AbSolve
+sum :: CassieParser
 sum = polyTerm '+' Sum difference "sum"
 
-difference :: AbSolve
+difference :: CassieParser
 difference = polyTerm '-' Difference product "difference"
 
-product :: AbSolve
+product :: CassieParser
 product = polyTerm '*' Product p3Term "product"
 
-quotient :: AbSolve
+quotient :: CassieParser
 quotient = do
     dend <- p2Term
     _ <- char '/'
@@ -59,7 +59,7 @@ quotient = do
         , divisor  = sor
         }
 
-exponent :: AbSolve
+exponent :: CassieParser
 exponent = do
     expBase <- p1Term 
     _ <- char '^'
@@ -69,10 +69,10 @@ exponent = do
         , exp  = expExp
         }
 
-logarithm :: AbSolve
+logarithm :: CassieParser
 logarithm = do
     whiteSpace haskell
-    _ <- string "log"
+    _ <- string "log "
     logBase <- expression
     logLog <- parens haskell expression <?> "logarithm"
     return Logarithm 
@@ -80,29 +80,29 @@ logarithm = do
         , log  = logLog
         }
 
-parenthetical :: AbSolve
+parenthetical :: CassieParser
 parenthetical = Group <$> (whiteSpace haskell >> parens haskell expression) <?> "grouped expression"
 
 -- | Parses an identifier (haskell definition) and returns an @AlgebraicStruct.Symbol@
-value :: AbSolve
+value :: CassieParser
 value = do
     val <- try (float haskell) <|> fromInteger <$> integer haskell <?> "value"
     return $ Value val
 
 -- | Parses a number literal and returns an @AlgebraicStruct.Value@
-symb :: AbSolve
+symb :: CassieParser
 symb = do
     sym <- whiteSpace haskell >> identifier haskell <?> "symbol"
     return $ Symbol sym
 
-p3Term :: AbSolve
+p3Term :: CassieParser
 p3Term = try quotient <|> p2Term
 
-p2Term :: AbSolve
+p2Term :: CassieParser
 p2Term = try exponent <|> p1Term
 
-p1Term :: AbSolve
+p1Term :: CassieParser
 p1Term = try logarithm <|> p0Term
 
-p0Term :: AbSolve
+p0Term :: CassieParser
 p0Term = try parenthetical <|> try symb <|> value

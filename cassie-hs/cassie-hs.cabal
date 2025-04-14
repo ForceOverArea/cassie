@@ -24,7 +24,8 @@ library
                         Data.Cassie.Internal,
                         Data.Cassie.Isolate,
                         Data.Cassie.Structures,
-                        Data.Cassie
+                        Data.Cassie.Substitute,
+                        Data.Cassie,
     -- other-modules:
     -- other-extensions:
     -- Build uses GHC 9.2.8 by default, use up to 4.21.0.0 to satisfy experimental WASM backend

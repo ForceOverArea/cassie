@@ -1,6 +1,7 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Internal 
-    ( parseContextString
+    ( get2
+    , parseContextString
     ) where
 
 import safe Control.Arrow ((&&&), second)

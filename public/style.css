@@ -1,3 +1,8 @@
+:root {
+    background-color: black;
+    color: cadetblue;
+}
+
 [contenteditable] {
     outline: 0px solid transparent;
 }

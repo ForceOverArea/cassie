@@ -50,9 +50,10 @@ data AlgebraicStruct
         , log  :: AlgebraicStruct
         }
 
+    -- | Represents a function 
     | Function 
         { fname :: String
-        , argv :: [AlgebraicStruct]
+        , argv  :: [AlgebraicStruct]
         }
 
     -- | Represents a grouped set of algebraic structures contained within parenthesis
@@ -63,6 +64,7 @@ data AlgebraicStruct
 
     -- | Represents a raw value that cannot be reversed and contains no other algebraic structures
     | Symbol String
+    deriving (Eq, Ord)
 
 instance Show AlgebraicStruct where
     show (Sum terms) = intercalate " + " $ map show terms
@@ -73,9 +75,9 @@ instance Show AlgebraicStruct where
 
     show (Quotient sor dend) = show sor ++ " / " ++ show dend
 
-    show (Exponent b e) = show b ++ "^" ++ show e
+    show (Exponent b e) = show b ++ " ^ " ++ show e
 
-    show (Logarithm b l) = "log" ++ show b ++ "(" ++ show l ++ ")"
+    show (Logarithm b l) = "log " ++ show b ++ "(" ++ show l ++ ")"
 
     show (Function n a) = n ++ "(" ++ intercalate "," (map show a) ++ ")"
 

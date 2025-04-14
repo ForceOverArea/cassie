@@ -11,7 +11,7 @@ async function solveEquations(sys) {
   
   for (const i of idents) {
     soln = await solveFor(sys, i);
-    console.info(soln);
+    // console.info(soln);
     results.push(soln);
   }
 
