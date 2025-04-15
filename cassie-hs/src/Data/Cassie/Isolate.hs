@@ -176,11 +176,7 @@ isolatePolynomialTerm :: [AlgebraicStruct] -> Solver [AlgebraicStruct]
 isolatePolynomialTerm terms = do
     sym <- ask
     let (wrapped, wrapper) = partition (~? sym) terms
-    let n = length wrapped
-    if n /= 1 then do
-        case n of
-            0 -> lift $ throwError SymbolNotFound
-            _ -> lift $ throwError NeedsPolysolve
-    else do
-        setLhs $ head wrapped
-        return wrapper
+    case wrapped of 
+        [x] -> setLhs x >> return wrapper
+        [] -> lift $ throwError SymbolNotFound
+        _ -> lift $ throwError NeedsPolysolve

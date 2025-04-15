@@ -185,11 +185,6 @@ popCrumb = do
             put cs
             return $ Just c
 
-enumerate :: [a] -> [(Int, a)]
-enumerate = foldl f []
-    where
-        f xs h = xs ++ [(length xs, h)]
-
 insertAt :: a -> Int -> [a] -> [a]
 insertAt e idx xs = (take idx xs) ++ (e:(drop idx xs))
 
