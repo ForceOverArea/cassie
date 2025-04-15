@@ -8,16 +8,15 @@ module Data.Cassie.Evaluate
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.Trans (lift)
-import safe Data.Cassie.Structures (AlgebraicStruct(..))
+import safe Data.Cassie.Structures (AlgebraicStruct(..), Symbol)
 import safe Data.List (uncons)
 import safe qualified Data.Map as M (lookup, Map)
 
 type Context = M.Map String CtxItem
 
 data CtxItem 
-    = Const Double 
-    | Func Int ([Double] -> Double)
-    -- | AlgFunc Int ([Double] -> Double)
+    = Const AlgebraicStruct 
+    | Func [Symbol] AlgebraicStruct
 
 data EvalError 
     = SymbolNotDefined String

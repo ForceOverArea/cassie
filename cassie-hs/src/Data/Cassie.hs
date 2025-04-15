@@ -2,7 +2,7 @@
 module Data.Cassie 
     ( solvedFor
     , solvedForValue
-    , solvedForValue'
+    -- , solvedForValue'
     ) where
 
 import Control.Arrow (left, second)
@@ -24,10 +24,10 @@ solvedForValue eqn sym ctx = do
     value' <- stringizeError $ evaluate value ctx
     return (value', eqn', steps)
 
-solvedForValue' :: String -> String -> [(String, Double)] -> Either String (Double, Equation, Steps)
-solvedForValue' eqn sym ctx = solvedForValue eqn sym ctx'
-    where 
-        ctx' = fromList (map (second Const) ctx)
+-- solvedForValue' :: String -> String -> [(String, Double)] -> Either String (Double, Equation, Steps)
+-- solvedForValue' eqn sym ctx = solvedForValue eqn sym ctx'
+--     where 
+--         ctx' = fromList (map (second Const) ctx)
 
 stringizeError :: Show a => Either a b -> Either String b
 stringizeError = left show
