@@ -13,7 +13,6 @@ import safe Control.Monad (join, when)
 import safe Control.Monad.State (get, lift, put, runStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Data.Cassie.Structures (AlgebraicStruct(..), Symbol)
-import safe Data.Cassie.Internal (get2)
 import safe Data.Cassie.Isolate ((~?))
 import safe Data.List (elemIndices, partition, uncons)
 
@@ -135,7 +134,7 @@ rebuildDelimited baseTerms structKind structTerms idxs = do
         f :: [AlgebraicStruct] -> (Int, AlgebraicStruct) -> [AlgebraicStruct]
         f ts (idx, term) = insertAt term idx ts
 
-rebuildBinary :: [AlgebraicStruct] 
+rebuildBinary :: [AlgebraicStruct]
     -> AlgebraicStruct 
     -> Maybe AlgebraicStruct 
     -> Bool 
@@ -143,16 +142,17 @@ rebuildBinary :: [AlgebraicStruct]
 rebuildBinary baseArgs structKind possTerm isLeft =
     case possTerm of 
         Just term -> do
-            when (length baseArgs /= 1) 
-                $ throwError IncorrectNumOfTermsToRebuild
-            return . uncurry (constructOneBinary structKind) $ if isLeft then
-                (term, head baseArgs)
+            when (length baseArgs /= 1) $ throwError IncorrectNumOfTermsToRebuild
+            if isLeft then
+                returnStruct term (head baseArgs)
             else
-                (head baseArgs, term)
-        Nothing -> do
-            when (length baseArgs /= 2)
-                $ throwError IncorrectNumOfTermsToRebuild
-            return . uncurry (constructOneBinary structKind) $ get2 baseArgs
+                returnStruct (head baseArgs) term
+        Nothing -> case baseArgs of
+            [x, y] -> returnStruct x y
+            _ -> throwError IncorrectNumOfTermsToRebuild
+    where 
+        returnStruct :: AlgebraicStruct -> AlgebraicStruct -> Substitute AlgebraicStruct 
+        returnStruct x y = return $ constructOneBinary structKind x y
 
 rebuildSingular :: AlgebraicStruct -> AlgebraicStruct -> Substitute AlgebraicStruct
 rebuildSingular _structKind baseTerm = return $ Group baseTerm
