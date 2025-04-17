@@ -32,7 +32,8 @@ import safe Data.Cassie.Structures (AlgebraicStruct(..), Symbol)
 import safe Data.Cassie.Internal (insertAt, truthTable2)
 import safe Data.Cassie.Isolate ((~?))
 
--- | 
+-- | An error type that may be thrown when substituting structures in
+--   another algebraic structure.
 data SubstitutionError 
     = IncorrectNumOfTermsToRebuild [AlgebraicStruct] (Maybe AlgCrumb)
     | IncorrectNumOfTermsToRebuildDelimited [AlgebraicStruct] Int Int 
@@ -142,7 +143,7 @@ popCrumb = do
 substitute :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> Either SubstitutionError AlgebraicStruct
 substitute target replacement source = runExcept $ fst <$> runStateT (substituteMain target replacement source) []
 
--- | The main 
+-- | The main control flow for substituting one algebraic structure for another.
 substituteMain :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> Substitute AlgebraicStruct
 substituteMain target replacement source = do
     children <- traverseTowards target source
@@ -174,7 +175,7 @@ traverseTowards s struct =
             return [g]
 
 -- | The logic needed to traverse the substitution zipper down towards a target symbol in an
---   algebraic substructure that has 1 or more delimited arguments (e.g. sum, product.)
+--   algebraic substructure that has 1 or more delimited arguments (e.g. sum, product)
 traverseTowardsDelimited :: Symbol -> AlgebraicStruct -> [AlgebraicStruct] -> Substitute [AlgebraicStruct]
 traverseTowardsDelimited s k terms = 
     let
@@ -185,6 +186,8 @@ traverseTowardsDelimited s k terms =
         pushCrumb $ Delimited k doesnt hasIndices
         return has
 
+-- | The logic needed to traverse the substitution zipper down towards a target symbol in an 
+--   algebraic substructure that has exactly 2 arguments (e.g. quotient, exponent)
 traverseTowardsBinary :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> AlgebraicStruct -> Substitute [AlgebraicStruct]
 traverseTowardsBinary s k l r = 
     let 
@@ -224,6 +227,9 @@ rebuildDelimited baseTerms structKind structTerms idxs =
             f <- constructOneDelimited structKind
             return $ f terms
 
+-- | Rebuilds a given binary structure @structKind@ onto the given structures in @baseArgs@. 
+--   If the sum of the number of structures in @baseArgs@ and @possTerm@ is not exactly 2, this
+--   function returns a @IncorrectNumOfTermsToRebuildBinary@ error.
 rebuildBinary :: [AlgebraicStruct] -> AlgebraicStruct -> Maybe AlgebraicStruct -> Bool -> Substitute AlgebraicStruct
 rebuildBinary baseArgs structKind possTerm isLeft = do
     f <- constructOneBinary structKind
@@ -234,9 +240,13 @@ rebuildBinary baseArgs structKind possTerm isLeft = do
             | otherwise -> return $ f x term
         _ -> lift . throwError $ IncorrectNumOfTermsToRebuildBinary possTerm
         
+-- | Rebuilds a given singular structure onto a given @baseTerm@.
 rebuildSingular :: AlgebraicStruct -> AlgebraicStruct -> Substitute AlgebraicStruct
 rebuildSingular _structKind baseTerm = return $ Group baseTerm
 
+-- | Returns the constructor function for a delimited algebraic structure. If the given 
+--   structure is not a delimited structure, then this function throws a @NotDelimitedStructure@
+--   error.
 constructOneDelimited :: AlgebraicStruct -> Substitute ([AlgebraicStruct] -> AlgebraicStruct)
 constructOneDelimited x = 
     case x of
@@ -246,6 +256,9 @@ constructOneDelimited x =
         Function n _ -> return $ Function n
         _            -> lift $ throwError NotDelimitedStructure
 
+-- | Returns the constructor funciton for a binary algebraic structure. If the given
+--   structure is not a binary structure, then this function throws a @NotBinaryStructure@ 
+--   error.
 constructOneBinary :: AlgebraicStruct -> Substitute (AlgebraicStruct -> AlgebraicStruct -> AlgebraicStruct)
 constructOneBinary x =
     case x of 
