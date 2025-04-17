@@ -139,7 +139,7 @@ popCrumb = do
             return $ Just c
 
 -- | Substitutes occurrences of @target@ with @replacement@ wherever 
---   they found within @source@.
+--   they are found within @source@.
 substitute :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> Either SubstitutionError AlgebraicStruct
 substitute target replacement source = runExcept $ fst <$> runStateT (substituteMain target replacement source) []
 
