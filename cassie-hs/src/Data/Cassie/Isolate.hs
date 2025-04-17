@@ -19,7 +19,6 @@ module Data.Cassie.Isolate
     , Steps
     ) where
 
-import safe Prelude hiding (exp, log)
 import safe Data.List
 import safe Control.Monad
 import safe qualified Data.Map as Map
@@ -31,13 +30,16 @@ import safe Data.Cassie.Internal (truthTable2)
 import safe Data.Cassie.Structures ((~?), AlgebraicStruct(..), Equation (Equation), Symbol)
 import safe Data.Cassie.Substitute (substitute, SubstitutionError)
 
+-- | A type alias for the log of steps taken while solving a given equation. 
 type Steps = [String]
 
+-- | An error type that may be thrown when attempting to solve an equation
+--   by symbolic isolation.
 data SolverError
     = NeedsPolysolve
     | SymbolNotFound
     | IsolationErrorOccurred
-    | FunctionNotUnderstood
+    | FunctionArgumentsIncorrect Int Int
     | ZeroOrSingleTermPolynomial
     | FailedToCallFunction SubstitutionError
 
@@ -53,9 +55,14 @@ instance Show SolverError where
         = "an unknown error occurred while trying to isolate the\
         \ given symbol in the equation"
     
-    show FunctionNotUnderstood 
-        = "encountered a function that could not be algebraically reversed"
-    
+    show (FunctionArgumentsIncorrect expected actual)
+        = "The function was called with the incorrect number of\
+        \ arguments (expected " 
+        ++ show expected
+        ++ ", found "
+        ++ show actual
+        ++")"
+
     show ZeroOrSingleTermPolynomial 
         = "encountered a single-term polynomial expression. this\
         \ error should not be reached unless a manually-built\
@@ -64,26 +71,38 @@ instance Show SolverError where
     show (FailedToCallFunction err)
         = "failed to call function on arguments: " ++ show err
 
+-- | The @Isolate@ monad type for statefully isolating a variable in a 
+--   larger expression.
 type Isolate = RWST (Symbol, Context) Steps Equation (Except SolverError)
 
+-- | Applies a function to the right-hand side of the equation being solved,
+--   changing its state. This function is roughly a more concrete instance of
+--   @Control.Monad.State.modify@.
 modifyRhs :: (AlgebraicStruct -> AlgebraicStruct) -> Isolate ()
 modifyRhs f = do
     Equation (lhs, rhs) <- get
     put $ Equation (lhs, f rhs)
 
+-- | Puts a snapshot of the current state of the equation being solved into the 
+--   log of steps taken in the solution. 
 logStep :: Isolate ()
 logStep = do
     step <- show <$> get
     tell [step]
 
+-- | Sets the state of the left-hand side of the equation being solved. This 
+--   function is roughly a more concrete instance of @Control.Monad.State.put@.
 setLhs :: AlgebraicStruct -> Isolate ()
 setLhs lhs = do
     Equation (_, rhs) <- get
     put $ Equation (lhs, rhs)
 
+-- | Attempts to isolate a given symbol @sym@ in a given @Equation@, either returning
+--   a solved equation and the steps taken to achieve the solution, or a @SolverError@.
 isolate :: Equation -> Symbol -> Context -> Either SolverError (Equation, Steps)
 isolate eqn sym ctx = runExcept $ execRWST isolateMain (sym, ctx) eqn
 
+-- | The main control flow for isolating a symbol in an algebraic structure.
 isolateMain :: Isolate ()
 isolateMain = do
     Equation (lhs, rhs) <- get
@@ -103,17 +122,18 @@ isolateMain = do
         Function n a    -> isolateFn n a
         Group g         -> setLhs g >> isolateMain
         Value _         -> lift $ throwError IsolationErrorOccurred
-        Symbol s        -> if s == sym then 
-                            return ()
-                        else
-                            lift $ throwError IsolationErrorOccurred
+        Symbol s
+            | s == sym  -> return ()
+            | otherwise -> lift $ throwError IsolationErrorOccurred
 
+-- | Control flow for isolating the target symbol in some number of terms.
 isolateSum :: [AlgebraicStruct] -> Isolate ()
 isolateSum terms = do
     wrapperTerms <- isolatePolynomialTerm terms
     modifyRhs $ \rhs -> Difference [rhs, Group $ Sum wrapperTerms]
     isolateMain
 
+-- | Control flow for isolating the target symbol in some number of subtrahends.
 isolateDiff :: [AlgebraicStruct] -> Isolate ()
 isolateDiff (addend:subtrahends) = do
     sym <- asks fst
@@ -126,30 +146,37 @@ isolateDiff (addend:subtrahends) = do
     isolateMain
 isolateDiff _ = lift $ throwError ZeroOrSingleTermPolynomial
 
+-- | Control flow for isolating the target symbol in some number of factors.
 isolateProd :: [AlgebraicStruct] -> Isolate ()
 isolateProd factors = do
     wrapperTerms <- isolatePolynomialTerm factors
     modifyRhs $ \rhs -> Quotient (Group rhs) (Group $ Product wrapperTerms)
     isolateMain
 
+-- | Control flow for isolating some symbol that has been passed to a function.
 isolateFn :: String -> [AlgebraicStruct] -> Isolate ()
-isolateFn name callArgs = 
+isolateFn name callSiteArgs = 
     let 
-        applyFuncArgs an ca i = do 
-            let result = foldM (flip $ uncurry substitute) i $ zip an ca
-            case result of 
+        subArgsIntoImpl = flip $ uncurry substitute
+
+        applyFuncArgs argNames callArgs impl =
+            let 
+                argmap = zip argNames callArgs
+                result = foldM subArgsIntoImpl impl argmap
+            in case result of 
                 Left err     -> lift . throwError $ FailedToCallFunction err
                 Right subbed -> setLhs subbed
     in do
         ctx <- asks snd
         case Map.lookup name ctx of
-            Nothing -> error ""
-            Just (Const _) -> error ""
             Just (Func argNames impl)
-                | length argNames == length callArgs 
-                    -> applyFuncArgs argNames callArgs impl
-                | otherwise -> error ""
+                | length argNames /= length callSiteArgs 
+                    -> lift . throwError $ FunctionArgumentsIncorrect (length argNames) (length callSiteArgs)
+                | otherwise -> applyFuncArgs argNames callSiteArgs impl
+            _ -> error ""
+        isolateMain
 
+-- | Control flow for isolating the target symbol within a quotient.
 isolateQuotient :: AlgebraicStruct -> AlgebraicStruct -> Isolate ()
 isolateQuotient d s = 
     let 
@@ -164,6 +191,7 @@ isolateQuotient d s =
         chooseBranch d s isolateDividend isolateDivisor
         isolateMain
 
+-- | Control flow for isolating the target symbol within an exponent.
 isolateExp :: AlgebraicStruct -> AlgebraicStruct -> Isolate ()
 isolateExp b e = 
     let 
@@ -178,7 +206,8 @@ isolateExp b e =
     in do
         chooseBranch b e isolateBase isolateExponent 
         isolateMain
-        
+
+-- | Control flow for isolating the target symbol within a logarithm.
 isolateLog :: AlgebraicStruct -> AlgebraicStruct -> Isolate ()
 isolateLog b l = 
     let 
@@ -194,6 +223,7 @@ isolateLog b l =
         chooseBranch b l isolateBase isolateLogarithm
         isolateMain
 
+-- | Helper function for isolating the target symbol in a many-termed expression.
 isolatePolynomialTerm :: [AlgebraicStruct] -> Isolate [AlgebraicStruct]
 isolatePolynomialTerm terms = do
     sym <- asks fst
@@ -203,6 +233,7 @@ isolatePolynomialTerm terms = do
         [] -> lift $ throwError SymbolNotFound
         _ -> lift $ throwError NeedsPolysolve
 
+-- | Helper function for isolating the target symbol in the arguments of a binary algebraic structure.
 chooseBranch :: AlgebraicStruct -> AlgebraicStruct -> Isolate a -> Isolate a -> Isolate a
 chooseBranch x y l r = do
     sym <- asks fst
