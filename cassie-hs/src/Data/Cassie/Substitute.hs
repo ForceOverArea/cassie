@@ -28,9 +28,8 @@ module Data.Cassie.Substitute
 import safe Data.List
 import safe Control.Monad.State (get, lift, put, runStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
-import safe Data.Cassie.Structures (AlgebraicStruct(..), Symbol)
+import safe Data.Cassie.Structures ((~?), AlgebraicStruct(..), Symbol)
 import safe Data.Cassie.Internal (insertAt, truthTable2)
-import safe Data.Cassie.Isolate ((~?))
 
 -- | An error type that may be thrown when substituting structures in
 --   another algebraic structure.

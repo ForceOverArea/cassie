@@ -1,20 +1,37 @@
+{- |
+Module      :  Isolate
+Description :  Monad transformer stack and actions for isolating some symbol in an algebraic structure
+Copyright   :  (c) Grant Christiansen
+License     :  MIT
+
+Maintainer  :  christiansengrant18@gmail.com
+Stability   :  [unstable] | experimental | provisional | stable | frozen
+Portability :  portable
+
+Defines the @Isolate@ monad transformer stack type and appropriate actions.
+This module also exports the @isolate@ function, which can be used to symbolically
+solve equations given as an @AlgebraicStruct@.
+-}
+
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Isolate
-    ( (~?)
-    , isolate
+    ( isolate
     , Steps
     ) where
 
 import safe Prelude hiding (exp, log)
+import safe Data.List
+import safe Control.Monad
+import safe qualified Data.Map as Map
 import safe Control.Monad.Trans (lift)
-import safe Control.Monad.RWS (ask, get, put, tell, RWST(..))
+import safe Control.Monad.RWS (asks, get, put, tell, execRWST, RWST(..))
 import safe Control.Monad.Except (throwError, runExcept, Except)
-import safe Data.Cassie.Structures (AlgebraicStruct(..), Equation (Equation), Symbol)
-import safe Data.List (partition)
+import safe Data.Cassie.Evaluate (Context, CtxItem(..))
+import safe Data.Cassie.Internal (truthTable2)
+import safe Data.Cassie.Structures ((~?), AlgebraicStruct(..), Equation (Equation), Symbol)
+import safe Data.Cassie.Substitute (substitute, SubstitutionError)
 
 type Steps = [String]
-
-type Solver = RWST Symbol Steps Equation (Except SolverError)
 
 data SolverError
     = NeedsPolysolve
@@ -22,76 +39,84 @@ data SolverError
     | IsolationErrorOccurred
     | FunctionNotUnderstood
     | ZeroOrSingleTermPolynomial
-    deriving (Eq, Ord)
+    | FailedToCallFunction SubstitutionError
 
 instance Show SolverError where
-    show NeedsPolysolve = "the solution requires polysolving capability that is not yet supported"
-    show SymbolNotFound = "the given symbol was not found in the given equation"
-    show IsolationErrorOccurred = "an unknown error occurred while trying to isolate the given symbol in the equation"
-    show FunctionNotUnderstood = "encountered a function that could not be algebraically reversed"
-    show ZeroOrSingleTermPolynomial = "encountered a single-term polynomial expression. this error should not be reached unless a manually-built structure was isolated"
+    show NeedsPolysolve 
+        = "the solution requires polysolving capability that is\
+        \ not yet supported"
+    
+    show SymbolNotFound 
+        = "the given symbol was not found in the given equation"
+    
+    show IsolationErrorOccurred 
+        = "an unknown error occurred while trying to isolate the\
+        \ given symbol in the equation"
+    
+    show FunctionNotUnderstood 
+        = "encountered a function that could not be algebraically reversed"
+    
+    show ZeroOrSingleTermPolynomial 
+        = "encountered a single-term polynomial expression. this\
+        \ error should not be reached unless a manually-built\
+        \ structure was isolated"
 
--- | A binary operation that reveals whether @sym@ is present as 
---   a raw symbol in the given @AlgebraicStruct@.
-(~?) :: AlgebraicStruct -> Symbol -> Bool
-Sum terms ~? sym = any (~? sym) terms
+    show (FailedToCallFunction err)
+        = "failed to call function on arguments: " ++ show err
 
-Difference subtrahends ~? sym = any (~? sym) subtrahends
+type Isolate = RWST (Symbol, Context) Steps Equation (Except SolverError)
 
-Product factors ~? sym = any (~? sym) factors
+modifyRhs :: (AlgebraicStruct -> AlgebraicStruct) -> Isolate ()
+modifyRhs f = do
+    Equation (lhs, rhs) <- get
+    put $ Equation (lhs, f rhs)
 
-Quotient s d ~? sym = any (~? sym) [s, d]
+logStep :: Isolate ()
+logStep = do
+    step <- show <$> get
+    tell [step]
 
-Exponent b e ~? sym = any (~? sym) [b, e]
+setLhs :: AlgebraicStruct -> Isolate ()
+setLhs lhs = do
+    Equation (_, rhs) <- get
+    put $ Equation (lhs, rhs)
 
-Logarithm b l ~? sym = any (~? sym) [b, l]
+isolate :: Equation -> Symbol -> Context -> Either SolverError (Equation, Steps)
+isolate eqn sym ctx = runExcept $ execRWST isolateMain (sym, ctx) eqn
 
-Function _ a ~? sym = any (~? sym) a
-
-Group g ~? sym = g ~? sym
-
-Value _ ~? _ = False
-
-Symbol x ~? sym = x == sym
-
-isolate :: Equation -> Symbol -> Either SolverError (Equation, Steps)
-isolate eqn sym = do
-    (_, result, steps) <- runExcept $ runRWST isolateMain sym eqn
-    return (result, steps)
-
-isolateMain :: Solver ()
+isolateMain :: Isolate ()
 isolateMain = do
     Equation (lhs, rhs) <- get
-    sym <- ask
+    sym <- asks fst
     logStep
     if rhs ~? sym && not (lhs ~? sym) then do -- swap sides if needed
         setLhs rhs
         modifyRhs (const lhs)
         isolateMain
     else case lhs of
-        Sum ts -> isolateSum ts
-        Difference ss -> isolateDiff ss
-        Product fs -> isolateProd fs
-        Quotient d s -> isolateQuotient d s
-        Exponent b e -> isolateExp b e
-        Logarithm b l -> isolateLog b l
-        Function _ _ -> lift $ throwError FunctionNotUnderstood
-        Group g -> setLhs g >> isolateMain
-        Value _ -> lift $ throwError IsolationErrorOccurred
-        Symbol s -> if s == sym then 
-                return () -- terminate recursive loop
-            else
-                lift $ throwError IsolationErrorOccurred
+        Sum ts          -> isolateSum ts
+        Difference ss   -> isolateDiff ss
+        Product fs      -> isolateProd fs
+        Quotient d s    -> isolateQuotient d s
+        Exponent b e    -> isolateExp b e
+        Logarithm b l   -> isolateLog b l
+        Function n a    -> isolateFn n a
+        Group g         -> setLhs g >> isolateMain
+        Value _         -> lift $ throwError IsolationErrorOccurred
+        Symbol s        -> if s == sym then 
+                            return ()
+                        else
+                            lift $ throwError IsolationErrorOccurred
 
-isolateSum :: [AlgebraicStruct] -> Solver ()
+isolateSum :: [AlgebraicStruct] -> Isolate ()
 isolateSum terms = do
     wrapperTerms <- isolatePolynomialTerm terms
     modifyRhs $ \rhs -> Difference [rhs, Group $ Sum wrapperTerms]
     isolateMain
 
-isolateDiff :: [AlgebraicStruct] -> Solver ()
+isolateDiff :: [AlgebraicStruct] -> Isolate ()
 isolateDiff (addend:subtrahends) = do
-    sym <- ask
+    sym <- asks fst
     if addend ~? sym then do -- need different behavior depending on where symbol is
         setLhs addend
         modifyRhs $ Sum . (:subtrahends)
@@ -101,82 +126,88 @@ isolateDiff (addend:subtrahends) = do
     isolateMain
 isolateDiff _ = lift $ throwError ZeroOrSingleTermPolynomial
 
-isolateProd :: [AlgebraicStruct] -> Solver ()
+isolateProd :: [AlgebraicStruct] -> Isolate ()
 isolateProd factors = do
     wrapperTerms <- isolatePolynomialTerm factors
     modifyRhs $ \rhs -> Quotient (Group rhs) (Group $ Product wrapperTerms)
     isolateMain
 
-isolateQuotient :: AlgebraicStruct -> AlgebraicStruct -> Solver ()
-isolateQuotient d s = do
-    sym <- ask
-    case map (~? sym) [d, s] of
-        [False, False] -> lift $ throwError SymbolNotFound
-        [True, True] -> lift $ throwError NeedsPolysolve
-        [True, False] -> do
+isolateFn :: String -> [AlgebraicStruct] -> Isolate ()
+isolateFn name callArgs = 
+    let 
+        applyFuncArgs an ca i = do 
+            let result = foldM (flip $ uncurry substitute) i $ zip an ca
+            case result of 
+                Left err     -> lift . throwError $ FailedToCallFunction err
+                Right subbed -> setLhs subbed
+    in do
+        ctx <- asks snd
+        case Map.lookup name ctx of
+            Nothing -> error ""
+            Just (Const _) -> error ""
+            Just (Func argNames impl)
+                | length argNames == length callArgs 
+                    -> applyFuncArgs argNames callArgs impl
+                | otherwise -> error ""
+
+isolateQuotient :: AlgebraicStruct -> AlgebraicStruct -> Isolate ()
+isolateQuotient d s = 
+    let 
+        isolateDividend = do
             setLhs d
             modifyRhs $ Product . (:[s])
-        [False, True] -> do
-            setLhs s
-            modifyRhs $ \rhs -> Quotient s rhs
-        _ -> error "an unknown error occurred in isolateQuotient"
-    isolateMain
 
-isolateExp :: AlgebraicStruct -> AlgebraicStruct -> Solver ()
-isolateExp b e = do
-    sym <- ask
-    case map (~? sym) [b, e] of
-        [False, False] -> lift $ throwError SymbolNotFound
-        [True, True] -> lift $ throwError NeedsPolysolve
-        [True, False] -> do
+        isolateDivisor = do
+            setLhs s 
+            modifyRhs $ Quotient s
+    in do 
+        chooseBranch d s isolateDividend isolateDivisor
+        isolateMain
+
+isolateExp :: AlgebraicStruct -> AlgebraicStruct -> Isolate ()
+isolateExp b e = 
+    let 
+        isolateBase = do
             setLhs b
             let rhsExp = Group $ Quotient (Value 1.0) e
             modifyRhs $ \rhs -> Exponent (Group rhs) (Group rhsExp)
-        [False, True] -> do
-            setLhs e
-            modifyRhs $ \rhs -> Logarithm (Group b) (Group rhs)
-        _ -> error "an unknown error occurred in isolateExponent"
-    isolateMain
 
-isolateLog :: AlgebraicStruct -> AlgebraicStruct -> Solver ()
-isolateLog b l = do
-    sym <- ask
-    case map (~? sym) [b, l] of
-        [False, False] -> lift $ throwError SymbolNotFound
-        [True, True] -> lift $ throwError NeedsPolysolve
-        [True, False] -> do
+        isolateExponent = do
+            setLhs e
+            modifyRhs $ Logarithm (Group b) . Group
+    in do
+        chooseBranch b e isolateBase isolateExponent 
+        isolateMain
+        
+isolateLog :: AlgebraicStruct -> AlgebraicStruct -> Isolate ()
+isolateLog b l = 
+    let 
+        isolateBase = do
             setLhs b
             let rhsExp = Group l
             modifyRhs $ Exponent rhsExp . Group . Quotient (Value 1.0)
-        [False, True] -> do
+        
+        isolateLogarithm = do
             setLhs l
             modifyRhs $ Exponent b . Group
-        _ -> error "an unknown error has occurred in isolateLogarithm"
-    isolateMain
+    in do
+        chooseBranch b l isolateBase isolateLogarithm
+        isolateMain
 
--- isolateFn :: String -> Int -> [AlgebraicStruct] -> Solver ()
--- isolateFn _name _argc _argv = lift $ throwError FunctionNotUnderstood
-
-modifyRhs :: (AlgebraicStruct -> AlgebraicStruct) -> Solver ()
-modifyRhs f = do
-    Equation (lhs, rhs) <- get
-    put $ Equation (lhs, f rhs)
-
-logStep :: Solver ()
-logStep = do
-    step <- show <$> get
-    tell [step]
-
-setLhs :: AlgebraicStruct -> Solver ()
-setLhs lhs = do
-    Equation (_, rhs) <- get
-    put $ Equation (lhs, rhs)
-
-isolatePolynomialTerm :: [AlgebraicStruct] -> Solver [AlgebraicStruct]
+isolatePolynomialTerm :: [AlgebraicStruct] -> Isolate [AlgebraicStruct]
 isolatePolynomialTerm terms = do
-    sym <- ask
+    sym <- asks fst
     let (wrapped, wrapper) = partition (~? sym) terms
     case wrapped of 
         [x] -> setLhs x >> return wrapper
         [] -> lift $ throwError SymbolNotFound
         _ -> lift $ throwError NeedsPolysolve
+
+chooseBranch :: AlgebraicStruct -> AlgebraicStruct -> Isolate a -> Isolate a -> Isolate a
+chooseBranch x y l r = do
+    sym <- asks fst
+    truthTable2 (~? sym) x y
+        (lift $ throwError SymbolNotFound)
+        (lift $ throwError NeedsPolysolve)
+        l
+        r
