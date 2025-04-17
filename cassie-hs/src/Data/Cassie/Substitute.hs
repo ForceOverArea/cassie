@@ -32,18 +32,78 @@ import safe Data.Cassie.Structures (AlgebraicStruct(..), Symbol)
 import safe Data.Cassie.Internal (insertAt, truthTable2)
 import safe Data.Cassie.Isolate ((~?))
 
+-- | 
 data SubstitutionError 
-    = NoCrumbsLeft
-    | IncorrectNumOfTermsToRebuild
+    = IncorrectNumOfTermsToRebuild [AlgebraicStruct] (Maybe AlgCrumb)
+    | IncorrectNumOfTermsToRebuildDelimited [AlgebraicStruct] Int Int 
+    | IncorrectNumOfTermsToRebuildBinary (Maybe AlgebraicStruct)
     | FoundWrongSymbol
     | BadStructure
     | BinaryStructureContainedNone
     | NotDelimitedStructure
     | NotBinaryStructure
-    deriving Show
+
+instance Show SubstitutionError where
+    show (IncorrectNumOfTermsToRebuild structures (Just crumb))
+        = "cannot rebuild structure onto structure(s) '" 
+        ++ (intercalate ", " $ map show structures)
+        ++ "' because that would be an invalid base structure for '"
+        ++ show crumb
+        ++ "'"
+
+    show (IncorrectNumOfTermsToRebuild structures Nothing)
+        = "cannot rebuild structure onto terms '"
+        ++ (intercalate ", " $ map show structures)
+        ++ "' because the result of a substitution must\
+        \ be a single structure."
+
+    show (IncorrectNumOfTermsToRebuildDelimited structures expected actual)
+        = "cannot build a delimited structure onto '"
+        ++ (intercalate ", " $ map show structures)
+        ++ "' because the number of structures given did\
+        \ not match the number of terms that needed to be\
+        \ replaced in the parent structure. (expected "
+        ++ show expected
+        ++ ", but found "
+        ++ show actual
+        ++ ")"
+
+    show (IncorrectNumOfTermsToRebuildBinary (Just otherTerm))
+        = "could not build a binary structure because '"
+        ++ show otherTerm
+        ++ "' can only form a binary structure when built\
+        \ onto EXACTLY one other structure"
+
+    show (IncorrectNumOfTermsToRebuildBinary Nothing)
+        = "could not build a binary structure because\
+        \ a binary structure can only be built onto EXACTLY\
+        \TWO other structures" 
+
+    show FoundWrongSymbol 
+        = "found a different symbol while traversing an\
+        \ algebraic structure that claimed it contained\
+        \ the symbol of interest"
+
+    show BadStructure 
+        = "found NO child structures while traversing an\
+        \ algebraic structure that should have at least one"
+
+    show BinaryStructureContainedNone 
+        = "found a binary structure that claimed to contain\
+        \ the symbol of interest, but whose two child structures\
+        \ did not"
+
+    show NotDelimitedStructure 
+        = "tried to build a delimited algebraic structure using\
+        \ a breadcrumb for a different structure"
+
+    show NotBinaryStructure 
+        = "tried to build a binary algrbraic structure using\
+        \ a breadcrumb for a different structure"
 
 -- | Breadcrumb type for an AlgebraicStruct zipper implementation.
---   Can represent delimited structures or binary operations (e.g. sums, or exponents, respectively)
+--   Can represent delimited structures or binary operations (e.g. 
+--   sums, or exponents, respectively)
 data AlgCrumb
     = Delimited { kind    :: AlgebraicStruct        -- ^ The kind of structure that this should be
                 , items   :: [AlgebraicStruct]      -- ^ The other structures in the delimited list
@@ -57,11 +117,32 @@ data AlgCrumb
                 }
     deriving Show
 
+-- | The @Substitute@ zipper monad type for statefully traversing 
+--   an @AlgebraicStruct@ parser tree.
 type Substitute = StateT [AlgCrumb] (Except SubstitutionError)
 
+-- | Pushes a crumb onto the stack of breadcrumbs in the substitute 
+--   zipper monad.
+pushCrumb :: AlgCrumb -> Substitute ()
+pushCrumb c = get >>= put . (c:)
+
+-- | Pops a crumb off the stack of breadcrumbs in the substitute 
+--   zipper monad.
+popCrumb :: Substitute (Maybe AlgCrumb)
+popCrumb = do
+    ccs <- get
+    case uncons ccs of
+        Nothing -> return Nothing
+        Just (c, cs) -> do 
+            put cs
+            return $ Just c
+
+-- | Substitutes occurrences of @target@ with @replacement@ wherever 
+--   they found within @source@.
 substitute :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> Either SubstitutionError AlgebraicStruct
 substitute target replacement source = runExcept $ fst <$> runStateT (substituteMain target replacement source) []
 
+-- | The main 
 substituteMain :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> Substitute AlgebraicStruct
 substituteMain target replacement source = do
     children <- traverseTowards target source
@@ -107,38 +188,25 @@ traverseTowardsDelimited s k terms =
 traverseTowardsBinary :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> AlgebraicStruct -> Substitute [AlgebraicStruct]
 traverseTowardsBinary s k l r = 
     let 
-        both = do
-            pushCrumb (Binary k Nothing False)
-            return [l, r]
-
-        neither = lift $ throwError BinaryStructureContainedNone
-
-        leftOnly = do
-            pushCrumb (Binary k (Just r) False)
-            return [l]
-
-        rightOnly = do
-            pushCrumb (Binary k (Just l) True)
-            return [r]
-    in truthTable2 (~? s) l r 
-        both 
-        neither 
-        leftOnly 
-        rightOnly
+        both      = pushCrumb (Binary k Nothing False) >> return [l, r]
+        neither   = lift $ throwError BinaryStructureContainedNone
+        leftOnly  = pushCrumb (Binary k (Just r) False) >> return [l]
+        rightOnly = pushCrumb (Binary k (Just l) True) >> return [r]
+    in truthTable2 (~? s) l r both neither leftOnly rightOnly
 
 -- | 'Zips up' a zipper onto a given algebraic structure, returnin the reconstructed tree struture.
 rebuildOnto :: [AlgebraicStruct] -> Substitute AlgebraicStruct
 rebuildOnto structures = do
     crumb <- popCrumb
     case (crumb, structures) of
-        (Nothing, [x]) -> return x
-        (Just crumbKind, (x:_)) -> do
+        (Nothing, [x])        -> return x
+        (Just crumbKind, x:_) -> do
             newBase <- case crumbKind of 
-                Delimited k terms idxs -> rebuildDelimited structures k terms idxs
+                Delimited k terms idxs   -> rebuildDelimited structures k terms idxs
                 Binary k possTerm isLeft -> rebuildBinary structures k possTerm isLeft
-                Singular k -> rebuildSingular k x
+                Singular k               -> rebuildSingular k x
             rebuildOnto $ pure newBase
-        _ -> lift $ throwError IncorrectNumOfTermsToRebuild
+        _ -> lift . throwError $ IncorrectNumOfTermsToRebuild structures crumb
 
 -- | Rebuilds an 'unzipped' structure by zipping @baseTerms@ and @idxs@ into a Map-like 
 --   structure, then using that map to insert the given @baseTerms@ into their respective 
@@ -148,8 +216,10 @@ rebuildDelimited baseTerms structKind structTerms idxs =
     let 
         terms = foldl rebuildTerm structTerms $ zip idxs baseTerms
         rebuildTerm ts (idx, term) = insertAt term idx ts
-    in if length idxs /= length baseTerms then
-            lift $ throwError IncorrectNumOfTermsToRebuild
+        numIdxs = length idxs
+        numTerms = length baseTerms
+    in if numIdxs /= numTerms then
+            lift . throwError $ IncorrectNumOfTermsToRebuildDelimited baseTerms numIdxs numTerms
         else do
             f <- constructOneDelimited structKind
             return $ f terms
@@ -162,7 +232,7 @@ rebuildBinary baseArgs structKind possTerm isLeft = do
         (Just term, [x])
             | isLeft    -> return $ f term x 
             | otherwise -> return $ f x term
-        _ -> lift $ throwError IncorrectNumOfTermsToRebuild
+        _ -> lift . throwError $ IncorrectNumOfTermsToRebuildBinary possTerm
         
 rebuildSingular :: AlgebraicStruct -> AlgebraicStruct -> Substitute AlgebraicStruct
 rebuildSingular _structKind baseTerm = return $ Group baseTerm
@@ -183,18 +253,3 @@ constructOneBinary x =
         Exponent _ _  -> return Exponent
         Logarithm _ _ -> return Logarithm
         _             -> lift $ throwError NotBinaryStructure
-
--- constructOneSingular :: AlgebraicStruct -> AlgebraicStruct -> AlgebraicStruct
--- constructOneSingular _ = Group
-
-pushCrumb :: AlgCrumb -> Substitute ()
-pushCrumb c = get >>= put . (c:)
-
-popCrumb :: Substitute (Maybe AlgCrumb)
-popCrumb = do
-    ccs <- get
-    case uncons ccs of
-        Nothing -> return Nothing
-        Just (c, cs) -> do 
-            put cs
-            return $ Just c
