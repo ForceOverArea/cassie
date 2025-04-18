@@ -19,10 +19,10 @@ common warnings
 library
     import:             warnings
     exposed-modules:    Data.Cassie.Parser,
-                        Data.Cassie.PolySolve,
                         Data.Cassie.Evaluate,
                         Data.Cassie.Internal,
                         Data.Cassie.Isolate,
+                        Data.Cassie.Isolate.PolySolve,
                         Data.Cassie.Structures,
                         Data.Cassie.Substitute,
                         Data.Cassie,
