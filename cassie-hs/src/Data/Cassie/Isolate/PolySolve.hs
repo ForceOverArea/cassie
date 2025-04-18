@@ -1,5 +1,5 @@
 {-# LANGUAGE Safe #-}
-module Data.Cassie.PolySolve 
+module Data.Cassie.Isolate.PolySolve 
     ( 
     ) where
 

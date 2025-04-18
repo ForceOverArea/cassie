@@ -1,6 +1,8 @@
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE InstanceSigs #-}
 module Data.Cassie.Structures 
     ( (~?)
+    , show'
     , AlgebraicStruct(..)
     , Equation(..)
     , Symbol
@@ -60,28 +62,28 @@ data AlgebraicStruct
 
     -- | Represents a raw value that cannot be reversed and contains no other algebraic structures
     | Symbol String
-    deriving (Eq, Ord)
+    deriving (Show, Eq, Ord)
 
-instance Show AlgebraicStruct where
-    show (Sum terms) = intercalate " + " $ map show terms
+show' :: AlgebraicStruct -> String
+show' (Sum terms) = intercalate " + " $ map show' terms
 
-    show (Difference subtrahends) = intercalate " - " $ map show subtrahends
+show' (Difference subtrahends) = intercalate " - " $ map show' subtrahends
 
-    show (Product factors) = intercalate " * " $ map show factors
+show' (Product factors) = intercalate " * " $ map show' factors
 
-    show (Quotient sor dend) = show sor ++ " / " ++ show dend
+show' (Quotient sor dend) = show' sor ++ " / " ++ show dend
 
-    show (Exponent b e) = show b ++ " ^ " ++ show e
+show' (Exponent b e) = show' b ++ " ^ " ++ show' e
 
-    show (Logarithm b l) = "log " ++ show b ++ "(" ++ show l ++ ")"
+show' (Logarithm b l) = "log " ++ show' b ++ "(" ++ show' l ++ ")"
 
-    show (Function n a) = n ++ "(" ++ intercalate "," (map show a) ++ ")"
+show' (Function n a) = n ++ "(" ++ intercalate "," (map show' a) ++ ")"
 
-    show (Group g) = "(" ++ show g ++ ")"
+show' (Group g) = "(" ++ show' g ++ ")"
 
-    show (Value val) = show val
+show' (Value val) = show val
 
-    show (Symbol sym) = sym
+show' (Symbol sym) = sym
 
 -- | A binary operation that reveals whether @sym@ is present as 
 --   a raw symbol in the given @AlgebraicStruct@.

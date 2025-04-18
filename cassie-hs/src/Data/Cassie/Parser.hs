@@ -2,6 +2,7 @@
 module Data.Cassie.Parser 
     ( parseEquation
     , parseExpression
+    , CassieParserError
     ) where
 
 import safe Prelude hiding (exponent, logBase, product, sum)
@@ -92,8 +93,8 @@ exponent = do
 logarithm :: CassieParser
 logarithm = do
     whiteSpace haskell
-    _ <- string "log "
-    logBase <- expression
+    _ <- string "log"
+    logBase <- angles haskell expression
     logLog <- parens haskell expression <?> "logarithm"
     return Logarithm { base = logBase
                      , logm = logLog

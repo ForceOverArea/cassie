@@ -17,6 +17,7 @@ solve equations given as an @AlgebraicStruct@.
 module Data.Cassie.Isolate
     ( isolate
     , Steps
+    , IsolateError
     ) where
 
 import safe Data.List
@@ -34,7 +35,7 @@ type Steps = [String]
 
 -- | An error type that may be thrown when attempting to solve an equation
 --   by symbolic isolation.
-data SolverError
+data IsolateError
     = NeedsPolysolve
     | SymbolNotFound String
     | IsolationErrorOccurred
@@ -43,7 +44,7 @@ data SolverError
     | FailedToCallFunction SubstitutionError
     | NotAFunction String
 
-instance Show SolverError where
+instance Show IsolateError where
     show NeedsPolysolve 
         = "the solution requires polysolving capability that is\
         \ not yet supported"
@@ -76,7 +77,7 @@ instance Show SolverError where
 
 -- | The @Isolate@ monad type for statefully isolating a variable in a 
 --   larger expression.
-type Isolate = RWST (Symbol, Context) Steps Equation (Except SolverError)
+type Isolate = RWST (Symbol, Context) Steps Equation (Except IsolateError)
 
 -- | Applies a function to the right-hand side of the equation being solved,
 --   changing its state. This function is roughly a more concrete instance of
@@ -101,8 +102,8 @@ setLhs lhs = do
     put $ Equation (lhs, rhs)
 
 -- | Attempts to isolate a given symbol @sym@ in a given @Equation@, either returning
---   a solved equation and the steps taken to achieve the solution, or a @SolverError@.
-isolate :: Equation -> Symbol -> Context -> Either SolverError (Equation, Steps)
+--   a solved equation and the steps taken to achieve the solution, or a @IsolateError@.
+isolate :: Equation -> Symbol -> Context -> Either IsolateError (Equation, Steps)
 isolate eqn sym ctx = runExcept $ execRWST isolateMain (sym, ctx) eqn
 
 -- | The main control flow for isolating a symbol in an algebraic structure.
@@ -240,5 +241,5 @@ chooseBranch x y l r = do
         r
 
 -- | Shorthand for throwing an @Except@ monad error
-throwM :: SolverError -> Isolate a
+throwM :: IsolateError -> Isolate a
 throwM = lift . throwError

@@ -3,6 +3,7 @@ module Data.Cassie.Evaluate
     ( evaluate
     , Context
     , CtxItem(..)
+    , EvalError
     ) where
 
 import safe Data.List
