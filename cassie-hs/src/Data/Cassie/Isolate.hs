@@ -20,7 +20,6 @@ module Data.Cassie.Isolate
     ) where
 
 import safe Data.List
-import safe Control.Monad
 import safe qualified Data.Map as Map
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.RWS (asks, get, put, tell, execRWST, RWST(..))
@@ -28,7 +27,7 @@ import safe Control.Monad.Except (throwError, runExcept, Except)
 import safe Data.Cassie.Evaluate (Context, CtxItem(..))
 import safe Data.Cassie.Internal (truthTable2)
 import safe Data.Cassie.Structures ((~?), AlgebraicStruct(..), Equation (Equation), Symbol)
-import safe Data.Cassie.Substitute (substitute, SubstitutionError)
+import safe Data.Cassie.Substitute (substituteFuncArgs, SubstitutionError)
 
 -- | A type alias for the log of steps taken while solving a given equation. 
 type Steps = [String]
@@ -37,19 +36,20 @@ type Steps = [String]
 --   by symbolic isolation.
 data SolverError
     = NeedsPolysolve
-    | SymbolNotFound
+    | SymbolNotFound String
     | IsolationErrorOccurred
     | FunctionArgumentsIncorrect Int Int
     | ZeroOrSingleTermPolynomial
     | FailedToCallFunction SubstitutionError
+    | NotAFunction String
 
 instance Show SolverError where
     show NeedsPolysolve 
         = "the solution requires polysolving capability that is\
         \ not yet supported"
     
-    show SymbolNotFound 
-        = "the given symbol was not found in the given equation"
+    show (SymbolNotFound name)
+        = "the given symbol '" ++ name ++ "' was not found in the given equation"
     
     show IsolationErrorOccurred 
         = "an unknown error occurred while trying to isolate the\
@@ -70,6 +70,9 @@ instance Show SolverError where
 
     show (FailedToCallFunction err)
         = "failed to call function on arguments: " ++ show err
+
+    show (NotAFunction name)
+        = "the symbol '" ++ name ++ "' is not a function"
 
 -- | The @Isolate@ monad type for statefully isolating a variable in a 
 --   larger expression.
@@ -121,10 +124,10 @@ isolateMain = do
         Logarithm b l   -> isolateLog b l
         Function n a    -> isolateFn n a
         Group g         -> setLhs g >> isolateMain
-        Value _         -> lift $ throwError IsolationErrorOccurred
+        Value _         -> throwM IsolationErrorOccurred
         Symbol s
             | s == sym  -> return ()
-            | otherwise -> lift $ throwError IsolationErrorOccurred
+            | otherwise -> throwM IsolationErrorOccurred
 
 -- | Control flow for isolating the target symbol in some number of terms.
 isolateSum :: [AlgebraicStruct] -> Isolate ()
@@ -144,7 +147,7 @@ isolateDiff (addend:subtrahends) = do
         wrapperTerms <- isolatePolynomialTerm subtrahends
         modifyRhs $ Sum . (:addend:wrapperTerms)
     isolateMain
-isolateDiff _ = lift $ throwError ZeroOrSingleTermPolynomial
+isolateDiff _ = throwM ZeroOrSingleTermPolynomial
 
 -- | Control flow for isolating the target symbol in some number of factors.
 isolateProd :: [AlgebraicStruct] -> Isolate ()
@@ -155,26 +158,19 @@ isolateProd factors = do
 
 -- | Control flow for isolating some symbol that has been passed to a function.
 isolateFn :: String -> [AlgebraicStruct] -> Isolate ()
-isolateFn name callSiteArgs = 
-    let 
-        subArgsIntoImpl = flip $ uncurry substitute
-
-        applyFuncArgs argNames callArgs impl =
-            let 
-                argmap = zip argNames callArgs
-                result = foldM subArgsIntoImpl impl argmap
-            in case result of 
-                Left err     -> lift . throwError $ FailedToCallFunction err
-                Right subbed -> setLhs subbed
-    in do
-        ctx <- asks snd
-        case Map.lookup name ctx of
-            Just (Func argNames impl)
-                | length argNames /= length callSiteArgs 
-                    -> lift . throwError $ FunctionArgumentsIncorrect (length argNames) (length callSiteArgs)
-                | otherwise -> applyFuncArgs argNames callSiteArgs impl
-            _ -> error ""
-        isolateMain
+isolateFn name callSiteArgs = do
+    ctx <- asks snd
+    case Map.lookup name ctx of
+        Nothing        -> throwM $ SymbolNotFound name
+        Just (Const _) -> throwM $ NotAFunction name
+        Just (Func argNames impl)
+            | length argNames /= length callSiteArgs 
+                -> throwM $ FunctionArgumentsIncorrect (length argNames) (length callSiteArgs)
+            | otherwise 
+                -> case substituteFuncArgs impl argNames callSiteArgs of
+                    Left err -> throwM $ FailedToCallFunction err
+                    Right x  -> setLhs x
+    isolateMain
 
 -- | Control flow for isolating the target symbol within a quotient.
 isolateQuotient :: AlgebraicStruct -> AlgebraicStruct -> Isolate ()
@@ -230,15 +226,19 @@ isolatePolynomialTerm terms = do
     let (wrapped, wrapper) = partition (~? sym) terms
     case wrapped of 
         [x] -> setLhs x >> return wrapper
-        [] -> lift $ throwError SymbolNotFound
-        _ -> lift $ throwError NeedsPolysolve
+        [] -> throwM $ SymbolNotFound sym
+        _ -> throwM NeedsPolysolve
 
 -- | Helper function for isolating the target symbol in the arguments of a binary algebraic structure.
 chooseBranch :: AlgebraicStruct -> AlgebraicStruct -> Isolate a -> Isolate a -> Isolate a
 chooseBranch x y l r = do
     sym <- asks fst
     truthTable2 (~? sym) x y
-        (lift $ throwError SymbolNotFound)
-        (lift $ throwError NeedsPolysolve)
+        (throwM $ SymbolNotFound sym)
+        (throwM $ NeedsPolysolve)
         l
         r
+
+-- | Shorthand for throwing an @Except@ monad error
+throwM :: SolverError -> Isolate a
+throwM = lift . throwError

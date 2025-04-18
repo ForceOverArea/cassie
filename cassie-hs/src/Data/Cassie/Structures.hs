@@ -1,13 +1,12 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Structures 
-    ( emap
+    ( (~?)
     , AlgebraicStruct(..)
     , Equation(..)
     , Symbol
     ) where
 
-import safe Prelude hiding (exp)
-import safe Data.List (intercalate)
+import safe Data.List
 
 -- | A type alias for a symbol that may be nested inside an algebraic structure
 type Symbol = String
@@ -17,9 +16,6 @@ newtype Equation = Equation (AlgebraicStruct, AlgebraicStruct)
 
 instance Show Equation where
     show (Equation (lhs, rhs)) = show lhs ++ " = " ++ show rhs
-
-emap :: ((AlgebraicStruct, AlgebraicStruct) -> (AlgebraicStruct, AlgebraicStruct)) -> Equation -> Equation
-emap f (Equation sides) = Equation (f sides)
 
 -- | Represents a (possibly nested) 'schoolyard algebra' structure
 data AlgebraicStruct
@@ -41,13 +37,13 @@ data AlgebraicStruct
     -- | Represents a @base@ value raised to the power of @exponent@
     | Exponent
         { base :: AlgebraicStruct
-        , exp  :: AlgebraicStruct
+        , expn :: AlgebraicStruct
         }
 
     -- | Represents the exponent required to achieve @log@ given @base@
     | Logarithm
         { base :: AlgebraicStruct
-        , log  :: AlgebraicStruct
+        , logm :: AlgebraicStruct
         }
 
     -- | Represents a function 
@@ -86,3 +82,26 @@ instance Show AlgebraicStruct where
     show (Value val) = show val
 
     show (Symbol sym) = sym
+
+-- | A binary operation that reveals whether @sym@ is present as 
+--   a raw symbol in the given @AlgebraicStruct@.
+(~?) :: AlgebraicStruct -> Symbol -> Bool
+Sum terms ~? sym = any (~? sym) terms
+
+Difference subtrahends ~? sym = any (~? sym) subtrahends
+
+Product factors ~? sym = any (~? sym) factors
+
+Quotient s d ~? sym = any (~? sym) [s, d]
+
+Exponent b e ~? sym = any (~? sym) [b, e]
+
+Logarithm b l ~? sym = any (~? sym) [b, l]
+
+Function _ a ~? sym = any (~? sym) a
+
+Group g ~? sym = g ~? sym
+
+Value _ ~? _ = False
+
+Symbol x ~? sym = x == sym

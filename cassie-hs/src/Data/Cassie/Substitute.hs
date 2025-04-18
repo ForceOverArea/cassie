@@ -17,14 +17,16 @@ they represent in the context of a larger problem.
 
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Substitute 
-    ( substitute
+    ( rebuildOnto
+    , substitute
+    , substituteFuncArgs
     , traverseTowards
-    , rebuildOnto
     , AlgCrumb(..)
     , Substitute
     , SubstitutionError
     ) where
 
+import safe Control.Monad
 import safe Data.List
 import safe Control.Monad.State (get, lift, put, runStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
@@ -141,6 +143,13 @@ popCrumb = do
 --   they are found within @source@.
 substitute :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> Either SubstitutionError AlgebraicStruct
 substitute target replacement source = runExcept $ fst <$> runStateT (substituteMain target replacement source) []
+
+substituteFuncArgs :: AlgebraicStruct -> [Symbol] -> ([AlgebraicStruct] -> Either SubstitutionError AlgebraicStruct)
+substituteFuncArgs impl args = 
+    let 
+        foldFunc = flip $ uncurry substitute
+        subArgs  = foldM foldFunc impl
+    in subArgs . zip args
 
 -- | The main control flow for substituting one algebraic structure for another.
 substituteMain :: Symbol -> AlgebraicStruct -> AlgebraicStruct -> Substitute AlgebraicStruct

@@ -5,14 +5,15 @@ module Data.Cassie.Evaluate
     , CtxItem(..)
     ) where
 
+import safe Data.List
+import safe qualified Data.Map as Map
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.Trans (lift)
 import safe Data.Cassie.Structures (AlgebraicStruct(..), Symbol)
-import safe Data.List (uncons)
-import safe qualified Data.Map as M (lookup, Map)
+import safe Data.Cassie.Substitute (substituteFuncArgs, SubstitutionError)
 
-type Context = M.Map String CtxItem
+type Context = Map.Map Symbol CtxItem
 
 data CtxItem 
     = Const AlgebraicStruct 
@@ -22,6 +23,7 @@ data EvalError
     = SymbolNotDefined String
     | InvalidArguments Int Int
     | ZeroOrSingleTermPolynomial
+    | FailedToCallFunction SubstitutionError
 
 instance Show EvalError where
     show (SymbolNotDefined symbol) 
@@ -39,63 +41,69 @@ instance Show EvalError where
     show ZeroOrSingleTermPolynomial
         = "found a structure representing a polynomial expression that had only one term"
 
+    show (FailedToCallFunction err)
+        = "failed to evaluate function with arguments: " ++ show err
+
 type Evaluate = ReaderT Context (Except EvalError)
 
 evaluate :: AlgebraicStruct -> Context -> Either EvalError Double
-evaluate expr ctx = runExcept $ runReaderT (evaluate' expr) ctx
+evaluate expr ctx = runExcept $ runReaderT (evaluateMain expr) ctx
 
-evaluate' :: AlgebraicStruct -> Evaluate Double
-evaluate' (Sum terms) = sum <$> mapM evaluate' terms
+evaluateMain :: AlgebraicStruct -> Evaluate Double
+evaluateMain (Sum terms) = sum <$> mapM evaluateMain terms
 
-evaluate' (Difference subtrahends) =
+evaluateMain (Difference subtrahends) =
     case uncons subtrahends of
         Nothing -> lift $ throwError ZeroOrSingleTermPolynomial
         Just (hd, tl) -> do
-            hd' <- evaluate' hd
-            tl' <- mapM evaluate' tl
+            hd' <- evaluateMain hd
+            tl' <- mapM evaluateMain tl
             return $ foldl (-) hd' tl'
 
-evaluate' (Product factors) = product <$> mapM evaluate' factors
+evaluateMain (Product factors) = product <$> mapM evaluateMain factors
 
-evaluate' (Quotient d s) = do
-    d' <- evaluate' d
-    s' <- evaluate' s
+evaluateMain (Quotient d s) = do
+    d' <- evaluateMain d
+    s' <- evaluateMain s
     return $ d' / s'
 
-evaluate' (Exponent b e) = do
-    b' <- evaluate' b
-    e' <- evaluate' e
+evaluateMain (Exponent b e) = do
+    b' <- evaluateMain b
+    e' <- evaluateMain e
     return $ b' ** e'
 
-evaluate' (Logarithm b l) = do
-    b' <- evaluate' b
-    l' <- evaluate' l
+evaluateMain (Logarithm b l) = do
+    b' <- evaluateMain b
+    l' <- evaluateMain l
     return $ logBase b' l'
 
-evaluate' (Function n a) = do
-    numericArgs <- mapM evaluate' a
-    (argc, func) <- getFunc n
-    if argc == length a then
-        return $ func numericArgs
+evaluateMain (Function n args) = do
+    (argNames, func) <- getFunc n
+    if length argNames == length args then
+        let 
+            subbedFunc = substituteFuncArgs func argNames args
+        in case subbedFunc of
+            Left err -> lift . throwError $ FailedToCallFunction err
+            Right result -> evaluateMain result
     else 
-        lift . throwError $ InvalidArguments argc (length a)
+        lift . throwError $ InvalidArguments (length argNames) (length args)
     
-evaluate' (Group g) = evaluate' g
+evaluateMain (Group g) = evaluateMain g
 
-evaluate' (Value v) = return v
+evaluateMain (Value v) = return v
 
-evaluate' (Symbol s) = getConst s
+evaluateMain (Symbol s) = getConst s >>= evaluateMain
 
-getConst :: String -> Evaluate Double
+getConst :: String -> Evaluate AlgebraicStruct
 getConst s = do
-    cst <- asks (M.lookup s)
+    cst <- asks (Map.lookup s)
     case cst of
         Just (Const v) -> return v
         _ -> lift . throwError $ SymbolNotDefined s
 
-getFunc :: String -> Evaluate (Int, [Double] -> Double)
+getFunc :: String -> Evaluate ([Symbol], AlgebraicStruct)
 getFunc s = do
-    fn <- asks (M.lookup s)
+    fn <- asks (Map.lookup s)
     case fn of
         Just (Func c f) -> return (c, f)
         _ -> lift . throwError $ SymbolNotDefined s
