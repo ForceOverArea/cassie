@@ -19,6 +19,8 @@ common warnings
 library
     import:             warnings
     exposed-modules:    Data.Cassie.Parser,
+                        Data.Cassie.Parser.Internal,
+                        Data.Cassie.Parser.Lang,
                         Data.Cassie.Evaluate,
                         Data.Cassie.Internal,
                         Data.Cassie.Isolate,

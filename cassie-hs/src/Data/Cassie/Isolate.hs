@@ -22,11 +22,10 @@ module Data.Cassie.Isolate
 
 import safe Data.List
 import safe qualified Data.Map as Map
-import safe Control.Monad.Trans (lift)
 import safe Control.Monad.RWS (asks, get, put, tell, execRWST, RWST(..))
-import safe Control.Monad.Except (throwError, runExcept, Except)
+import safe Control.Monad.Except (runExcept, Except)
 import safe Data.Cassie.Evaluate (Context, CtxItem(..))
-import safe Data.Cassie.Internal (truthTable2)
+import safe Data.Cassie.Internal
 import safe Data.Cassie.Structures ((~?), AlgebraicStruct(..), Equation (Equation), Symbol)
 import safe Data.Cassie.Substitute (substituteFuncArgs, SubstitutionError)
 
@@ -240,6 +239,3 @@ chooseBranch x y l r = do
         l
         r
 
--- | Shorthand for throwing an @Except@ monad error
-throwM :: IsolateError -> Isolate a
-throwM = lift . throwError

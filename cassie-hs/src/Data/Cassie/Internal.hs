@@ -1,15 +1,27 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Internal 
     ( insertAt
+    , splitStrAt
+    , throwM
     , truthTable2
     ) where
 
-import Control.Arrow ((***))
-import Control.Monad (join)
+import safe Control.Arrow
+import safe Control.Monad
+import safe Control.Monad.Trans (lift, MonadTrans)
+import safe Control.Monad.Except (throwError, Except)
+import safe qualified Data.Text as Text
 
 -- | Inserts a given value @x@ into a list of values at the @idx@th index.
 insertAt :: a -> Int -> [a] -> [a]
 insertAt x idx xs = (take idx xs) ++ (x:(drop idx xs))
+
+splitStrAt :: Char -> String -> [String]
+splitStrAt c = map (Text.unpack . Text.strip) . Text.split (== c) . Text.pack
+
+-- | Shorthand for throwing an @Except@ monad error
+throwM :: MonadTrans t => e -> t (Except e) a
+throwM = lift . throwError
 
 -- | @truthTable2 p x y q1 q2 q3 q4@
 --
