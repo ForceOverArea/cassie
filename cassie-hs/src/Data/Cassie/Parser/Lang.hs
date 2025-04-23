@@ -22,8 +22,8 @@ data CassieLangError
     | PoorlyDefinedError
     deriving Show
 
-parseFunction :: String -> Context -> Either CassieLangError Context 
-parseFunction funcDef ctx = 
+parseFunction :: Context -> String -> Either CassieLangError Context 
+parseFunction ctx funcDef = 
     let 
         parseResult = runParser parseConstrainedFunction Set.empty funcDef funcDef
 

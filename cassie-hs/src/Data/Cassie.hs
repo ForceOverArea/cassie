@@ -17,7 +17,7 @@ import safe Data.Cassie.Internal
 import safe Data.Cassie.Evaluate (evaluate, Context, CtxItem(..), EvalError)
 import safe Data.Cassie.Isolate (isolate, Steps, IsolateError)
 import safe Data.Cassie.Parser (parseEquation, CassieParserError)
-import safe Data.Cassie.Parser.Lang (CassieLangError)
+import safe Data.Cassie.Parser.Lang (parseFunction, CassieLangError)
 import safe Data.Cassie.Structures (AlgebraicStruct(..), Equation(..), Symbol)
 
 -- | The Cassie 'compiler' monad for statefully building a 
@@ -26,7 +26,7 @@ type Cassie = StateT (Context, EquationPool) (Except CassieError)
 
 type Symbols = Set.Set Symbol
 
-type EquationPool = [(AlgebraicStruct, Symbols)]
+type EquationPool = EquationPool
 
 data CassieError
     = ParseError CassieParserError
@@ -57,46 +57,55 @@ solvedForValue eqn sym ctx = do
 -- solveSystemNumerically :: String -> Either CassieError (Map.Map Symbol Double)
 -- solveSystemNumerically sys = Right Map.empty
 
+buildCtxAndEqnPool :: String -> Either CassieError (Context, EquationPool)
+buildCtxAndEqnPool sys = do
+    let (eqns, funcs) = partitionEqnsAndFuncs sys
+    (consts, trueEqns) <- partitionConstsAndEquations <$> eqns
+    ctx <- parseFunctions funcs =<< solveAndEvalConsts consts
+    return (ctx, trueEqns)
 
-partitionEqnsAndFuncs :: String -> (Either CassieError [(Equation, Symbols)], [String])
+partitionEqnsAndFuncs :: String -> (Either CassieError EquationPool, [String])
 partitionEqnsAndFuncs = 
     let 
         f1a ::String -> ([String], [String])
         f1a = partition ('=' `elem`) . splitStrAt '\n'
 
-        f1b :: [String] -> Either CassieError [(Equation, Symbols)]
+        f1b :: [String] -> Either CassieError EquationPool
         f1b = mapM $ left ParseError . parseEquation
 
     in f1a >>> first f1b
 
-partitionConstsAndEquations :: [(Equation, Symbols)] -> ([(Equation, Symbol)], [(Equation, Symbols)])
+partitionConstsAndEquations :: EquationPool -> ([(Equation, Symbol)], EquationPool)
 partitionConstsAndEquations = 
     let 
-        f2a :: [(Equation, Symbols)] -> ([(Equation, Symbols)], [(Equation, Symbols)])
+        f2a :: EquationPool -> (EquationPool, EquationPool)
         f2a = partition $ (== 1) . Set.size . snd
 
-        f2b :: [(Equation, Symbols)] -> [(Equation, Symbol)]
+        f2b :: EquationPool -> [(Equation, Symbol)]
         f2b = map $ second Set.findMin
 
     in f2a >>> first f2b
 
 solveAndEvalConsts :: [(Equation, Symbol)] -> Either CassieError Context
-solveAndEvalConsts = 
+solveAndEvalConsts xs = 
     let 
-        f3a :: [(Equation, Symbol)] -> Either CassieError [Equation]
-        f3a = mapM
+        f3 :: [(Equation, Symbol)] -> Either CassieError [Equation]
+        f3 = mapM
             $ (flip $ uncurry isolate) Map.empty
             >>> left IsolationError
             >>> right fst
 
-        f3b :: [Equation] -> Either CassieError Context
-        f3b = foldM f4 Map.empty
+        f4a :: [Equation] -> Either CassieError Context
+        f4a = foldM f4b Map.empty
 
         -- All equations known to be pre-solved, ok to implement as partial function here:
-        f4 :: Context -> Equation -> Either CassieError Context
-        f4 ctx (Equation (Symbol x, rhs)) = do
+        f4b :: Context -> Equation -> Either CassieError Context
+        f4b ctx (Equation (Symbol x, rhs)) = do
             result <- left EvaluationError $ evaluate rhs Map.empty
             return $ Map.insert x (Const $ Value result) ctx
-        f4 _ _ = error "not reachable"
-        
-    in f3a >>> right f3b
+        f4b _ _ = error "not reachable"
+
+    in f3 xs >>= f4a
+
+parseFunctions :: [String] -> Context -> Either CassieError Context
+parseFunctions funcs ctx = (left FunctionParseError) $ foldM parseFunction ctx funcs 
