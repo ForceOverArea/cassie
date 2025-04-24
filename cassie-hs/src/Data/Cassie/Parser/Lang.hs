@@ -8,7 +8,7 @@ module Data.Cassie.Parser.Lang
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 import safe Control.Arrow (left)
-import safe Data.Cassie.Evaluate (Context, CtxItem(..))
+import safe Data.Cassie.Evaluate (Context, CtxItem(..), isConst)
 import safe Data.Cassie.Parser.Internal
 import safe Data.Cassie.Structures (Symbol)
 import safe Text.Parsec
@@ -33,9 +33,6 @@ parseFunction ctx funcDef =
             return (name, struct, syms)
 
         knowns = Set.fromList (Map.keys $ Map.filter isConst ctx)
-
-        isConst (Const _)  = True
-        isConst (Func _ _) = False
     in do 
         (name, funcObj, dependencies) <- left CassieLangParseError parseResult
         if dependencies `Set.difference` knowns /= Set.empty then

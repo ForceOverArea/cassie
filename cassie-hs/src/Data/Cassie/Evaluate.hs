@@ -1,6 +1,7 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Evaluate
     ( evaluate
+    , isConst
     , Context
     , CtxItem(..)
     , EvalError
@@ -108,3 +109,7 @@ getFunc s = do
     case fn of
         Just (Func c f) -> return (c, f)
         _ -> lift . throwError $ SymbolNotDefined s
+
+isConst :: CtxItem -> Bool
+isConst (Const _)  = True
+isConst (Func _ _) = False

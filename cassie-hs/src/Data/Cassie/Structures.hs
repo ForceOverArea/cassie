@@ -3,6 +3,8 @@
 module Data.Cassie.Structures 
     ( (~?)
     , show'
+    , lhs
+    , rhs
     , AlgebraicStruct(..)
     , Equation(..)
     , Symbol
@@ -107,3 +109,9 @@ Group g ~? sym = g ~? sym
 Value _ ~? _ = False
 
 Symbol x ~? sym = x == sym
+
+lhs :: Equation -> AlgebraicStruct
+lhs (Equation (lhs, _rhs)) = lhs
+
+rhs :: Equation -> AlgebraicStruct
+rhs (Equation (_lhs, rhs)) = rhs
