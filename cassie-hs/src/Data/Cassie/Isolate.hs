@@ -182,7 +182,7 @@ isolateQuotient d s =
 
         isolateDivisor = do
             setLhs s 
-            modifyRhs $ Quotient s
+            modifyRhs $ Quotient d
     in do 
         chooseBranch d s isolateDividend isolateDivisor
         isolateMain

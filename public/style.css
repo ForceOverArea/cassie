@@ -39,6 +39,10 @@
     padding-left: 7px;
 }
 
+.title-alt {
+    color: mediumvioletred;
+}
+
 .version-tag {
     font-size: 16px;
 }
