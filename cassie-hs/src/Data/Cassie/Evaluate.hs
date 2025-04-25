@@ -52,9 +52,23 @@ evaluate :: AlgebraicStruct -> Context -> Either EvalError Double
 evaluate expr ctx = runExcept $ runReaderT (evaluateMain expr) ctx
 
 evaluateMain :: AlgebraicStruct -> Evaluate Double
-evaluateMain (Sum terms) = sum <$> mapM evaluateMain terms
+evaluateMain x = case x of
+    Sum terms              -> evaluateSum terms
+    Difference subtrahends -> evaluateDiff subtrahends
+    Product factors        -> evaluateProd factors
+    Quotient d s           -> evaluateQuotient d s
+    Exponent b e           -> evaluateExponent b e
+    Logarithm b l          -> evaluateLog b l
+    Function n a           -> evaluateFunction n a
+    Group g                -> evaluateMain g
+    Value v                -> return v
+    Symbol s               -> getConst s >>= evaluateMain
 
-evaluateMain (Difference subtrahends) =
+evaluateSum :: [AlgebraicStruct] -> Evaluate Double
+evaluateSum terms = sum <$> mapM evaluateMain terms
+
+evaluateDiff :: [AlgebraicStruct] -> Evaluate Double
+evaluateDiff subtrahends =
     case uncons subtrahends of
         Nothing -> lift $ throwError ZeroOrSingleTermPolynomial
         Just (hd, tl) -> do
@@ -62,24 +76,29 @@ evaluateMain (Difference subtrahends) =
             tl' <- mapM evaluateMain tl
             return $ foldl (-) hd' tl'
 
-evaluateMain (Product factors) = product <$> mapM evaluateMain factors
+evaluateProd :: [AlgebraicStruct] -> Evaluate Double
+evaluateProd factors = product <$> mapM evaluateMain factors
 
-evaluateMain (Quotient d s) = do
+evaluateQuotient :: AlgebraicStruct -> AlgebraicStruct -> Evaluate Double
+evaluateQuotient d s = do
     d' <- evaluateMain d
     s' <- evaluateMain s
     return $ d' / s'
 
-evaluateMain (Exponent b e) = do
+evaluateExponent :: AlgebraicStruct -> AlgebraicStruct -> Evaluate Double
+evaluateExponent b e = do
     b' <- evaluateMain b
     e' <- evaluateMain e
     return $ b' ** e'
 
-evaluateMain (Logarithm b l) = do
+evaluateLog :: AlgebraicStruct -> AlgebraicStruct -> Evaluate Double
+evaluateLog b l = do
     b' <- evaluateMain b
     l' <- evaluateMain l
     return $ logBase b' l'
 
-evaluateMain (Function n args) = do
+evaluateFunction :: String -> [AlgebraicStruct] -> Evaluate Double
+evaluateFunction n args = do
     (argNames, func) <- getFunc n
     if length argNames == length args then
         let 
@@ -89,12 +108,6 @@ evaluateMain (Function n args) = do
             Right result -> evaluateMain result
     else 
         lift . throwError $ InvalidArguments (length argNames) (length args)
-    
-evaluateMain (Group g) = evaluateMain g
-
-evaluateMain (Value v) = return v
-
-evaluateMain (Symbol s) = getConst s >>= evaluateMain
 
 getConst :: String -> Evaluate AlgebraicStruct
 getConst s = do

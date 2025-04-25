@@ -11,14 +11,14 @@ import safe Control.Monad
 import safe Data.List
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
-import safe Control.Monad.RWS (get, lift, put, modify, tell, RWST)
+import safe Control.Monad.RWS (get, lift, modify, tell, execRWST, RWST)
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Data.Cassie.Internal
 import safe Data.Cassie.Evaluate (evaluate, isConst, Context, CtxItem(..), EvalError)
 import safe Data.Cassie.Isolate (isolate, Steps, IsolateError)
 import safe Data.Cassie.Parser (parseEquation, CassieParserError)
 import safe Data.Cassie.Parser.Lang (parseFunction, CassieLangError)
-import safe Data.Cassie.Structures (AlgebraicStruct(..), Equation(..), Symbol)
+import safe Data.Cassie.Structures (getSymbol, leftHand, rightHand, AlgebraicStruct(..), Equation(..), Symbol)
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.
@@ -35,6 +35,7 @@ data CassieError
     | EvaluationError EvalError
     | EvaluationArgError
     | ConstraintError String
+    | FailedToFullySolve
     deriving Show
 
 solvedFor :: String -> String -> Context -> Either CassieError (Equation, Steps)
@@ -52,30 +53,57 @@ solvedForValue eqn sym ctx = do
     value' <- left EvaluationError $ evaluate value ctx
     return (value', eqn', steps)
 
--- solveSystem :: String -> Either CassieError (Map.Map Symbol AlgebraicStruct)
--- solveSystem sys = 
+solveSystem :: String -> Either CassieError (Map.Map Symbol AlgebraicStruct)
+solveSystem sys = 
+    let 
+        removeFunctions ctx key (Const struct) = Map.insert name struct ctx
+        removeFunctions ctx key (Function _ _) = ctx
+    in do
+        ctxAndEqns <- buildCtxAndEqnPool sys
+        ((ctx, _eqns), _solns) <- (runExcept $ execRWST solveSystemMain () ctxAndEqns)
+        return $ removeFunctions ctx
 
 -- solveSystemNumerically :: String -> Either CassieError (Map.Map Symbol Double)
 -- solveSystemNumerically sys = Right Map.empty
 
--- solveSystemMain :: Cassie Solution
--- solveSystemMain = 
-    
---         return Map.empty
+solveSystemMain :: Cassie ()
+solveSystemMain = do
+    updateUnknowns
+    madeProgress <- solveSingleUnknowns
+    if madeProgress then
+        solveSystemMain
+    else do
+        solvedSubsystem <- solveSystems
+        eqnPool <- getEqns
+        if solvedSubsystem then
+            solveSystemMain
+        else if length eqnPool /= 0 then
+            lift $ throwError FailedToFullySolve
+        else
+            return ()
 
-solveSingleUnknowns :: Cassie ()
+solveSystems :: Cassie Bool
+solveSystems = error "not implemented yet"
+
+solveSingleUnknowns :: Cassie Bool
 solveSingleUnknowns = 
     let 
         isConstrained = (1 ==) . Set.size . snd
-        
-        solveForSingleUnknown ctx = isolate' ctx . second Set.findMin
+        solve1Unknown ctx = isolate' ctx . second Set.findMin
+        addSolutionToCtx eqn = do
+            let name = getSymbol $ leftHand eqn
+            let value = rightHand eqn 
+            modifyCtx (Map.insert name $ Const value)
     in do
-        updateUnknowns
         ctx <- getCtx
         constrained <- filter isConstrained <$> getEqns
-        case mapM (solveForSingleUnknown ctx) constrained of
+        case mapM (solve1Unknown ctx) constrained of
             Left err     -> lift (throwError $ IsolationError err)
-            Right solved -> tell solved
+            Right [] -> return False
+            Right solved -> do 
+                tell solved
+                mapM_ (addSolutionToCtx . fst) solved
+                return True
 
 updateUnknowns :: Cassie ()
 updateUnknowns = do
@@ -124,13 +152,15 @@ solveAndEvalConsts xs =
         f4a :: [Equation] -> Either CassieError Context
         f4a = foldM f4b Map.empty
 
-        -- All equations known to be pre-solved, ok to implement as partial function here:
         f4b :: Context -> Equation -> Either CassieError Context
         f4b ctx eqn = do
             (x, result) <- evaluate' Map.empty eqn
             return $ Map.insert x (Const $ Value result) ctx
 
     in f3 xs >>= f4a
+
+parseFunctions :: [String] -> Context -> Either CassieError Context
+parseFunctions funcs ctx = (left FunctionParseError) $ foldM parseFunction ctx funcs 
 
 isolate' :: Context -> (Equation, Symbol) -> Either IsolateError (Equation, Steps)
 isolate' ctx = flip (uncurry isolate) ctx
@@ -140,9 +170,6 @@ evaluate' ctx (Equation (Symbol x, rhs')) = do
     result <- left EvaluationError $ evaluate rhs' ctx
     return (x, result)
 evaluate' _ _ = Left EvaluationArgError
-
-parseFunctions :: [String] -> Context -> Either CassieError Context
-parseFunctions funcs ctx = (left FunctionParseError) $ foldM parseFunction ctx funcs 
 
 getEqns :: Cassie EquationPool
 getEqns = snd <$> get

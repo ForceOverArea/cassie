@@ -2,9 +2,10 @@
 {-# LANGUAGE InstanceSigs #-}
 module Data.Cassie.Structures 
     ( (~?)
+    , getSymbol
+    , leftHand
+    , rightHand
     , show'
-    , lhs
-    , rhs
     , AlgebraicStruct(..)
     , Equation(..)
     , Symbol
@@ -110,8 +111,13 @@ Value _ ~? _ = False
 
 Symbol x ~? sym = x == sym
 
-lhs :: Equation -> AlgebraicStruct
-lhs (Equation (lhs, _rhs)) = lhs
+leftHand :: Equation -> AlgebraicStruct
+leftHand (Equation (x, _)) = x
 
-rhs :: Equation -> AlgebraicStruct
-rhs (Equation (_lhs, rhs)) = rhs
+rightHand :: Equation -> AlgebraicStruct
+rightHand (Equation (_, x)) = x
+
+getSymbol :: AlgebraicStruct -> Symbol
+getSymbol (Symbol x) = x
+getSymbol _ = error "given structure was not a symbol"
+
