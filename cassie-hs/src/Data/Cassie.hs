@@ -3,13 +3,13 @@ module Data.Cassie
     ( solvedFor
     , solvedForValue
     , solveSystem
-    -- , solveSystemNumerically
     ) where
 
 import safe Control.Arrow
 import safe Control.Monad
 import safe Data.List
 import safe qualified Data.Map as Map
+import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Set as Set
 import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
@@ -17,7 +17,7 @@ import safe Data.Cassie.Internal
 import safe Data.Cassie.Evaluate (evaluate, isConst, Context, CtxItem(..), EvalError)
 import safe Data.Cassie.Isolate (isolate, Steps, IsolateError)
 import safe Data.Cassie.Parser (parseEquation, CassieParserError)
-import safe Data.Cassie.Parser.Lang (parseFunction, CassieLangError)
+import safe Data.Cassie.Parser.Lang (parseFunction, CassieLangError, Symbols)
 import safe Data.Cassie.Structures (getSymbol, leftHand, rightHand, AlgebraicStruct(..), Equation(..), Symbol)
 
 -- | The Cassie 'compiler' monad for statefully building a 
@@ -29,8 +29,6 @@ type Solution = Map.Map Symbol SolutionValues
 type SolutionValues = (Equation, Steps, Either CassieError Double)
 
 type EquationPool = [(Equation, Symbols)]
-
-type Symbols = Set.Set Symbol
 
 data CassieError
     = ParseError CassieParserError
@@ -70,18 +68,19 @@ solveSystemMain = do
     if madeProgress then
         solveSystemMain
     else do
-        solvedSubsystem <- solveSystems
-        eqnPool <- getEqns
-        if solvedSubsystem then
-            solveSystemMain
-        else if length eqnPool /= 0 then
-            lift $ throwError FailedToFullySolve
-        else
-            return ()
+        return ()
+        -- solvedSubsystem <- solveSystems
+        -- eqnPool <- getEqns
+        -- if solvedSubsystem then
+        --     solveSystemMain
+        -- else if length eqnPool /= 0 then
+        --     lift $ throwError FailedToFullySolve
+        -- else
+        --     return ()
 
 -- | BIG TODO HERE - requires linear system substitution solver
-solveSystems :: Cassie Bool
-solveSystems = error "not implemented yet"
+-- solveSystems :: Cassie Bool
+-- solveSystems = error "not implemented yet"
 
 solveSingleUnknowns :: Cassie Bool
 solveSingleUnknowns = 
@@ -123,8 +122,11 @@ buildCtxAndEqnPool sys = do
 partitionEqnsAndFuncs :: String -> (Either CassieError EquationPool, [String])
 partitionEqnsAndFuncs = 
     let 
-        f1a ::String -> ([String], [String])
-        f1a = partition ('=' `elem`) . splitStrAt '\n'
+        f1a :: String -> ([String], [String])
+        f1a = splitStrAt '\n'
+            >>> filter isNonEmptyString
+            >>> map (NonEmpty.head . splitStrAt' '#')
+            >>> partition ('=' `elem`)
 
         f1b :: [String] -> Either CassieError EquationPool
         f1b = mapM $ left ParseError . parseEquation

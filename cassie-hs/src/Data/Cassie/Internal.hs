@@ -4,23 +4,29 @@ module Data.Cassie.Internal
     , second'
     , third
     , insertAt
+    , isNonEmptyString
     , splitStrAt
+    , splitStrAt'
     , throwM
     , truthTable2
     ) where
 
 import safe Control.Arrow
 import safe Control.Monad
+import safe qualified Data.Text as Text
+import safe qualified Data.List.NonEmpty as NonEmpty
 import safe Control.Monad.Trans (lift, MonadTrans)
 import safe Control.Monad.Except (throwError, Except)
-import safe qualified Data.Text as Text
 
 -- | Inserts a given value @x@ into a list of values at the @idx@th index.
 insertAt :: a -> Int -> [a] -> [a]
 insertAt x idx xs = (take idx xs) ++ (x:(drop idx xs))
 
 splitStrAt :: Char -> String -> [String]
-splitStrAt c = map (Text.unpack . Text.strip) . Text.split (== c) . Text.pack
+splitStrAt c = Prelude.map (Text.unpack . Text.strip) . Text.split (== c) . Text.pack
+
+splitStrAt' :: Char -> String -> NonEmpty.NonEmpty String
+splitStrAt' c = NonEmpty.map (Text.unpack . Text.strip) . NonEmpty.fromList . Text.split (== c) . Text.pack
 
 -- | Shorthand for throwing an @Except@ monad error
 throwM :: MonadTrans t => e -> t (Except e) a
@@ -55,3 +61,10 @@ second' f (x, y, z) = (x, f y, z)
 
 third :: (t -> c) -> (a, b, t) -> (a, b, c)
 third f (x, y, z) = (x, y, f z)
+
+isNonEmptyString :: String -> Bool
+isNonEmptyString str = 
+    let 
+        p :: Bool -> Char -> Bool
+        p b x = b || (not $ x `elem` " \n\r\t")
+    in foldl p False str
