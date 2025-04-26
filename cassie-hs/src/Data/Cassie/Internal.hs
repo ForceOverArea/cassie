@@ -1,6 +1,9 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Internal 
-    ( insertAt
+    ( first'
+    , second'
+    , third
+    , insertAt
     , splitStrAt
     , throwM
     , truthTable2
@@ -43,3 +46,12 @@ truthTable2 p x y q1 q2 q3 q4
         (False, False) -> q2
         (True, False) -> q3
         (False, True) -> q4
+
+first' :: (t -> a) -> (t, b, c) -> (a, b, c)
+first' f (x, y, z) = (f x, y, z) 
+
+second' :: (t -> b) -> (a, t, c) -> (a, b, c)
+second' f (x, y, z) = (x, f y, z) 
+
+third :: (t -> c) -> (a, b, t) -> (a, b, c)
+third f (x, y, z) = (x, y, f z)

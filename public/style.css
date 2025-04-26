@@ -1,11 +1,17 @@
 :root {
     background-color: #eeeeee;
-    color: black;
+    color: #404048;
+    background-color: black;
 }
 
 @font-face {
-    font-family: 'MinimalHard';
-    src: url('Minimalhard-yw2Y.ttf');
+    font-family: 'Minimalhard';
+    src: url('assets/fonts/Minimalhard-yw2Y.ttf');
+}
+
+@font-face {
+    font-family: 'IBMPlexMono-Regular';
+    src: url('assets/fonts/IBMPlexMono-Regular.ttf');
 }
 
 [contenteditable] {
@@ -28,11 +34,13 @@
 }
 
 .titlebar {
+    /* size */
     height: 80px;
     width: 100%;
 }
 
 .title {
+    /* cool font B) */
     font-family: 'MinimalHard';
     font-size: 80px;
 
@@ -40,11 +48,12 @@
 }
 
 .title-alt {
+    /* color for CAS in CASsie */
     color: mediumvioletred;
 }
 
 .version-tag {
-    font-size: 16px;
+    font-size: 20px;
 }
 
 .app-view {
@@ -52,19 +61,52 @@
     display: flex;
     flex-direction: row;
 
-    font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-family: 'IBMPlexMono-Regular';
+    color: lawngreen;
+    background-color: black;
+}
+
+.editor-border {
+    width: 60%;
+    padding: 30px;
 }
 
 .editor-pane {
-    width: 60%;
     font-size: 24pt;
-    padding: 30px;
-    border: 1px solid black;
+    border: 1px solid rgb(94, 188, 0);
+
+    height: 100%;
+}
+
+.editor-pane * {
+    filter: drop-shadow(3px, 3px, 3px);
+    caret-shape: block;
+}
+
+/* .editor-cli {
+    flex: 1;
+    display: flex;
+    align-items: center;
+
+    padding-top: 15px;
+    border: 1px solid lawngreen;
+    font-size: 16pt;
+} */
+
+.soln-border {
+    flex: 1;
+
+    padding-top: 30px;
+    padding-bottom: 30px;
+    padding-right: 30px;
 }
 
 .soln-pane {
     flex: 1;
     display: flex;
     justify-content: center;
+
     font-size: 16pt;
+    height: 100%;
+    border: 1px solid rgb(94, 188, 0);
 }

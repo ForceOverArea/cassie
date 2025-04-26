@@ -2,7 +2,7 @@
 module Data.Cassie 
     ( solvedFor
     , solvedForValue
-    -- , solveSystem
+    , solveSystem
     -- , solveSystemNumerically
     ) where
 
@@ -11,7 +11,7 @@ import safe Control.Monad
 import safe Data.List
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
-import safe Control.Monad.RWS (get, lift, modify, tell, execRWST, RWST)
+import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Data.Cassie.Internal
 import safe Data.Cassie.Evaluate (evaluate, isConst, Context, CtxItem(..), EvalError)
@@ -22,7 +22,11 @@ import safe Data.Cassie.Structures (getSymbol, leftHand, rightHand, AlgebraicStr
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.
-type Cassie = RWST () [(Equation, Steps)] (Context, EquationPool) (Except CassieError)
+type Cassie = StateT (Context, EquationPool, Solution) (Except CassieError)
+
+type Solution = Map.Map Symbol SolutionValues
+
+type SolutionValues = (Equation, Steps, Either CassieError Double)
 
 type EquationPool = [(Equation, Symbols)]
 
@@ -53,18 +57,11 @@ solvedForValue eqn sym ctx = do
     value' <- left EvaluationError $ evaluate value ctx
     return (value', eqn', steps)
 
-solveSystem :: String -> Either CassieError (Map.Map Symbol AlgebraicStruct)
-solveSystem sys = 
-    let 
-        removeFunctions ctx key (Const struct) = Map.insert name struct ctx
-        removeFunctions ctx key (Function _ _) = ctx
-    in do
-        ctxAndEqns <- buildCtxAndEqnPool sys
-        ((ctx, _eqns), _solns) <- (runExcept $ execRWST solveSystemMain () ctxAndEqns)
-        return $ removeFunctions ctx
-
--- solveSystemNumerically :: String -> Either CassieError (Map.Map Symbol Double)
--- solveSystemNumerically sys = Right Map.empty
+solveSystem :: String -> Either CassieError Solution
+solveSystem sys = do
+        (ctx, eqns) <- buildCtxAndEqnPool sys
+        (_, _, solnInfo) <- runExcept $ execStateT solveSystemMain (ctx, eqns, Map.empty)
+        return solnInfo
 
 solveSystemMain :: Cassie ()
 solveSystemMain = do
@@ -82,6 +79,7 @@ solveSystemMain = do
         else
             return ()
 
+-- | BIG TODO HERE - requires linear system substitution solver
 solveSystems :: Cassie Bool
 solveSystems = error "not implemented yet"
 
@@ -90,21 +88,24 @@ solveSingleUnknowns =
     let 
         isConstrained = (1 ==) . Set.size . snd
         solve1Unknown ctx = isolate' ctx . second Set.findMin
-        addSolutionToCtx eqn = do
-            let name = getSymbol $ leftHand eqn
-            let value = rightHand eqn 
-            modifyCtx (Map.insert name $ Const value)
     in do
         ctx <- getCtx
         constrained <- filter isConstrained <$> getEqns
         case mapM (solve1Unknown ctx) constrained of
-            Left err     -> lift (throwError $ IsolationError err)
+            Left err -> lift (throwError $ IsolationError err)
             Right [] -> return False
             Right solved -> do 
-                tell solved
-                mapM_ (addSolutionToCtx . fst) solved
+                mapM_ addSolution solved
                 return True
 
+addSolution :: (Equation, Steps) -> Cassie ()
+addSolution (eqn, steps) = do
+    let name = getSymbol $ leftHand eqn
+    let value = rightHand eqn 
+    numSoln <- flip evaluate' eqn <$> getCtx
+    modifyCtx $ Map.insert name (Const value)
+    addSoln name (eqn, steps, snd <$> numSoln)
+    
 updateUnknowns :: Cassie ()
 updateUnknowns = do
     knowns <- getKnownConsts
@@ -171,11 +172,11 @@ evaluate' ctx (Equation (Symbol x, rhs')) = do
     return (x, result)
 evaluate' _ _ = Left EvaluationArgError
 
-getEqns :: Cassie EquationPool
-getEqns = snd <$> get
-
 getCtx :: Cassie Context
-getCtx = fst <$> get
+getCtx = let f (x, _, _) = x in f <$> get
+
+getEqns :: Cassie EquationPool
+getEqns = let f (_, x, _) = x in f <$> get
 
 getKnownConsts :: Cassie Symbols
 getKnownConsts = do
@@ -183,14 +184,11 @@ getKnownConsts = do
     let f = isConst . (ctx Map.!)
     return $ Set.fromList . filter f . Map.keys $ ctx
 
-modifyEqns :: (EquationPool -> EquationPool) -> Cassie ()
-modifyEqns f = modify $ second f
-
 modifyCtx :: (Context -> Context) -> Cassie ()
-modifyCtx f = modify $ first f
+modifyCtx f = modify $ first' f
 
-putEqns :: EquationPool -> Cassie ()
-putEqns eqns = modifyEqns $ const eqns
+modifyEqns :: (EquationPool -> EquationPool) -> Cassie ()
+modifyEqns f = modify $ second' f
 
-putCtx :: Context -> Cassie ()
-putCtx ctx = modifyCtx $ const ctx
+addSoln :: Symbol -> SolutionValues -> Cassie ()
+addSoln sym sv = modify (third $ Map.insert sym sv)
