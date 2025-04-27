@@ -1,5 +1,4 @@
 {-# LANGUAGE Safe #-}
-{-# LANGUAGE InstanceSigs #-}
 module Data.Cassie.Structures 
     ( (~?)
     , getSymbol

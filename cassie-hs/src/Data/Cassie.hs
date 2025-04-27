@@ -3,6 +3,9 @@ module Data.Cassie
     ( solvedFor
     , solvedForValue
     , solveSystem
+    , showStepsFor
+    , CassieError
+    , Solution
     ) where
 
 import safe Control.Arrow
@@ -194,3 +197,12 @@ modifyEqns f = modify $ second' f
 
 addSoln :: Symbol -> SolutionValues -> Cassie ()
 addSoln sym sv = modify (third $ Map.insert sym sv)
+
+showStepsFor :: Symbol -> Solution -> IO () 
+showStepsFor name soln = 
+    let 
+        getSteps = do
+            (_, x, _) <- Map.lookup name soln
+            return x
+    in 
+        putStrLn $ show (intercalate "\n" <$> getSteps)

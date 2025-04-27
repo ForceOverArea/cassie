@@ -1,0 +1,5 @@
+fn myFunc(x, y, z) -> x + y * z     # this is a comment
+
+g = 1 - myFunc(2, h, 3)
+
+3 = g

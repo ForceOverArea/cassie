@@ -1,32 +1,43 @@
 module Main where
 
-import Control.Arrow ((|||))
-import Data.Cassie (solvedFor, solvedForValue')
-import Data.Cassie.Internal (parseContextString)
-import Data.Cassie.Structures (Equation)
+import Control.Arrow 
+import Control.Monad
+import qualified Data.Map as Map
+import Data.Aeson ()
+import Data.Cassie (solveSystem, CassieError, Solution)
+import Data.Cassie.Internal 
+import Data.Cassie.Isolate (Steps)
+import Data.Cassie.Structures (Equation, Symbol)
 import GHC.Wasm.Prim
 
 main = error "not necessary"
 
-solvedForHs :: JSString -> JSString -> JSString
-solvedForHs eqn target = 
-    let eqn' = fromJSString eqn
-        target' = fromJSString target
-    in case eqn' `solvedFor` target' of
-        Left _ -> toJSString ""
-        Right (soln, _steps) -> toJSString $ show soln
+solveSystemHs :: JSString -> JSVal -> JSVal
+solveSystemHs systemJS = 
+    let 
+        system = fromJSString systemJS
+    in case solveSystem system of
+        Left  err  -> (toJSString . show) err
+        Right soln -> let ks = Map.keys soln 
+            in map (buildSolnObject soln) ks
 
-solvedForValueHs :: JSString -> JSString -> JSString -> Double
-solvedForValueHs eqn target ctx =
-    let ctx' = parseContextString $ fromJSString ctx
-        eqn' = fromJSString eqn
-        target' = fromJSString target
-    in case solvedForValue' eqn' target' ctx' of
-        Left _ -> nan
-        Right (soln, _, _) -> soln
-    where 
-        nan :: Double
-        nan = 0.0 / 0.0
+buildSolnObject :: Solution -> Symbol -> JSVal
+buildSolnObject soln name = 
+    let 
+        f = first' getJSStrRep
+            >>> second' buildStepsArray
+            >>> third buildNumSolns
 
-foreign export javascript solvedForHs :: JSString -> JSString -> JSString
-foreign export javascript solvedForValueHs :: JSString -> JSString -> JSString -> Double
+        (symbolic, steps, numeric) = f $ soln Map.! name
+    in toJSArray [toJSString name, symbolic, steps, numeric]
+
+getJSStrRep :: Show a => a -> JSString
+getJSStrRep = toJSString . show
+
+buildStepsArray :: Steps -> JSVal
+buildStepsArray steps = toJSArray $ map toJSString steps
+
+buildNumSolns :: Either CassieError Double -> JSString
+buildNumSolns = join (|||) getJSStrRep
+
+foreign export javascript solveSystemHs :: JSString -> JSVal

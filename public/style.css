@@ -1,7 +1,7 @@
 :root {
     background-color: #eeeeee;
-    color: #404048;
-    background-color: black;
+    color: #606868;
+    background-color: #202028;
 }
 
 @font-face {
@@ -63,7 +63,7 @@
 
     font-family: 'IBMPlexMono-Regular';
     color: lawngreen;
-    background-color: black;
+    /* background-color: black; */
 }
 
 .editor-border {
