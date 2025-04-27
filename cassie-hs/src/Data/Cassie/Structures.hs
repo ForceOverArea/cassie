@@ -19,7 +19,7 @@ type Symbol = String
 newtype Equation = Equation (AlgebraicStruct, AlgebraicStruct)
 
 instance Show Equation where
-    show (Equation (lhs, rhs)) = show lhs ++ " = " ++ show rhs
+    show (Equation (lhs, rhs)) = show' lhs ++ " = " ++ show' rhs
 
 -- | Represents a (possibly nested) 'schoolyard algebra' structure
 data AlgebraicStruct

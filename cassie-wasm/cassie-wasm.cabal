@@ -18,12 +18,12 @@ common warnings
 
 executable cassie-wasm
     import:             warnings
-    ghc-options:        -no-hs-main -optl-Wl,--export=solvedForHs,--export=solvedForValueHs -optl-mexec-model=reactor
+    ghc-options:        -no-hs-main -optl-Wl,--export=solveSystemHs -optl-mexec-model=reactor
     main-is:            WasmBindings.hs
     -- other-modules:
     -- other-extensions:
-    build-depends:      aeson               >= 2.2.3.0,
-                        base               ^>= 4.21.0.0,
+    build-depends:      base               ^>= 4.21.0.0,
+                        -- aeson               >= 2.2.3.0,
                         cassie-hs           >= 0.1.0.0,
                         containers          >= 0.6.5.1,
                         ghc-experimental    >= 9.1202.0,
