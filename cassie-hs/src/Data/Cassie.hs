@@ -127,8 +127,8 @@ partitionEqnsAndFuncs =
     let 
         f1a :: String -> ([String], [String])
         f1a = splitStrAt '\n'
-            >>> filter isNonEmptyString
             >>> map (NonEmpty.head . splitStrAt' '#')
+            >>> filter isNonEmptyString
             >>> partition ('=' `elem`)
 
         f1b :: [String] -> Either CassieError EquationPool

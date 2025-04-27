@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Arrow 
+import Data.List
 import qualified Data.Map as Map
 import Data.Cassie (solveSystem, Solution)
 import Data.Cassie.Internal 
@@ -28,11 +29,13 @@ buildSolnObject soln name =
         postProcSoln = first' show  
             >>> second' show 
             >>> third getNumValOrErr
-        getNumValOrErr = left show
-            >>> right show
-    in "{ symbol: \"" ++ name ++           "\", \
-       \equation: \"" ++ show symbolic ++  "\", \
-          \steps: \"" ++ show steps ++     "\", \
-          \value: \"" ++ show numeric ++   "\", }"
+        getNumValOrErr x = case x of
+            Left y -> show y
+            Right z -> show z
+    in "{ symbol: \"" ++ name 
+        ++ "\", equation: \"" ++ show symbolic 
+        ++ "\", steps: \"" ++ show steps 
+        ++ "\", value: \"" ++ show numeric 
+        ++ "\", }"
 
 foreign export javascript solveSystemHs :: JSString -> JSString
