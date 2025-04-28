@@ -25,16 +25,28 @@ async function ensure_initialized() {
   }
 }
 
-export async function solveFor(eqn, target) {
-  await ensure_initialized();
-  return wasi.instance.exports.solvedForHs(eqn, target);
+const haskellStringCleanup = (x) => { 
+  return x.replaceAll('\\\\n', '<br>')
+    .replaceAll('\\"', '"')
+    .slice(1, -1);
 }
 
-export async function solveForValue(eqn, target, context) {
-  const ctxItems = [];
-  for (const [k, v] of Object.entries(context)) {
-    ctxItems.push(`${k}=${v}`);
-  }
+export async function solveSystem(systemText) {
+  let result;
+
   await ensure_initialized();
-  return wasi.instance.exports.solvedForValueHs(eqn, target, ctxItems.join(','));
+
+  const sanitized = haskellStringCleanup(
+    await wasi.instance.exports.solveSystemHs(systemText)
+  );
+
+  try {
+    result = JSON.parse(sanitized);
+    console.debug(JSON.stringify(result, null, 2));
+  } catch (err) {
+    result = sanitized;
+    console.error(err);
+    console.info(sanitized);
+  }
+  return result;
 }

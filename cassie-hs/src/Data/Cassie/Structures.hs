@@ -73,7 +73,7 @@ show' (Difference subtrahends) = intercalate " - " $ map show' subtrahends
 
 show' (Product factors) = intercalate " * " $ map show' factors
 
-show' (Quotient sor dend) = show' sor ++ " / " ++ show dend
+show' (Quotient sor dend) = show' sor ++ " / " ++ show' dend
 
 show' (Exponent b e) = show' b ++ " ^ " ++ show' e
 

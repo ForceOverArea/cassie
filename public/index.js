@@ -10,7 +10,16 @@ function main() {
   const soln_pane = document.getElementById(SOLN_PANE_ID);
   
   editor.oninput = async () => { 
-    soln_pane.innerHTML =  await solveSystem(editor.innerText);
+    const soln = await solveSystem(editor.innerText);
+    if ('string' === typeof soln) {
+      soln_pane.innerHTML = soln.toString();
+    } else { // assuming solution is an array of objects
+      const systemSoln = [];
+      for (const solved of soln) {
+        systemSoln.push(solved.equation);
+      }
+      soln_pane.innerHTML = systemSoln.join('<br>');
+    }
   }
 }
 
