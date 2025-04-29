@@ -15,7 +15,8 @@ solve equations given as an @AlgebraicStruct@.
 
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Isolate
-    ( isolate
+    ( isIsolated
+    , isolate
     , Steps
     , IsolateError
     ) where
@@ -104,6 +105,11 @@ setLhs lhs = do
 --   a solved equation and the steps taken to achieve the solution, or a @IsolateError@.
 isolate :: Equation -> Symbol -> Context -> Either IsolateError (Equation, Steps)
 isolate eqn sym ctx = runExcept $ execRWST isolateMain (sym, ctx) eqn
+
+isIsolated :: Equation -> Symbol -> Bool
+isIsolated eqn sym = case isolate eqn sym Map.empty of
+    Left _ -> False
+    Right (eqn', _) -> eqn == eqn'
 
 -- | The main control flow for isolating a symbol in an algebraic structure.
 isolateMain :: Isolate ()

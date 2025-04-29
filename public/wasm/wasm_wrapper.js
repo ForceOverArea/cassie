@@ -6,7 +6,9 @@ const WASM_MODULE_PATH = '/cassie/public/wasm/cassie-wasm.wasm';
 const jsffiExports = {};
 const wasi = new WASI({});
 
-async function ensure_initialized() {
+export async function init() {
+  const wasm_methods = {};
+
   if (wasi.hasBeenInitialized) {
     return;
   } else {
@@ -21,8 +23,11 @@ async function ensure_initialized() {
     wasi.initialize(wasm, {
       ghc_wasm_jsffi: ghc_wasm_jsffi(jsffiExports)
     });
-    // TODO: can anything else be made lazy here?
   }
+
+  wasm_methods.solveSystem = solveSystem;
+
+  return wasm_methods;
 }
 
 const haskellStringCleanup = (x) => { 
@@ -31,10 +36,8 @@ const haskellStringCleanup = (x) => {
     .slice(1, -1);
 }
 
-export async function solveSystem(systemText) {
+async function solveSystem(systemText) {
   let result;
-
-  await ensure_initialized();
 
   const sanitized = haskellStringCleanup(
     await wasi.instance.exports.solveSystemHs(systemText)

@@ -18,7 +18,7 @@ import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Data.Cassie.Internal
 import safe Data.Cassie.Evaluate (evaluate, isConst, Context, CtxItem(..), EvalError)
-import safe Data.Cassie.Isolate (isolate, Steps, IsolateError)
+import safe Data.Cassie.Isolate (isIsolated, isolate, Steps, IsolateError)
 import safe Data.Cassie.Parser (parseEquation, CassieParserError)
 import safe Data.Cassie.Parser.Lang (parseFunction, CassieLangError, Symbols)
 import safe Data.Cassie.Structures (getSymbol, leftHand, rightHand, AlgebraicStruct(..), Equation(..), Symbol)
@@ -140,7 +140,7 @@ partitionConstsAndEquations :: EquationPool -> ([(Equation, Symbol)], EquationPo
 partitionConstsAndEquations = 
     let 
         f2a :: EquationPool -> (EquationPool, EquationPool)
-        f2a = partition $ (== 1) . Set.size . snd
+        f2a = partition $ \(eq, syms) -> (Set.size syms == 1) && (isIsolated eq $ Set.findMin syms)
 
         f2b :: EquationPool -> [(Equation, Symbol)]
         f2b = map $ second Set.findMin

@@ -1,5 +1,4 @@
 :root {
-    background-color: #eeeeee;
     color: #606868;
     background-color: #202028;
 }
@@ -37,6 +36,9 @@
     /* size */
     height: 80px;
     width: 100%;
+
+    padding-left: 30px;
+    padding-top: 15px;
 }
 
 .title {
@@ -62,7 +64,7 @@
     flex-direction: row;
 
     font-family: 'IBMPlexMono-Regular';
-    color: lawngreen;
+    color: #d0d0d0;
     /* background-color: black; */
 }
 
@@ -72,29 +74,22 @@
 }
 
 .editor-pane {
-    font-size: 24pt;
-    border: 1px solid rgb(94, 188, 0);
+    font-size: 16pt;
+    border: 1px solid #d0d0d0;
+    color: yellowgreen;
 
     height: 100%;
 }
 
-.editor-pane * {
+/* .editor-pane * {
     filter: drop-shadow(3px, 3px, 3px);
     caret-shape: block;
-}
-
-/* .editor-cli {
-    flex: 1;
-    display: flex;
-    align-items: center;
-
-    padding-top: 15px;
-    border: 1px solid lawngreen;
-    font-size: 16pt;
 } */
 
 .soln-border {
     flex: 1;
+    display: flex;
+    flex-flow: column;
 
     padding-top: 30px;
     padding-bottom: 30px;
@@ -104,9 +99,57 @@
 .soln-pane {
     flex: 1;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
 
     font-size: 16pt;
-    height: 100%;
-    border: 1px solid rgb(94, 188, 0);
+    flex-basis: 85%;
+    flex-shrink: 0;
+    border: 1px solid #d0d0d0;
+    color: yellowgreen;
 }
+
+.toggle-border {
+    flex: 1;
+    display: flex;
+}
+
+.soln-toggle {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+
+    padding-top: 30px;
+}
+
+.toggle-option-border {
+    flex: 1;
+    display: flex;
+
+    /* padding-top: 15px; */
+    width: 48%;
+}
+
+.toggle-option-border.l {
+    padding-right: 15px;
+}
+
+.toggle-option-border.r {
+    padding-left: 15px;
+}
+
+.toggle-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    color: yellowgreen;
+    border: 1px solid #d0d0d0;
+}
+
+.toggle-option:hover {
+    color: #202028;
+    background-color: #d0d0d0;
+}
+
+/* .debug { border: 1px solid red; } */

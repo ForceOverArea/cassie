@@ -16,7 +16,7 @@ import safe Data.List
 type Symbol = String
 
 -- | An equation represented by two algebraic structures whose values are deemed to be equivalent
-newtype Equation = Equation (AlgebraicStruct, AlgebraicStruct)
+newtype Equation = Equation (AlgebraicStruct, AlgebraicStruct) deriving Eq
 
 instance Show Equation where
     show (Equation (lhs, rhs)) = show' lhs ++ " = " ++ show' rhs
