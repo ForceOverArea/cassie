@@ -69,7 +69,11 @@ async function trySolveSystem() {
 
 export function showStepsFor(symbol, soln) {
   const target = soln.find(x => x.symbol == symbol);
-  return `Showing steps to solve for ${symbol}:<br>${target.steps}`;
+  return `Showing steps to solve for ${symbol}:<br>${
+    target.steps
+      .replaceAll(/log\s*</g, 'log&lt;') // TODO: this should really be handled in Glue.hs...
+      .replaceAll(/>\s*\(/g, '&gt;(')
+  }`;
 }
 
 function renderSolnAs(soln, solnKind) {
