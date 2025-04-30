@@ -12,8 +12,17 @@ export async function init() {
   if (wasi.hasBeenInitialized) {
     return;
   } else {
+    let fetchedWasm = await fetch(WASM_MODULE_PATH);
+    
+    // This is a hack to make this script work with the deno dev server script.
+    if (fetchedWasm.status !== 200) {
+      fetchedWasm = await fetch(
+        WASM_MODULE_PATH.replace('/cassie', '')
+      );
+    }
+
     const wasm = await WebAssembly.instantiateStreaming(
-      fetch(WASM_MODULE_PATH),
+      fetchedWasm,
       Object.assign(
         { ghc_wasm_jsffi: ghc_wasm_jsffi(jsffiExports) },
         wasi.getImportObject()

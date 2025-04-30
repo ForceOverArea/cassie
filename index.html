@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CASsie v0.1.0.0</title>
-  <link rel="shortcut icon" href="public/assets/images/cassie_logo.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="public/assets/images/cassie_logo_lighter.ico" type="image/x-icon">
   <link rel="stylesheet" href="./public/style.css">
   <script type="module" src="./public/index.js" defer></script>
 </head>
@@ -12,10 +12,9 @@
   <div id="outermost" class="outermost top-left debug">
     <span id="titlebar" class="titlebar top-left debug">
       <span>
-        <!-- &nbsp; -->
         <img src="public/assets/images/cassie_logo_lighter.png" 
           alt="the cassie logo: a winking computer terminal"
-          height="46px">
+          height="41px">
       </span>
       <span class="title">
         <span class="title-alt">Cas</span>sie
@@ -31,17 +30,16 @@
           <div><br></div>
           <div>b = f(a) + 3<br></div>
         </div>
-        <!-- <div id="editor-cli" class="editor-cli" contenteditable="true"></div> -->
       </div>
         <div id="soln-border" class="soln-border border debug">
           <div id="soln-pane" class="soln-pane debug"></div>
           <div id="toggle-border" class="toggle-border debug">
             <div id="soln-toggle" class="soln-toggle debug">
               <div id="symbolic-toggle" class="toggle-option-border l">
-                <div id="toggle-option" class="toggle-option">Symbolic</div>
+                <div id="toggle-option" class="toggle-option quick-fill clickable">Symbolic</div>
               </div>
               <div id="numeric-toggle" class="toggle-option-border r">
-                <div id="toggle-option" class="toggle-option">Numeric</div>
+                <div id="toggle-option" class="toggle-option quick-fill clickable">Numeric</div>
               </div>
             </div>
           </div>

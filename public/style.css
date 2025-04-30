@@ -1,11 +1,11 @@
 :root {
     color: #606868;
-    background-color: #202028;
+    background-image: url('assets/images/hud-grid-pattern-background-04_758394-54-3854030843-edited-dark2.png');
 }
 
 @font-face {
     font-family: 'Minimalhard';
-    src: url('assets/fonts/Minimalhard-yw2Y.ttf');
+    src: url('assets/fonts/Minimalhard2-9YxK.ttf');
 }
 
 @font-face {
@@ -36,22 +36,22 @@
     /* size */
     height: 80px;
     width: 100%;
-
+    /* alignment */
     padding-left: 30px;
-    padding-top: 15px;
+    /* padding-top: 15px; */
 }
 
 .title {
-    /* cool font B) */
+    /* cool font */
     font-family: 'MinimalHard';
     font-size: 80px;
-
+    /* alignment */
     padding-left: 7px;
 }
 
 .title-alt {
-    /* color for CAS in CASsie */
-    color: mediumvioletred;
+    /* text color for CAS in CASsie */
+    color: rgb(255, 0, 162);
 }
 
 .version-tag {
@@ -69,29 +69,29 @@
 }
 
 .editor-border {
+    /* size */
     width: 60%;
-    padding: 30px;
+    /* alignment */
+    padding-bottom: 30px;
+    padding-left: 30px;
+    padding-right: 30px;
 }
 
 .editor-pane {
     font-size: 16pt;
     border: 1px solid #d0d0d0;
     color: yellowgreen;
+    background-color: #202028C0;
 
     height: 100%;
 }
 
-/* .editor-pane * {
-    filter: drop-shadow(3px, 3px, 3px);
-    caret-shape: block;
-} */
-
 .soln-border {
+    /*  */
     flex: 1;
     display: flex;
     flex-flow: column;
 
-    padding-top: 30px;
     padding-bottom: 30px;
     padding-right: 30px;
 }
@@ -103,10 +103,11 @@
     align-items: center;
 
     font-size: 16pt;
-    flex-basis: 85%;
+    flex-basis: 80%;
     flex-shrink: 0;
     border: 1px solid #d0d0d0;
     color: yellowgreen;
+    background-color: #202028C0;
 }
 
 .toggle-border {
@@ -126,7 +127,6 @@
     flex: 1;
     display: flex;
 
-    /* padding-top: 15px; */
     width: 48%;
 }
 
@@ -139,17 +139,45 @@
 }
 
 .toggle-option {
+    /* alignment */
     display: flex;
     align-items: center;
     justify-content: center;
+    /* size */
     width: 100%;
-    color: yellowgreen;
+    /* coloring */
+    background: linear-gradient(to right, #d0d0d0 50%, #202028C0 50%);
     border: 1px solid #d0d0d0;
 }
 
 .toggle-option:hover {
     color: #202028;
-    background-color: #d0d0d0;
+}
+
+.sym-soln-entry {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    background: linear-gradient(to right, yellowgreen 50%, #00000000 50%);
+    transition: all 0.2s ease;
+}
+
+.sym-soln-entry:hover {
+    color: #202028;
+}
+
+.quick-fill {
+    background-size: 200% 100%;
+    background-position: right bottom;
+    transition: all 0.3s ease;
+}
+
+.quick-fill:hover {
+    background-position: left bottom;
+}
+
+.clickable {
+    cursor: pointer;
 }
 
 /* .debug { border: 1px solid red; } */

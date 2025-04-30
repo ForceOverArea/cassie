@@ -77,7 +77,7 @@ show' (Quotient sor dend) = show' sor ++ " / " ++ show' dend
 
 show' (Exponent b e) = show' b ++ " ^ " ++ show' e
 
-show' (Logarithm b l) = "log " ++ show' b ++ "(" ++ show' l ++ ")"
+show' (Logarithm b l) = "log<" ++ show' b ++ ">(" ++ show' l ++ ")"
 
 show' (Function n a) = n ++ "(" ++ intercalate "," (map show' a) ++ ")"
 
