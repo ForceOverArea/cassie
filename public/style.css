@@ -1,6 +1,7 @@
 :root {
-    color: #606868;
-    background-image: url('assets/images/hud-grid-pattern-background-04_758394-54-3854030843-edited-dark2.png');
+    color: #404848;
+    /* background-image: url('assets/images/hud-grid-pattern-background-04_758394-54-3854030843-edited-dark2.png'); */
+    background-color: #b0b0b0;
 }
 
 @font-face {
@@ -79,7 +80,7 @@
 
 .editor-pane {
     font-size: 16pt;
-    border: 1px solid #d0d0d0;
+    /* border: 1px solid #d0d0d0; */
     color: yellowgreen;
     background-color: #202028C0;
 
@@ -105,7 +106,7 @@
     font-size: 16pt;
     flex-basis: 80%;
     flex-shrink: 0;
-    border: 1px solid #d0d0d0;
+    /* border: 1px solid #d0d0d0; */
     color: yellowgreen;
     background-color: #202028C0;
 }
@@ -147,7 +148,7 @@
     width: 100%;
     /* coloring */
     background: linear-gradient(to right, #d0d0d0 50%, #202028C0 50%);
-    border: 1px solid #d0d0d0;
+    /* border: 1px solid #d0d0d0; */
 }
 
 .toggle-option:hover {
