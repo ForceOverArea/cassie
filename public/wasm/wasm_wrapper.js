@@ -40,7 +40,10 @@ export async function init() {
 }
 
 const haskellStringCleanup = (x) => { 
-  return x.replaceAll('\\\\n', '<br>')
+  return x
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('\\\\n', '<br>')
     .replaceAll('\\"', '"')
     .slice(1, -1);
 }

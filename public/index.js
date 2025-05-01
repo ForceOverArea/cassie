@@ -61,30 +61,24 @@ async function trySolveSystem() {
     for (const x of soln) {
       const solnTag = document.getElementById(solnUID(x.symbol));
       solnTag.onclick = () => { 
-        SOLN_PANE.innerHTML = showStepsFor(x.symbol, soln) ;
+        const steps = showStepsFor(x.symbol, soln); //.split('');
+        SOLN_PANE.innerHTML = steps;
       };
     }
   }
 }
 
-export function showStepsFor(symbol, soln) {
+function showStepsFor(symbol, soln) {
   const target = soln.find(x => x.symbol == symbol);
-  return `Showing steps to solve for ${symbol}:<br>${
-    target.steps
-      .replaceAll(/log\s*</g, 'log&lt;') // TODO: this should really be handled in Glue.hs...
-      .replaceAll(/>\s*\(/g, '&gt;(')
-  }`;
+  return `Showing steps to solve for ${symbol}:<br>${target.steps}`;
 }
 
 function renderSolnAs(soln, solnKind) {
-  const classes = 'sym-soln-entry quick-fill clickable';
-
+  const classes = 'sym-soln-entry quick-fill quicker clickable';
   if (solnKind === SolnShowStates.NUMERIC) {
     return `${soln.symbol} = ${soln.maybeValue}`;
   } else if (solnKind === SolnShowStates.SYMBOLIC) {
-    return `<div id="${solnUID(soln.symbol)}" class="${classes}">${
-      soln.equation
-    }</div>`;
+    return `<div id="${solnUID(soln.symbol)}" class="${classes}">${soln.equation}</div>`;
   }
 }
 

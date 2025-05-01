@@ -170,7 +170,7 @@
 .quick-fill {
     background-size: 200% 100%;
     background-position: right bottom;
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
 }
 
 .quick-fill:hover {
