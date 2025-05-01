@@ -244,4 +244,3 @@ chooseBranch x y l r = do
         (throwM $ NeedsPolysolve)
         l
         r
-

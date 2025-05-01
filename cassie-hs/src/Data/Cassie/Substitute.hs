@@ -44,6 +44,7 @@ data SubstitutionError
     | BinaryStructureContainedNone
     | NotDelimitedStructure
     | NotBinaryStructure
+    deriving Eq
 
 instance Show SubstitutionError where
     show (IncorrectNumOfTermsToRebuild structures (Just crumb))
@@ -117,7 +118,7 @@ data AlgCrumb
                 }
     | Singular  { kind    :: AlgebraicStruct        -- ^ The kind of structure that this structure contains
                 }
-    deriving Show
+    deriving (Show, Eq)
 
 -- | The @Substitute@ zipper monad type for statefully traversing 
 --   an @AlgebraicStruct@ parser tree.
