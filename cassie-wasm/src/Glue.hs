@@ -5,16 +5,19 @@ module Glue
 
 import Data.List
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Cassie (CassieError, Solution)
+import Data.Cassie.Evaluate (Context, CtxItem)
 import Data.Cassie.Isolate (Steps)
 import Data.Cassie.Structures (Equation, Symbol)
 
-newtype SingleSoln = SingleSoln (String, Equation, Steps, Either CassieError Double)
+newtype Solution' = Solution' (String, Equation, Steps, Either CassieError Double)
 
-instance A.ToJSON SingleSoln where
-    toJSON (SingleSoln (sym, eqn, steps, val)) = 
+instance A.ToJSON Solution' where
+    toJSON (Solution' (sym, eqn, steps, val)) = 
         let 
             unwrap :: Either CassieError Double -> A.Value
             unwrap x = case x of
@@ -29,17 +32,30 @@ instance A.ToJSON SingleSoln where
                     , "maybeValue" A..= unwrap val
                     ]
 
-cassieWrapper :: Either CassieError Solution -> String
+newtype CtxItem' = CtxItem' CtxItem
+
+instance A.ToJSON CtxItem' where
+    toJSON (CtxItem' ci) = A.toJSON $ show ci
+
+cassieWrapper :: Either CassieError (Context, Solution) -> String
 cassieWrapper possSoln = show . A.encode
     $ case possSoln of
         Left err   -> jsonify err
-        Right soln -> A.toJSON $ map (buildSingleSolnObject soln) (Map.keys soln)
+        Right (ctx, soln) -> A.object [ "context"  A..= buildJSONContext ctx
+                                      , "solution" A..= buildJSONSoln soln
+                                      ]
+
+buildJSONContext :: Context -> A.Value
+buildJSONContext = A.toJSON . AKM.fromMap . Map.map CtxItem' . Map.mapKeys AK.fromString
+
+buildJSONSoln :: Solution -> A.Value
+buildJSONSoln soln = A.toJSON $ map (buildSingleSolnObject soln) (Map.keys soln)
 
 buildSingleSolnObject :: Solution -> Symbol -> A.Value
 buildSingleSolnObject soln name = 
     let 
         (symbolic, steps, numeric) = soln Map.! name
-    in A.toJSON $ SingleSoln (name, symbolic, steps, numeric)
+    in A.toJSON $ Solution' (name, symbolic, steps, numeric)
 
 jsonify :: Show a => a -> A.Value
 jsonify = (A.String . Text.show)

@@ -27,7 +27,7 @@ import safe qualified Data.Map as Map
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.Trans (lift)
-import safe Data.Cassie.Structures (AlgebraicStruct(..), Symbol)
+import safe Data.Cassie.Structures (showAlgStruct, AlgebraicStruct(..), Symbol)
 import safe Data.Cassie.Substitute (substituteFuncArgs, SubstitutionError)
 
 -- | A concrete @Data.Map@ type for providing context to the algorithm
@@ -39,7 +39,16 @@ type Context = Map.Map Symbol CtxItem
 data CtxItem 
     = Const AlgebraicStruct 
     | Func [Symbol] AlgebraicStruct
-    deriving (Show, Eq)
+    deriving Eq
+
+instance Show CtxItem where
+    show (Const algStruct) = 
+        case evaluate algStruct Map.empty of
+            Left _ -> showAlgStruct algStruct
+            Right val -> show val
+    
+    show (Func args algStruct) =
+        "(" ++ intercalate "," args ++ ") -> " ++ showAlgStruct algStruct
 
 -- | An error that may be thrown by @evaluate@.
 data EvalError 

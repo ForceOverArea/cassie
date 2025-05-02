@@ -58,11 +58,11 @@ solvedForValue eqn sym ctx = do
     value' <- left EvaluationError $ evaluate value ctx
     return (value', eqn', steps)
 
-solveSystem :: String -> Either CassieError Solution
+solveSystem :: String -> Either CassieError (Context, Solution)
 solveSystem sys = do
         (ctx, eqns) <- buildCtxAndEqnPool sys
         (_, _, solnInfo) <- runExcept $ execStateT solveSystemMain (ctx, eqns, Map.empty)
-        return solnInfo
+        return (ctx, solnInfo)
 
 solveSystemMain :: Cassie ()
 solveSystemMain = do

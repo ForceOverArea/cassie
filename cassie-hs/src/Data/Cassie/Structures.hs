@@ -4,7 +4,7 @@ module Data.Cassie.Structures
     , getSymbol
     , leftHand
     , rightHand
-    , show'
+    , showAlgStruct
     , AlgebraicStruct(..)
     , Equation(..)
     , Symbol
@@ -19,7 +19,7 @@ type Symbol = String
 newtype Equation = Equation (AlgebraicStruct, AlgebraicStruct) deriving Eq
 
 instance Show Equation where
-    show (Equation (lhs, rhs)) = show' lhs ++ " = " ++ show' rhs
+    show (Equation (lhs, rhs)) = showAlgStruct lhs ++ " = " ++ showAlgStruct rhs
 
 -- | Represents a (possibly nested) 'schoolyard algebra' structure
 data AlgebraicStruct
@@ -66,26 +66,26 @@ data AlgebraicStruct
     | Symbol String
     deriving (Show, Eq, Ord)
 
-show' :: AlgebraicStruct -> String
-show' (Sum terms) = intercalate " + " $ map show' terms
+showAlgStruct :: AlgebraicStruct -> String
+showAlgStruct (Sum terms) = intercalate " + " $ map showAlgStruct terms
 
-show' (Difference subtrahends) = intercalate " - " $ map show' subtrahends
+showAlgStruct (Difference subtrahends) = intercalate " - " $ map showAlgStruct subtrahends
 
-show' (Product factors) = intercalate " * " $ map show' factors
+showAlgStruct (Product factors) = intercalate " * " $ map showAlgStruct factors
 
-show' (Quotient sor dend) = show' sor ++ " / " ++ show' dend
+showAlgStruct (Quotient sor dend) = showAlgStruct sor ++ " / " ++ showAlgStruct dend
 
-show' (Exponent b e) = show' b ++ " ^ " ++ show' e
+showAlgStruct (Exponent b e) = showAlgStruct b ++ " ^ " ++ showAlgStruct e
 
-show' (Logarithm b l) = "log<" ++ show' b ++ ">(" ++ show' l ++ ")"
+showAlgStruct (Logarithm b l) = "log<" ++ showAlgStruct b ++ ">(" ++ showAlgStruct l ++ ")"
 
-show' (Function n a) = n ++ "(" ++ intercalate "," (map show' a) ++ ")"
+showAlgStruct (Function n a) = n ++ "(" ++ intercalate "," (map showAlgStruct a) ++ ")"
 
-show' (Group g) = "(" ++ show' g ++ ")"
+showAlgStruct (Group g) = "(" ++ showAlgStruct g ++ ")"
 
-show' (Value val) = show val
+showAlgStruct (Value val) = show val
 
-show' (Symbol sym) = sym
+showAlgStruct (Symbol sym) = sym
 
 -- | A binary operation that reveals whether @sym@ is present as 
 --   a raw symbol in the given @AlgebraicStruct@.
