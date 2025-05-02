@@ -12,9 +12,9 @@ const wasmImports = {
   solveSystem() {}
 };
 
-init().then((wasi_reactor) => {
-  Object.assign(wasmImports, wasi_reactor);
-});
+function onInitialization() {
+  trySolveSystem();
+}
 
 // script is deferred, so main function can safely access DOM.
 function main() {
@@ -22,12 +22,12 @@ function main() {
 
   SYMBOLIC_TOGGLE.onclick = () => {
     solnShowState_global = SolnShowStates.SYMBOLIC;
-    EDITOR.oninput();
+    trySolveSystem();
   }
 
   NUMERIC_TOGGLE.onclick = () => {
     solnShowState_global = SolnShowStates.NUMERIC;
-    EDITOR.oninput();
+    trySolveSystem();
   }
 }
 
@@ -44,3 +44,8 @@ async function trySolveSystem() {
 }
 
 main();
+
+init().then((wasi_reactor) => {
+  Object.assign(wasmImports, wasi_reactor);
+  onInitialization();
+});
