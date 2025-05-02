@@ -27,7 +27,8 @@ export function renderSymbolic(cassieSoln) {
   for (const [i, { steps, symbol }] of cassieSoln.solution.entries()) {
     const elem = document.getElementById(SYM_SOLN_ID_PREFIX + i);
     elem.onclick = () => {
-      SOLN_PANE.innerHTML = `Showing steps to solve for ${symbol}:<br>${steps}`;
+      SOLN_PANE.innerHTML = solnHeader(`Showing steps to solve for ${symbol}:`) 
+        + `<br>${steps}`;
     }
   }
 }
