@@ -1,5 +1,5 @@
-import { init } from './wasm/wasm_wrapper.js'
-import { renderNumeric, renderSymbolic } from './outputRendering.js'
+import { init } from './wasm/wasm_wrapper.js';
+import { renderNumeric, renderSymbolic } from './outputRendering.js';
 import { EDITOR, NUMERIC_TOGGLE, SOLN_PANE, SYMBOLIC_TOGGLE } from "./domElements.js";
 
 const SolnShowStates = {
@@ -31,8 +31,6 @@ function main() {
   }
 }
 
-main();
-
 async function trySolveSystem() { 
   const soln = await wasmImports.solveSystem(EDITOR.innerText);
   
@@ -45,3 +43,4 @@ async function trySolveSystem() {
   }
 }
 
+main();

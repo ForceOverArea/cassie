@@ -1,7 +1,7 @@
 :root {
     color: #404848;
-    /* background-image: url('assets/images/hud-grid-pattern-background-04_758394-54-3854030843-edited-dark2.png'); */
-    background-color: #b0b0b0;
+    background-image: url('assets/images/abstract-white-wave-or-wavy-line-background-and-texture-vector-1307380358.jpg');
+    /* background-color: #b0b0b0; */
 }
 
 @font-face {
@@ -31,12 +31,14 @@
     flex-direction: column;
     justify-content: center;
     text-align: left;
+
+    background-color: #808080B0;
 }
 
 .titlebar {
     /* size */
     height: 80px;
-    width: 100%;
+    width: 95%;
     /* alignment */
     padding-left: 30px;
     /* padding-top: 15px; */
@@ -65,7 +67,7 @@
     flex-direction: row;
 
     font-family: 'IBMPlexMono-Regular';
-    color: #d0d0d0;
+    color: #D0D0D0;
     /* background-color: black; */
 }
 
@@ -80,15 +82,14 @@
 
 .editor-pane {
     font-size: 16pt;
-    /* border: 1px solid #d0d0d0; */
-    color: yellowgreen;
+
+    color: #D0D0D0;
     background-color: #202028C0;
 
     height: 100%;
 }
 
 .soln-border {
-    /*  */
     flex: 1;
     display: flex;
     flex-flow: column;
@@ -106,8 +107,8 @@
     font-size: 16pt;
     flex-basis: 80%;
     flex-shrink: 0;
-    /* border: 1px solid #d0d0d0; */
-    color: yellowgreen;
+    
+    color: #D0D0D0;
     background-color: #202028C0;
 }
 
@@ -122,6 +123,12 @@
     flex-direction: row;
 
     padding-top: 30px;
+}
+
+.soln-header {
+    display: flex;
+    align-items: left baseline;
+    width: 100%;
 }
 
 .toggle-option-border {
@@ -147,8 +154,8 @@
     /* size */
     width: 100%;
     /* coloring */
-    background: linear-gradient(to right, #d0d0d0 50%, #202028C0 50%);
-    /* border: 1px solid #d0d0d0; */
+    background: linear-gradient(to right, #D0D0D0 50%, #202028C0 50%);
+    /* border: 1px solid #D0D0D0; */
 }
 
 .toggle-option:hover {
@@ -159,7 +166,7 @@
     display: flex;
     justify-content: center;
     width: 100%;
-    background: linear-gradient(to right, yellowgreen 50%, #00000000 50%);
+    background: linear-gradient(to right, #D0D0D0 50%, #00000000 50%);
     transition: all 0.2s ease;
 }
 
