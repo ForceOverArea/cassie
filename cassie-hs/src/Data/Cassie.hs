@@ -60,9 +60,9 @@ solvedForValue eqn sym ctx = do
 
 solveSystem :: String -> Either CassieError (Context, Solution)
 solveSystem sys = do
-        (ctx, eqns) <- buildCtxAndEqnPool sys
-        (_, _, solnInfo) <- runExcept $ execStateT solveSystemMain (ctx, eqns, Map.empty)
-        return (ctx, solnInfo)
+    (ctx, eqns) <- buildCtxAndEqnPool sys
+    (_, _, solnInfo) <- runExcept $ execStateT solveSystemMain (ctx, eqns, Map.empty)
+    return (ctx, solnInfo)
 
 solveSystemMain :: Cassie ()
 solveSystemMain = do

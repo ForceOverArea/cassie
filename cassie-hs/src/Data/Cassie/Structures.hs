@@ -3,6 +3,7 @@ module Data.Cassie.Structures
     ( (~?)
     , getSymbol
     , leftHand
+    , reciprocal
     , rightHand
     , showAlgStruct
     , AlgebraicStruct(..)
@@ -120,3 +121,7 @@ getSymbol :: AlgebraicStruct -> Symbol
 getSymbol (Symbol x) = x
 getSymbol _ = error "given structure was not a symbol"
 
+-- | Maps a given algebraic structure to its reciprocal.
+reciprocal :: AlgebraicStruct -> AlgebraicStruct
+reciprocal (Quotient (Value 1.0) s) = s
+reciprocal x = Quotient (Value 1.0) x
