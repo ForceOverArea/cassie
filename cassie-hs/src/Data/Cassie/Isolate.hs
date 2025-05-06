@@ -24,9 +24,10 @@ module Data.Cassie.Isolate
 import safe Data.List
 import safe qualified Data.Map as Map
 import safe Control.Monad.RWS (asks, get, put, tell, execRWST, RWST(..))
-import safe Control.Monad.Except (runExcept, Except)
+import safe Control.Monad.Except (catchError, runExcept, Except)
 import safe Data.Cassie.Evaluate (Context, CtxItem(..))
 import safe Data.Cassie.Internal
+import safe Data.Cassie.Isolate.PolySolve (factorize)
 import safe Data.Cassie.Structures ((~?), AlgebraicStruct(..), Equation (Equation), Symbol)
 import safe Data.Cassie.Substitute (substituteFuncArgs, SubstitutionError)
 
@@ -36,7 +37,7 @@ type Steps = [String]
 -- | An error type that may be thrown when attempting to solve an equation
 --   by symbolic isolation.
 data IsolateError
-    = NeedsPolysolve
+    = NeedsPolysolve AlgebraicStruct
     | SymbolNotFound String
     | IsolationErrorOccurred
     | FunctionArgumentsIncorrect Int Int
@@ -45,7 +46,7 @@ data IsolateError
     | NotAFunction String
 
 instance Show IsolateError where
-    show NeedsPolysolve 
+    show (NeedsPolysolve _struct)
         = "the solution requires polysolving capability that is\
         \ not yet supported"
     
@@ -233,7 +234,9 @@ isolatePolynomialTerm terms = do
     case wrapped of 
         [x] -> setLhs x >> return wrapper
         [] -> throwM $ SymbolNotFound sym
-        _ -> throwM NeedsPolysolve
+        (x:xs) -> throwM NeedsPolysolve 
+
+-- isolateSumOrDifference :: [terms] 
 
 -- | Helper function for isolating the target symbol in the arguments of a binary algebraic structure.
 chooseBranch :: AlgebraicStruct -> AlgebraicStruct -> Isolate a -> Isolate a -> Isolate a
@@ -241,6 +244,6 @@ chooseBranch x y l r = do
     sym <- asks fst
     truthTable2 (~? sym) x y
         (throwM $ SymbolNotFound sym)
-        (throwM $ NeedsPolysolve)
+        (throwM $ NeedsPolysolve $ Symbol "structure details not provided")
         l
         r
