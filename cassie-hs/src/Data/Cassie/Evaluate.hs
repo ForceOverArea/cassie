@@ -17,38 +17,17 @@ an @AlgebraicStruct@ to a numerical value given enough context.
 module Data.Cassie.Evaluate
     ( evaluate
     , isConst
-    , Context
-    , CtxItem(..)
     , EvalError
     ) where
 
-import safe Data.List
 import safe qualified Data.Map as Map
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.Trans (lift)
-import safe Data.Cassie.Structures (showAlgStruct, AlgebraicStruct(..), Symbol)
-import safe Data.Cassie.Substitute (substituteFuncArgs, SubstitutionError)
-
--- | A concrete @Data.Map@ type for providing context to the algorithm
---   for evaluating an @AlgebraicStruct@ to a numeric value.
-type Context = Map.Map Symbol CtxItem
-
--- | A value in a @Context@ instance that may represent either a known
---   constant or a known function in an @AlgebraicStructure@.
-data CtxItem 
-    = Const AlgebraicStruct 
-    | Func [Symbol] AlgebraicStruct
-    deriving Eq
-
-instance Show CtxItem where
-    show (Const algStruct) = 
-        case evaluate algStruct Map.empty of
-            Left _ -> showAlgStruct algStruct
-            Right val -> show val
-    
-    show (Func args algStruct) =
-        "(" ++ intercalate "," args ++ ") -> " ++ showAlgStruct algStruct
+import safe Data.Cassie.Structures.Internal (AlgStruct(..), Context, CtxItem(..), Symbol)
+import safe Data.Cassie.Structures.Magmas (MagmaMock(evalMagma))
+import safe Data.Cassie.Structures.UnarySystems (UnaryMock(evalUnary))
+import safe Data.Cassie.Substitute (substituteFnArgs, SubstitutionError)
 
 -- | An error that may be thrown by @evaluate@.
 data EvalError 
@@ -79,73 +58,38 @@ instance Show EvalError where
 
 -- | The @Evaluate@ monad transformer stack for providing immutable access to
 --   a @Context@ and reporting errors when attempting to evaluate an @AlgebraicStruct@. 
-type Evaluate = ReaderT Context (Except EvalError)
+type Evaluate m u n = ReaderT (Context m u n) (Except EvalError)
 
 -- | Evaluates a given @AlgebraicStruct@ to a numeric value given some @Context@.
 --   This function may fail, returning a @Left EvalError@ in the process.
-evaluate :: AlgebraicStruct -> Context -> Either EvalError Double
+evaluate :: (MagmaMock m n, UnaryMock u n) => AlgStruct m u n -> Context m u n -> Either EvalError n
 evaluate expr ctx = runExcept $ runReaderT (evaluateMain expr) ctx
 
 -- | The main control flow for evaluating an @AlgebraicStruct@ to a numeric value.
-evaluateMain :: AlgebraicStruct -> Evaluate Double
-evaluateMain x = case x of
-    Sum terms              -> evaluateSum terms
-    Difference subtrahends -> evaluateDiff subtrahends
-    Product factors        -> evaluateProd factors
-    Quotient d s           -> evaluateQuotient d s
-    Exponent b e           -> evaluateExponent b e
-    Logarithm b l          -> evaluateLog b l
-    Function n a           -> evaluateFunction n a
-    Group g                -> evaluateMain g
-    Value v                -> return v
-    Symbol s               -> getConst s >>= evaluateMain
-
--- | Control flow for evaluating the sum of multiple terms.
-evaluateSum :: [AlgebraicStruct] -> Evaluate Double
-evaluateSum terms = sum <$> mapM evaluateMain terms
-
--- | Control flow for evaluating the difference of multiple subtrahends.
-evaluateDiff :: [AlgebraicStruct] -> Evaluate Double
-evaluateDiff subtrahends =
-    case uncons subtrahends of
-        Nothing -> lift $ throwError ZeroOrSingleTermPolynomial
-        Just (hd, tl) -> do
-            hd' <- evaluateMain hd
-            tl' <- mapM evaluateMain tl
-            return $ foldl (-) hd' tl'
-
--- | Control flow for evaluating the product of multiple factors.
-evaluateProd :: [AlgebraicStruct] -> Evaluate Double
-evaluateProd factors = product <$> mapM evaluateMain factors
-
--- | Control flow for evaluating the quotient of a dividend and a divisor.
-evaluateQuotient :: AlgebraicStruct -> AlgebraicStruct -> Evaluate Double
-evaluateQuotient d s = do
-    d' <- evaluateMain d
-    s' <- evaluateMain s
-    return $ d' / s'
-
--- | Control flow for evaluating the exponent of a base value.
-evaluateExponent :: AlgebraicStruct -> AlgebraicStruct -> Evaluate Double
-evaluateExponent b e = do
-    b' <- evaluateMain b
-    e' <- evaluateMain e
-    return $ b' ** e'
-
--- | Control flow for evaluating the logarithm of a base value.
-evaluateLog :: AlgebraicStruct -> AlgebraicStruct -> Evaluate Double
-evaluateLog b l = do
-    b' <- evaluateMain b
-    l' <- evaluateMain l
-    return $ logBase b' l'
+evaluateMain :: (MagmaMock m n, UnaryMock u n) => AlgStruct m u n -> Evaluate m u n n
+evaluateMain y = case y of
+    Additive ts       -> sum <$> mapM evaluateMain ts
+    Multiplicative fs -> product <$> mapM evaluateMain fs
+    Negated x         -> negate <$> evaluateMain x
+    Inverse x         -> recip <$> evaluateMain x
+    Magma op l r      -> do 
+        l' <- evaluateMain l 
+        r' <- evaluateMain r
+        return $ evalMagma op l' r'
+    Unary op x        -> do
+        x' <- evaluateMain x
+        return $ evalUnary op x'
+    N_ary n a         -> evaluateFunction n a
+    Nullary n         -> return n
+    Symbol s          -> getConst s >>= evaluateMain
 
 -- | Control flow for evaluating a function with a number of arguments.
-evaluateFunction :: String -> [AlgebraicStruct] -> Evaluate Double
+evaluateFunction :: (MagmaMock m n, UnaryMock u n) => String -> [AlgStruct m u n] -> Evaluate m u n n
 evaluateFunction n args = do
     (argNames, func) <- getFunc n
     if length argNames == length args then
         let 
-            subbedFunc = substituteFuncArgs func argNames args
+            subbedFunc = substituteFnArgs func argNames args
         in case subbedFunc of
             Left err -> lift . throwError $ FailedToCallFunction err
             Right result -> evaluateMain result
@@ -153,7 +97,7 @@ evaluateFunction n args = do
         lift . throwError $ InvalidArguments (length argNames) (length args)
 
 -- | Fetches a constant value with the given name from the @Context@.
-getConst :: String -> Evaluate AlgebraicStruct
+getConst :: String -> Evaluate m u n (AlgStruct m u n)
 getConst s = do
     cst <- asks (Map.lookup s)
     case cst of
@@ -161,7 +105,7 @@ getConst s = do
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Fetches a function with the given name from the @Context@. 
-getFunc :: String -> Evaluate ([Symbol], AlgebraicStruct)
+getFunc :: String -> Evaluate m u n ([Symbol], AlgStruct m u n)
 getFunc s = do
     fn <- asks (Map.lookup s)
     case fn of
@@ -169,6 +113,6 @@ getFunc s = do
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Indicates whether a given @CtxItem@ is a @Const@-constructor value.
-isConst :: CtxItem -> Bool
+isConst :: CtxItem m u n -> Bool
 isConst (Const _)  = True
 isConst (Func _ _) = False

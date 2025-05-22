@@ -9,11 +9,12 @@ module Data.Cassie.Parser.Lang
 import safe Control.Arrow
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
-import safe Data.Cassie.Evaluate (Context, CtxItem(..), isConst)
+import safe Data.Cassie.Evaluate (isConst)
 import safe Data.Cassie.Parser.Internal
-import safe Data.Cassie.Structures (Symbol)
+import safe Data.Cassie.Structures.Instances.Real (RealCtx, RealMagma, RealUnary)
+import safe Data.Cassie.Structures.Internal (Context, CtxItem(..), Symbol)
 import safe Text.Parsec
-import safe Text.Parsec.Token(GenTokenParser(..))
+import safe Text.Parsec.Token (GenTokenParser(..))
 import safe Text.Parsec.Language (haskell)
 
 type CassieLang a = Parsec String Symbols a
@@ -25,7 +26,7 @@ data CassieLangError
     | PoorlyDefinedError
     deriving Show
 
-parseFunction :: Context -> String -> Either CassieLangError Context 
+parseFunction :: RealCtx -> String -> Either CassieLangError RealCtx
 parseFunction ctx funcDef = 
     let 
         parseResult = runParser parseConstrainedFunction Set.empty funcDef funcDef
@@ -43,7 +44,7 @@ parseFunction ctx funcDef =
         else
             return $ Map.insert name funcObj ctx
 
-functionDef :: CassieLang (Symbol, Symbols, CtxItem)
+functionDef :: CassieLang (Symbol, Symbols, CtxItem RealMagma RealUnary Double)
 functionDef = do
     _ <- string "fn"
     whiteSpace haskell

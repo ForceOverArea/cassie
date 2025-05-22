@@ -1,5 +1,4 @@
 optimization: 2
 packages:
     cassie-hs/
-    cassie2-hs/
     cassie-wasm/

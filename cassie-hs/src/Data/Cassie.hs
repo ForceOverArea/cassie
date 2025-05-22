@@ -17,15 +17,15 @@ import safe qualified Data.Set as Set
 import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Data.Cassie.Internal
-import safe Data.Cassie.Evaluate (evaluate, isConst, Context, CtxItem(..), EvalError)
-import safe Data.Cassie.Isolate (isIsolated, isolate, Steps, IsolateError)
-import safe Data.Cassie.Parser (parseEquation, CassieParserError)
+import safe Data.Cassie.Evaluate (evaluate, isConst, EvalError)
+import safe Data.Cassie.Isolate (isolate)
+import safe Data.Cassie.Parser (parseEquation)
 import safe Data.Cassie.Parser.Lang (parseFunction, CassieLangError, Symbols)
-import safe Data.Cassie.Structures (getSymbol, leftHand, rightHand, AlgebraicStruct(..), Equation(..), Symbol)
+import safe Data.Cassie.Structures (AlgStruct(..),  Context, CtxItem(..), Equation, Symbol)
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.
-type Cassie = StateT (Context, EquationPool, Solution) (Except CassieError)
+type Cassie = StateT (Context m u n, EquationPool, Solution) (Except CassieError)
 
 type Solution = Map.Map Symbol SolutionValues
 
@@ -43,7 +43,7 @@ data CassieError
     | FailedToFullySolve
     deriving Show
 
-solvedFor :: String -> String -> Context -> Either CassieError (Equation, Steps)
+solvedFor :: String -> String -> Context m u n -> Either CassieError (Equation, Steps)
 solvedFor eqn sym ctx = do
     (structure, syms) <- left ParseError $ parseEquation eqn
     when (not $ sym `Set.member` syms) 
@@ -51,7 +51,7 @@ solvedFor eqn sym ctx = do
     solution  <- left IsolationError $ isolate structure sym ctx
     return solution
 
-solvedForValue :: String -> String -> Context -> Either CassieError (Double, Equation, Steps)
+solvedForValue :: String -> String -> Context m u n -> Either CassieError (Double, Equation, Steps)
 solvedForValue eqn sym ctx = do
     (eqn', steps) <- solvedFor eqn sym ctx 
     let Equation (_, value) = eqn'

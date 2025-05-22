@@ -1,4 +1,0 @@
-module Cassie.Internal 
-    ( 
-    ) where
-

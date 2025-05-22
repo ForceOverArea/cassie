@@ -24,9 +24,15 @@ library
                         Data.Cassie.Evaluate,
                         Data.Cassie.Internal,
                         Data.Cassie.Isolate,
-                        Data.Cassie.Isolate.PolySolve,
+                        -- Data.Cassie.Isolate.PolySolve,
                         Data.Cassie.Structures,
+                        Data.Cassie.Structures.Internal,
+                        Data.Cassie.Structures.Instances.Complex,
+                        Data.Cassie.Structures.Instances.Real,
+                        Data.Cassie.Structures.Magmas,
+                        Data.Cassie.Structures.UnarySystems,
                         Data.Cassie.Substitute,
+                        Data.Cassie.Utils,
                         Data.Cassie,
     -- other-modules:
     -- other-extensions:

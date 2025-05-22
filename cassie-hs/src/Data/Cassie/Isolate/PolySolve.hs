@@ -9,15 +9,15 @@ module Data.Cassie.Isolate.PolySolve
 
 import safe Control.Monad
 import safe qualified Data.Set as Set
-import safe Data.Cassie.Structures ((~?), reciprocal, AlgebraicStruct(..), Symbol)
+import safe Data.Cassie.Structures.Internal ((~?), AlgStruct(..), Symbol)
 
-data FactorizationError 
-    = FactorNotFound AlgebraicStruct AlgebraicStruct
+data FactorizationError m u n
+    = FactorNotFound (AlgStruct m u n) (AlgStruct m u n)
     | NoCommonFactors
     | TargetNotAFactor
     deriving Show
 
-factorize :: Symbol -> AlgebraicStruct -> Either FactorizationError AlgebraicStruct
+factorize :: Symbol -> AlgStruct m u n -> Either FactorizationError (AlgStruct m u n)
 factorize sym src =
     let 
         cfs = commonFactors src
@@ -31,16 +31,14 @@ factorize sym src =
         factored <- foldM (flip factorOut) src $ commonFactorsOfInterest
         return . Product $ commonFactorsOfInterest ++ [Group factored]
 
-factorOut :: AlgebraicStruct -> AlgebraicStruct -> Either FactorizationError AlgebraicStruct
+factorOut :: AlgStruct m u n -> AlgStruct m u n -> Either FactorizationError (AlgStruct m u n)
 factorOut target src = 
     let 
         reportError = Left $ FactorNotFound target src
         factorOutM = mapM (factorOut target)
     in case src of 
-        Sum ts          -> Sum <$> factorOutM ts
-        Difference shs  -> Difference <$> factorOutM shs
-        Group g         -> Group <$> factorOut target g
-        Product fs
+        Additive ts          -> Additive <$> factorOutM ts
+        Multiplicative fs
             | null fs   -> reportError
             | otherwise 
                 -> let 
@@ -56,7 +54,7 @@ factorOut target src =
             | otherwise -> reportError
         _               -> reportError
 
-commonFactors :: AlgebraicStruct -> Set.Set AlgebraicStruct
+commonFactors :: AlgStruct m u n -> Set.Set AlgStruct m u n
 commonFactors src = 
     case src of
         (Sum ts)         -> intersections $ map commonFactors ts
@@ -64,7 +62,7 @@ commonFactors src =
         (Group g)        -> commonFactors g
         other            -> factors other
 
-factors :: AlgebraicStruct -> Set.Set AlgebraicStruct
+factors :: AlgStruct m u n -> Set.Set AlgStruct m u n
 factors src = 
     case src of
         (Product fs)   -> Set.unions $ map factors fs
