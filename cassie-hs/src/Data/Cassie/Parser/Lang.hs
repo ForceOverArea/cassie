@@ -12,7 +12,7 @@ import safe qualified Data.Set as Set
 import safe Data.Cassie.Evaluate (isConst)
 import safe Data.Cassie.Parser.Internal
 import safe Data.Cassie.Structures.Instances.Real (RealCtx, RealMagma, RealUnary)
-import safe Data.Cassie.Structures.Internal (Context, CtxItem(..), Symbol)
+import safe Data.Cassie.Structures.Internal (CtxItem(..), Symbol)
 import safe Text.Parsec
 import safe Text.Parsec.Token (GenTokenParser(..))
 import safe Text.Parsec.Language (haskell)

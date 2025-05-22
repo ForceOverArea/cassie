@@ -1,9 +1,12 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Structures
-    ( AlgStruct(..)
+    ( (~?)
+    , AlgElement
+    , AlgStruct(..)
     , Context
     , ComplexAlgStruct
     , ComplexCtx
+    , ComplexEqn
     , ComplexMagma(..)
     , ComplexUnary(..)
     , CtxItem(..)
@@ -11,6 +14,7 @@ module Data.Cassie.Structures
     , MagmaMock(..)
     , RealAlgStruct
     , RealCtx
+    , RealEqn
     , RealMagma(..)
     , RealUnary(..)
     , Renderable(..)
@@ -22,4 +26,4 @@ import safe Data.Cassie.Structures.Instances.Complex
 import safe Data.Cassie.Structures.Magmas (MagmaMock(..))
 import safe Data.Cassie.Structures.Instances.Real
 import safe Data.Cassie.Structures.UnarySystems (UnaryMock(..))
-import safe Data.Cassie.Structures.Internal (AlgStruct(..), Context, CtxItem(..), Equation, Renderable(..), Symbol)
+import safe Data.Cassie.Structures.Internal ((~?), AlgElement, AlgStruct(..), Context, CtxItem(..), Equation, Renderable(..), Symbol)

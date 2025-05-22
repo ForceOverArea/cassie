@@ -2,6 +2,7 @@
 module Data.Cassie.Parser 
     ( parseEquation
     , parseExpression
+    , CassieParserError
     ) where
 
 import safe Control.Arrow
