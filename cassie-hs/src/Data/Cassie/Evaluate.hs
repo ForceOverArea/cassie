@@ -24,9 +24,7 @@ import safe qualified Data.Map as Map
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.Trans (lift)
-import safe Data.Cassie.Structures.Internal (AlgStruct(..), Context, CtxItem(..), Symbol)
-import safe Data.Cassie.Structures.Magmas (MagmaMock(evalMagma))
-import safe Data.Cassie.Structures.UnarySystems (UnaryMock(evalUnary))
+import safe Data.Cassie.Structures
 import safe Data.Cassie.Substitute (substituteFnArgs, SubstitutionError)
 
 -- | An error that may be thrown by @evaluate@.
@@ -62,11 +60,11 @@ type Evaluate m u n = ReaderT (Context m u n) (Except EvalError)
 
 -- | Evaluates a given @AlgebraicStruct@ to a numeric value given some @Context@.
 --   This function may fail, returning a @Left EvalError@ in the process.
-evaluate :: (MagmaMock m n, UnaryMock u n) => AlgStruct m u n -> Context m u n -> Either EvalError n
+evaluate :: AlgebraicStructure m u n => AlgStruct m u n -> Context m u n -> Either EvalError n
 evaluate expr ctx = runExcept $ runReaderT (evaluateMain expr) ctx
 
 -- | The main control flow for evaluating an @AlgebraicStruct@ to a numeric value.
-evaluateMain :: (MagmaMock m n, UnaryMock u n) => AlgStruct m u n -> Evaluate m u n n
+evaluateMain :: AlgebraicStructure m u n => AlgStruct m u n -> Evaluate m u n n
 evaluateMain y = case y of
     Additive ts       -> sum <$> mapM evaluateMain ts
     Multiplicative fs -> product <$> mapM evaluateMain fs
@@ -84,7 +82,7 @@ evaluateMain y = case y of
     Symbol s          -> getConst s >>= evaluateMain
 
 -- | Control flow for evaluating a function with a number of arguments.
-evaluateFunction :: (MagmaMock m n, UnaryMock u n) => String -> [AlgStruct m u n] -> Evaluate m u n n
+evaluateFunction :: AlgebraicStructure m u n => String -> [AlgStruct m u n] -> Evaluate m u n n
 evaluateFunction n args = do
     (argNames, func) <- getFunc n
     if length argNames == length args then

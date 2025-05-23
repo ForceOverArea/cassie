@@ -15,23 +15,26 @@ solve equations given as an @AlgebraicStruct@.
 
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Isolate 
-    ( isolate
+    ( isIsolated
+    , isolate
+    , IsolateError
+    , Steps
     ) where
 
-import safe Control.Arrow
-import safe Control.Monad.RWS (asks, gets, modify, execRWST, RWST)
+import safe Control.Monad.RWS (asks, execRWST, get, gets, put, tell, RWST)
 import safe Control.Monad.Except (runExcept, Except)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Map as Map
-import safe Data.Cassie.Structures.Magmas (isolateLeftOperand, isolateRightOperand, CancelMagma(..))
-import safe Data.Cassie.Structures.UnarySystems (CancelUnary(..))
-import safe Data.Cassie.Structures.Internal
+import safe Data.Cassie.Structures
 import safe Data.Cassie.Substitute
 import safe Data.Cassie.Utils
 
-type Isolate m u n = RWST (Symbol, Context m u n) String (Equation m u n) (Except IsolateErr)
+type Isolate m u n = RWST (Symbol, Context m u n) Steps (Equation m u n) (Except IsolateError)
 
-data IsolateErr
+-- | A type alias for the log of steps taken while solving a given equation. 
+type Steps = [String]
+
+data IsolateError
     = FunctionCallErr SubstitutionError
     | FunctionNotDefined
     | InvalidArguments
@@ -44,14 +47,15 @@ data IsolateErr
     | WrongSymbolSomehow
     deriving (Show, Eq, Ord)
 
-isolate :: (CancelMagma m, CancelUnary u, AlgElement n) => Symbol -> Equation m u n -> Context m u n -> Either IsolateErr (Equation m u n)
-isolate target eqn ctx = fst <$> (runExcept $ execRWST isolateMain (target, ctx) eqn )
+isolate :: AlgebraicStructure m u n => Symbol -> Equation m u n -> Context m u n -> Either IsolateError (Equation m u n, Steps)
+isolate target eqn ctx = runExcept $ execRWST isolateMain (target, ctx) eqn
 
-isolateMain :: (CancelMagma m, CancelUnary u, AlgElement n) => Isolate m u n ()
+isolateMain :: AlgebraicStructure m u n => Isolate m u n ()
 isolateMain = do
     target <- asks fst
-    lhs <- gets fst
-    case lhs of 
+    lhs' <- gets lhs
+    logStep
+    case lhs' of 
         Additive terms          -> isolateAdditive terms
         Multiplicative factors  -> isolateMultiplicative factors
         Negated neg             -> negateRhs neg
@@ -66,31 +70,31 @@ isolateMain = do
             else 
                 throwErr WrongSymbolSomehow
 
-isolateAdditive :: (CancelMagma m, CancelUnary u, AlgElement n) => NE.NonEmpty (AlgStruct m u n) -> Isolate m u n ()
+isolateAdditive :: AlgebraicStructure m u n => NE.NonEmpty (AlgStruct m u n) -> Isolate m u n ()
 isolateAdditive terms = do
     wrapperTerms <- Additive <$> isolatePolyTerms terms
-    modifyRhs $ \rhs -> rhs - wrapperTerms
+    modifyRhs $ \rhs' -> rhs' - wrapperTerms
     isolateMain
 
-isolateMultiplicative :: (CancelMagma m, CancelUnary u, AlgElement n) => NE.NonEmpty (AlgStruct m u n) -> Isolate m u n ()
+isolateMultiplicative :: AlgebraicStructure m u n => NE.NonEmpty (AlgStruct m u n) -> Isolate m u n ()
 isolateMultiplicative factors = do
     wrapperTerms <- Multiplicative <$> isolatePolyTerms factors
     modifyRhs (/ wrapperTerms)
     isolateMain
 
-negateRhs :: (CancelMagma m, CancelUnary u, AlgElement n) => AlgStruct m u n -> Isolate m u n ()
-negateRhs lhs = do
-    setLhs lhs
+negateRhs :: AlgebraicStructure m u n => AlgStruct m u n -> Isolate m u n ()
+negateRhs lhs' = do
+    setLhs lhs'
     modifyRhs Negated
     isolateMain
 
-invertRhs :: (CancelMagma m, CancelUnary u, AlgElement n) => AlgStruct m u n -> Isolate m u n ()
-invertRhs lhs = do
-    setLhs lhs
+invertRhs :: AlgebraicStructure m u n => AlgStruct m u n -> Isolate m u n ()
+invertRhs lhs' = do
+    setLhs lhs'
     modifyRhs Inverse
     isolateMain
 
-isolateMagma :: (CancelMagma m, CancelUnary u, Fractional n) => m -> AlgStruct m u n -> AlgStruct m u n -> Isolate m u n ()
+isolateMagma :: AlgebraicStructure m u n => m -> AlgStruct m u n -> AlgStruct m u n -> Isolate m u n ()
 isolateMagma op lOperand rOperand = do
     target <- asks fst
     cancelOp <- truthTable2 (target ~?) lOperand rOperand
@@ -99,18 +103,18 @@ isolateMagma op lOperand rOperand = do
         (pure $ isolateLeftOperand  op lOperand)
         (pure $ isolateRightOperand op rOperand)
     case cancelOp of
-        Just f -> modifyRhs f
         Nothing -> throwErr NonCancellableMagma
+        Just f -> modifyRhs f
 
-isolateUnary :: (CancelMagma m, CancelUnary u, AlgElement n) => u -> AlgStruct m u n -> Isolate m u n ()
-isolateUnary op lhs = do
-    setLhs lhs
+isolateUnary :: AlgebraicStructure m u n => u -> AlgStruct m u n -> Isolate m u n ()
+isolateUnary op lhs' = do
+    setLhs lhs'
     case cancel op of
         Just invOp -> modifyRhs $ Unary invOp
         Nothing -> throwErr NoInverseOp
     isolateMain
 
-isolateN_ary :: (Eq m, Eq u, Eq n) => Symbol -> [AlgStruct m u n] -> Isolate m u n ()
+isolateN_ary :: AlgebraicStructure m u n => Symbol -> [AlgStruct m u n] -> Isolate m u n ()
 isolateN_ary name args = do
     (argNames, expanded) <- getFn name
     if length argNames /= length args then
@@ -130,10 +134,14 @@ isolatePolyTerms terms = do
         _   -> throwErr NeedsPolySolve
 
 modifyRhs :: (AlgStruct m u n -> AlgStruct m u n) -> Isolate m u n ()
-modifyRhs f = modify $ second f
+modifyRhs f = do
+    eqn <- get
+    put $ Equation (lhs eqn) (f $ rhs eqn)
 
 setLhs :: AlgStruct m u n -> Isolate m u n ()
-setLhs lhs = modify (first $ const lhs)
+setLhs lhs' = do
+    eqn <- get
+    put $ flip Equation (lhs') (rhs eqn)
 
 getFn :: String -> Isolate m u n ([Symbol], AlgStruct m u n)
 getFn fnName = do
@@ -142,3 +150,15 @@ getFn fnName = do
         Just (Func syms expanded) -> return (syms, expanded)
         Just (Const _)            -> throwErr NotAFunction
         Nothing                   -> throwErr FunctionNotDefined
+
+isIsolated :: AlgebraicStructure m u n => Equation m u n -> Symbol -> Bool
+isIsolated eqn sym = case isolate sym eqn Map.empty of
+    Left _ -> False
+    Right (eqn', _) -> eqn == eqn'
+
+-- | Puts a snapshot of the current state of the equation being solved into the 
+--   log of steps taken in the solution. 
+logStep :: AlgebraicStructure m u n => Isolate m u n ()
+logStep = do
+    step <- render <$> get
+    tell [step]

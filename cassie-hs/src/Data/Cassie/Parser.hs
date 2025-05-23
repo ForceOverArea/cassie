@@ -8,7 +8,7 @@ module Data.Cassie.Parser
 import safe Control.Arrow
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Parser.Internal
-import safe Data.Cassie.Structures.Internal (Symbol)
+import safe Data.Cassie.Structures.Internal (Equation(..), Symbol)
 import safe Data.Cassie.Structures.Instances.Real
 import safe Text.Parsec
 import safe Data.Cassie.Utils
@@ -45,10 +45,10 @@ parseEquation eqn =
     let 
         sides = splitStrAt '=' eqn
     in case sides of
-        [lhs, rhs] -> do
-            (lhs', lSyms) <- left FailedToParse $ parseExpression lhs 
-            (rhs', rSyms) <- left FailedToParse $ parseExpression rhs
-            return $ ((lhs', rhs'), lSyms `Set.union` rSyms)
+        [lText, rText] -> do
+            (lhs', lSyms) <- left FailedToParse $ parseExpression lText
+            (rhs', rSyms) <- left FailedToParse $ parseExpression rText
+            return $ (Equation lhs' rhs', lSyms `Set.union` rSyms)
         []         -> Left $ FoundNone eqn
         [_]        -> Left $ FoundExpression eqn
         (_:_:_)    -> Left $ FoundMultiple eqn

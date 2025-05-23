@@ -3,27 +3,26 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Structures.Internal 
     ( (~?)
-    , AlgElement
     , AlgStruct(..)
     , Context
     , CtxItem(..)
-    , Equation
+    , Equation(..)
     , Renderable(..)
     , Symbol
     ) where
 
 import safe Control.Arrow 
 import safe Control.Monad
-import safe Data.Complex (Complex)
+import safe qualified Data.Map as Map
+import safe Data.Complex
 import safe Data.List as List
 import safe qualified Data.List.NonEmpty as NE
-import safe qualified Data.Map as Map
 
 class Renderable r where
     render :: r -> String
-    needsParensAround :: r -> r -> Bool
 
-class (Num n, Fractional n, Eq n) => AlgElement n
+    needsParensAround :: r -> r -> Bool
+    needsParensAround _ _ = False
 
 type Symbol = String
 
@@ -34,7 +33,10 @@ data CtxItem m u n
     | Const (AlgStruct m u n)
     deriving (Show, Eq, Ord)
 
-type Equation m u n = (AlgStruct m u n, AlgStruct m u n)
+data Equation m u n = Equation { lhs :: AlgStruct m u n
+                               , rhs :: AlgStruct m u n
+                               }
+                               deriving (Show, Eq, Ord)
 
 -- | A heavily abstracted representation of a mathematical expression.
 --   This record is designed to represent generalized algebraic 
@@ -76,6 +78,46 @@ data AlgStruct m u n
     -- | A symbol representing an arbitrary element in the algebraic structure.
     | Symbol         Symbol
     deriving (Show, Eq, Ord)
+
+
+instance Num n => Num (AlgStruct m u n) where
+    (Additive terms1) + (Additive terms2) = Additive $ terms1 <> terms2
+    (Additive terms1) + x                 = Additive $ terms1 <> NE.fromList [x]
+    x + (Additive terms2)                 = Additive $ NE.fromList [x] <> terms2
+    x + y                                 = Additive $ NE.fromList [x, y]
+
+    (Multiplicative fac1) * (Multiplicative fac2) = Multiplicative $ fac1 <> fac2
+    (Multiplicative fac1) * x                     = Multiplicative $ fac1 <> NE.fromList [x]
+    x                     * (Multiplicative fac2) = Multiplicative $ NE.fromList [x] <> fac2
+    x * y                                         = Multiplicative $ NE.fromList [x, y]
+    
+    negate = Negated
+
+    abs (Negated x) = x
+    abs x           = x
+
+    signum (Negated _) = Negated $ fromInteger 1
+    signum _           = fromInteger 1
+
+    fromInteger = Nullary . fromInteger
+
+instance Fractional n => Fractional (AlgStruct m u n) where
+    recip = Inverse
+
+    fromRational = Nullary . fromRational
+
+instance Renderable Double where
+    render = show
+
+instance Show a => Renderable (Complex a) where
+    render = show
+
+instance (Renderable m, Renderable u, Renderable n) => Renderable (CtxItem m u n) where
+    render (Func args impl) = "(" ++ intercalate "," args ++ ") -> " ++ render impl
+    render (Const impl) = render impl
+
+instance (Renderable m, Renderable u, Renderable n) => Renderable (Equation m u n) where
+    render eqn = (render $ lhs eqn) ++ " = " ++ (render $ rhs eqn)
 
 instance (Renderable m, Renderable u, Renderable n) => Renderable (AlgStruct m u n) where
     render s = case s of
@@ -123,36 +165,6 @@ instance (Renderable m, Renderable u, Renderable n) => Renderable (AlgStruct m u
     
     Symbol _ `needsParensAround` _ = False
 
-instance Num n => Num (AlgStruct m u n) where
-    (Additive terms1) + (Additive terms2) = Additive $ terms1 <> terms2
-    (Additive terms1) + x                 = Additive $ terms1 <> NE.fromList [x]
-    x + (Additive terms2)                 = Additive $ NE.fromList [x] <> terms2
-    x + y                                 = Additive $ NE.fromList [x, y]
-
-    (Multiplicative fac1) * (Multiplicative fac2) = Multiplicative $ fac1 <> fac2
-    (Multiplicative fac1) * x                     = Multiplicative $ fac1 <> NE.fromList [x]
-    x                     * (Multiplicative fac2) = Multiplicative $ NE.fromList [x] <> fac2
-    x * y                                         = Multiplicative $ NE.fromList [x, y]
-    
-    negate = Negated
-
-    abs (Negated x) = x
-    abs x           = x
-
-    signum (Negated _) = Negated $ fromInteger 1
-    signum _           = fromInteger 1
-
-    fromInteger = Nullary . fromInteger
-
-instance Fractional n => Fractional (AlgStruct m u n) where
-    recip = Inverse
-
-    fromRational = Nullary . fromRational
-
-instance AlgElement Double
-
-instance AlgElement (Complex Double)
-
 (~?) :: Symbol -> AlgStruct m u n -> Bool
 sym ~? Additive terms           = any (sym ~?) terms
 sym ~? Multiplicative factors   = any (sym ~?) factors
@@ -167,7 +179,7 @@ sym ~? Symbol s                 = sym == s
 renderTerms :: (Renderable m, Renderable u, Renderable n) => NE.NonEmpty (AlgStruct m u n) -> [Char]
 renderTerms terms = 
     let
-        renderTerm (Negated term) = render term
+        renderTerm (Negated term) = render (Negated term)
         renderTerm term           = " + " ++ render term
     in case NE.uncons terms of
         (x, Just others) -> render x ++ concatMap renderTerm others
@@ -183,3 +195,4 @@ renderFactors factors =
         inverted (Inverse _) = True
         inverted _           = False
     in "(" ++ intercalate "*" num ++ ") / (" ++ intercalate "*" denom ++ ")"
+

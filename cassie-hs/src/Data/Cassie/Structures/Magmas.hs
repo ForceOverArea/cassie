@@ -11,14 +11,14 @@ module Data.Cassie.Structures.Magmas
 
 import safe Data.Cassie.Structures.Internal
 
-class (Eq m, Eq n) => MagmaMock m n where
+class MagmaMock m n where
     -- | Maps a marker representing a magma operation to its appropriate
     --   binary operation. 
     evalMagma :: m -> (n -> n -> n)
 
 -- | Typeclass for values that represent a set of binary operations that form 
 --   a magma along with elements of type @n@.
-class Eq m => CancelMagma m where    
+class CancelMagma m where    
     -- | Given a magma operation and a left operand, this function yields a
     --   function that performs the inverse operation on an algebraic structure.
     lCancel :: m -> Maybe (Either m m)
@@ -43,7 +43,7 @@ isolateRightOperand op r = do
         Left op'  -> Magma op' r
         Right op' -> \x -> Magma op' x r
 
-instance (Floating a, AlgElement a) => MagmaMock ExpnMagma a where
+instance (Floating a) => MagmaMock ExpnMagma a where
     evalMagma Expn = (**)
     evalMagma Logm = logBase
     evalMagma Root = flip (**) . (1.0 /)
@@ -60,3 +60,8 @@ instance CancelMagma ExpnMagma where
             Expn -> Left Root
             Logm -> Right Root
             Root -> Left Logm
+
+instance Renderable ExpnMagma where
+    render Expn = "^"
+    render Logm = ">("
+    render Root = ">("

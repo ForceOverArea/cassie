@@ -21,7 +21,7 @@ import safe Data.Cassie.Evaluate (evaluate, isConst, EvalError)
 import safe Data.Cassie.Isolate (isIsolated, isolate, IsolateError, Steps)
 import safe Data.Cassie.Parser (parseEquation, CassieParserError)
 import safe Data.Cassie.Parser.Lang (parseFunction, CassieLangError, Symbols)
-import safe Data.Cassie.Structures (AlgStruct(..), RealCtx, CtxItem(..), RealEqn, Symbol)
+import safe Data.Cassie.Structures (AlgStruct(..), Equation(..), RealCtx, CtxItem(..), RealEqn, Symbol)
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.
@@ -53,9 +53,8 @@ solvedFor eqn sym ctx = do
 
 solvedForValue :: String -> String -> RealCtx -> Either CassieError (Double, RealEqn, Steps)
 solvedForValue eqn sym ctx = do
-    (eqn', steps) <- solvedFor eqn sym ctx 
-    let (_, value) = eqn'
-    value' <- left EvaluationError $ evaluate value ctx
+    (eqn', steps) <- solvedFor eqn sym ctx
+    value' <- left EvaluationError $ evaluate (rhs eqn') ctx
     return (value', eqn', steps)
 
 solveSystem :: String -> Either CassieError (RealCtx, Solution m u n)
@@ -102,8 +101,8 @@ solveSingleUnknowns =
 
 addSolution :: (RealEqn, Steps) -> Cassie m u n ()
 addSolution (eqn, steps) = do
-    let name = getSymbol $ fst eqn
-    let value = snd eqn 
+    let name = getSymbol $ lhs eqn
+    let value = rhs eqn 
     numSoln <- flip evaluate' eqn <$> getCtx
     modifyCtx $ Map.insert name (Const value)
     addSoln name (eqn, steps, snd <$> numSoln)
@@ -172,7 +171,7 @@ isolate' :: RealCtx -> (RealEqn, Symbol) -> Either IsolateError (RealEqn, Steps)
 isolate' ctx (eqn, sym) = isolate sym eqn ctx
 
 evaluate' :: RealCtx -> RealEqn -> Either CassieError (Symbol, Double)
-evaluate' ctx (Symbol x, rhs') = do
+evaluate' ctx (Equation (Symbol x) rhs') = do
     result <- left EvaluationError $ evaluate rhs' ctx
     return (x, result)
 evaluate' _ _ = Left EvaluationArgError

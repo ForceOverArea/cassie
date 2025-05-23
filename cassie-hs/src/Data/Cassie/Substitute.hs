@@ -27,7 +27,7 @@ import safe Control.Monad.State (get, put, runStateT, StateT)
 import safe Control.Monad.Except (runExcept, Except)
 import safe Data.List
 import safe qualified Data.List.NonEmpty as NE
-import safe Data.Cassie.Structures.Internal ((~?), AlgStruct(..), Symbol)
+import safe Data.Cassie.Structures
 import safe Data.Cassie.Utils
 
 data SubstitutionError 
@@ -56,17 +56,17 @@ data AlgCrumb m u n
 
 type Substitute m u n = StateT [AlgCrumb m u n] (Except SubstitutionError)
 
-substitute :: (Eq m, Eq u, Eq n) => Symbol -> AlgStruct m u n -> AlgStruct m u n -> Either SubstitutionError (AlgStruct m u n)
+substitute :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> AlgStruct m u n -> Either SubstitutionError (AlgStruct m u n)
 substitute target replacement source = runExcept $ fst <$> runStateT (substituteMain target replacement source) []
 
-substituteFnArgs :: (Eq m, Eq u, Eq n) => AlgStruct m u n -> [Symbol] -> ([AlgStruct m u n] -> Either SubstitutionError (AlgStruct m u n))
+substituteFnArgs :: AlgebraicStructure m u n => AlgStruct m u n -> [Symbol] -> ([AlgStruct m u n] -> Either SubstitutionError (AlgStruct m u n))
 substituteFnArgs impl args = 
     let 
         foldFunc = flip $ uncurry substitute
         subArgs  = foldM foldFunc impl
     in subArgs . zip args
 
-substituteMain :: (Eq m, Eq u, Eq n) => Symbol -> AlgStruct m u n -> AlgStruct m u n -> Substitute m u n (AlgStruct m u n) 
+substituteMain :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> AlgStruct m u n -> Substitute m u n (AlgStruct m u n) 
 substituteMain target replacement source = do
     children <- traverseTowards target source
     case children of
@@ -78,7 +78,7 @@ substituteMain target replacement source = do
             newBases <- mapM (substituteMain target replacement) substructures
             rebuildOnto newBases
 
-traverseTowards :: (Eq m, Eq u, Eq n) 
+traverseTowards :: AlgebraicStructure m u n
     => Symbol 
     -> AlgStruct m u n 
     -> Substitute m u n [AlgStruct m u n]
@@ -94,7 +94,7 @@ traverseTowards s struct =
         Nullary _           -> return []
         Symbol s'           -> if s == s' then return [Symbol s'] else return []
 
-traverseTowardsPlural :: (Eq m, Eq u, Eq n) 
+traverseTowardsPlural :: AlgebraicStructure m u n 
     => Symbol 
     -> AlgStruct m u n 
     -> [AlgStruct m u n]

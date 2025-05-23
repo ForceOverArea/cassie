@@ -7,22 +7,22 @@ module Data.Cassie.Structures.UnarySystems
     , UnaryMock(..)
     ) where
 
-import safe Data.Cassie.Structures.Internal
+import Data.Cassie.Structures.Internal
 
-class (Eq u, AlgElement n) => UnaryMock u n where
+class UnaryMock u n where
     -- | Maps a marker representing a unary system operation to its appropriate
     --   unary operation.
     evalUnary :: u -> (n -> n)
 
 -- | Typeclass for values that represent a set of binary operations that form 
 --   a unary system along with elements of type @n@.
-class Eq u => CancelUnary u where
+class CancelUnary u where
     -- | Yields the inverse operation of the one given.
     cancel :: u -> Maybe u
 
 data TrigUnary = Sin | Cos | Tan | ASin | ACos | ATan deriving (Show, Eq, Ord)
 
-instance (Floating a, AlgElement a) => UnaryMock TrigUnary a where
+instance (Floating a) => UnaryMock TrigUnary a where
     evalUnary Sin = sin
     evalUnary Cos = cos
     evalUnary Tan = tan
@@ -39,3 +39,11 @@ instance CancelUnary TrigUnary where
             ASin -> Sin
             ACos -> Cos
             ATan -> Tan
+
+instance Renderable TrigUnary where
+    render Sin = "sin"
+    render Cos = "cos"
+    render Tan = "tan"
+    render ASin = "arcsin"
+    render ACos = "arccos"
+    render ATan = "arctan"
