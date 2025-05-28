@@ -10,14 +10,14 @@ module Data.Cassie.Parser.Internal
     , p2Term
     , p3Term
     , parenthetical
-    , product'
+    , product
     , quotient
-    , sum'
+    , sum
     , symb
     , CassieParser
     ) where
 
-import safe Prelude hiding (exponent, logBase)
+import safe Prelude hiding (exponent, logBase, product, sum)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Structures.Internal (AlgStruct(..), Symbol)
@@ -31,10 +31,10 @@ import safe Text.Parsec.Token (GenTokenParser(..))
 type CassieParser = Parsec String (Set.Set Symbol) (RealAlgStruct)
 
 expression :: CassieParser
-expression = sum'
+expression = sum
 
-sum' :: CassieParser
-sum' = do
+sum :: CassieParser
+sum = do
     whiteSpace haskell
     elements <- NE.fromList <$> p5Term `sepBy1` char '+' <?> "sum"
     return $ case elements of
@@ -48,8 +48,8 @@ difference = do
     subtrahend <- p5Term <?> "difference"
     return $ minuend - subtrahend
 
-product' :: CassieParser
-product' = do
+product :: CassieParser
+product = do
     whiteSpace haskell
     elements <- NE.fromList <$> p3Term `sepBy1` char '*' <?> "product"
     return $ case elements of
@@ -105,7 +105,7 @@ p5Term :: CassieParser
 p5Term = try difference <|> p4Term
 
 p4Term :: CassieParser 
-p4Term = try product' <|> p3Term
+p4Term = try product <|> p3Term
 
 p3Term :: CassieParser
 p3Term = try quotient <|> p2Term
