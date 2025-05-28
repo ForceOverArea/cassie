@@ -1,28 +1,22 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE InstanceSigs #-}
 module Data.Cassie.Structures.Internal 
     ( (~?)
     , AlgStruct(..)
     , Context
     , CtxItem(..)
     , Equation(..)
-    , Renderable(..)
+    , ShowAlgStruct(..)
     , Symbol
     ) where
 
 import safe Control.Arrow 
 import safe Control.Monad
 import safe qualified Data.Map as Map
-import safe Data.Complex
 import safe Data.List as List
 import safe qualified Data.List.NonEmpty as NE
-
-class Renderable r where
-    render :: r -> String
-
-    needsParensAround :: r -> r -> Bool
-    needsParensAround _ _ = False
 
 type Symbol = String
 
@@ -36,7 +30,7 @@ data CtxItem m u n
 data Equation m u n = Equation { lhs :: AlgStruct m u n
                                , rhs :: AlgStruct m u n
                                }
-                               deriving (Show, Eq, Ord)
+                               deriving (Eq, Ord)
 
 -- | A heavily abstracted representation of a mathematical expression.
 --   This record is designed to represent generalized algebraic 
@@ -79,6 +73,48 @@ data AlgStruct m u n
     | Symbol         Symbol
     deriving (Show, Eq, Ord)
 
+newtype ShowAlgStruct m u n = ShowAlgStruct (AlgStruct m u n) deriving (Eq, Ord)
+
+instance (Show m, Show u, Show n) => Show (ShowAlgStruct m u n) where
+    show (ShowAlgStruct s) = 
+        let
+            show' = show . ShowAlgStruct
+
+            renderTerm (Negated term) = show' (Negated term)
+            renderTerm term           = " + " ++ show' term
+
+            renderTerms terms = 
+                case NE.uncons terms of
+                    (x, Just others) -> show' x ++ concatMap renderTerm others
+                    (x, Nothing)     -> show' x
+
+            inverted (Inverse _) = True
+            inverted _           = False
+
+            unwrapInverse (Inverse x) = x
+            unwrapInverse x = x
+
+            renderFactors factors = 
+                let 
+                    fraction = renderBoth $ partition inverted $ NE.toList factors
+                    renderBoth = 
+                        first (map unwrapInverse) 
+                        >>> join (***) (map show')
+                in case fraction of
+                    ([], num)    -> "(" ++ intercalate "*" num ++ ")"
+                    (denom, [])  -> "1 / (" ++ intercalate "*" denom ++ ")"
+                    (denom, num) -> "(" ++ intercalate "*" num ++ ") / (" ++ intercalate "*" denom ++ ")"
+
+        in case s of
+            Additive terms          -> renderTerms terms
+            Multiplicative factors  -> renderFactors factors
+            Negated neg             -> " - " ++ show' neg
+            Inverse inv             -> "1 / " ++ show' inv
+            Magma m l r             -> (show' l) ++ (show m) ++ (show' r)
+            N_ary name args         -> name ++ "(" ++ intercalate "," (map show' args)  ++ ")"
+            Unary u x               -> show u ++ "(" ++ show' x ++ ")"
+            Nullary num             -> show num
+            Symbol sym              -> sym
 
 instance Num n => Num (AlgStruct m u n) where
     (Additive terms1) + (Additive terms2) = Additive $ terms1 <> terms2
@@ -106,64 +142,43 @@ instance Fractional n => Fractional (AlgStruct m u n) where
 
     fromRational = Nullary . fromRational
 
-instance Renderable Double where
-    render = show
+instance (Show m, Show u, Show n) => Show (Equation m u n) where
+    show eqn = (show . ShowAlgStruct $ lhs eqn) ++ " = " ++ (show . ShowAlgStruct $ rhs eqn)
 
-instance Show a => Renderable (Complex a) where
-    render = show
+(<%>) :: (Show m, Show u, Show n) => AlgStruct m u n -> AlgStruct m u n -> Bool
+Additive _ <%> as =
+    case as of
+        Negated _   -> True
+        Inverse _   -> True
+        Magma _ _ _ -> True
+        _           -> False
 
-instance (Renderable m, Renderable u, Renderable n) => Renderable (CtxItem m u n) where
-    render (Func args impl) = "(" ++ intercalate "," args ++ ") -> " ++ render impl
-    render (Const impl) = render impl
+Multiplicative _ <%> as =
+    case as of
+        Additive _  -> True
+        Negated _   -> True
+        Magma _ _ _ -> True
+        _           -> False
 
-instance (Renderable m, Renderable u, Renderable n) => Renderable (Equation m u n) where
-    render eqn = (render $ lhs eqn) ++ " = " ++ (render $ rhs eqn)
+Negated _ <%> _ = True
 
-instance (Renderable m, Renderable u, Renderable n) => Renderable (AlgStruct m u n) where
-    render s = case s of
-        Additive terms          -> renderTerms terms
-        Multiplicative factors  -> renderFactors factors
-        Negated neg             -> " - " ++ render neg
-        Inverse inv             -> "1 / " ++ render inv
-        Magma m l r             -> render l ++ render m ++ render r
-        N_ary name args         -> name ++ "(" ++ intercalate "," (map render args)  ++ ")"
-        Unary u x               -> render u ++ "(" ++ render x ++ ")"
-        Nullary num             -> render num
-        Symbol sym              -> sym
-    
-    Additive _ `needsParensAround` as =
-        case as of
-            Negated _   -> True
-            Inverse _   -> True
-            Magma _ _ _ -> True
-            _           -> False
+Inverse _ <%> _ = True
 
-    Multiplicative _ `needsParensAround` as =
-        case as of
-            Additive _  -> True
-            Negated _   -> True
-            Magma _ _ _ -> True
-            _           -> False
-    
-    Negated _ `needsParensAround` _ = True
+Magma _ _ _ <%> as =
+    case as of
+        Additive _       -> True
+        Multiplicative _ -> True
+        Negated _        -> True
+        Magma _ _ _      -> True
+        _                -> False
 
-    Inverse _ `needsParensAround` _ = True
+N_ary _ _ <%> _ = False
 
-    Magma _ _ _ `needsParensAround` as =
-        case as of
-            Additive _       -> True
-            Multiplicative _ -> True
-            Negated _        -> True
-            Magma _ _ _      -> True
-            _                -> False
+Unary _ _ <%> _ = False
 
-    N_ary _ _ `needsParensAround` _ = False
+Nullary _ <%> _ = False
 
-    Unary _ _ `needsParensAround` _ = False
-
-    Nullary _ `needsParensAround` _ = False
-    
-    Symbol _ `needsParensAround` _ = False
+Symbol _ <%> _ = False
 
 (~?) :: Symbol -> AlgStruct m u n -> Bool
 sym ~? Additive terms           = any (sym ~?) terms
@@ -175,24 +190,3 @@ sym ~? N_ary _ args             = any (sym ~?) args
 sym ~? Unary _ x                = sym ~? x
 _   ~? Nullary _                = False
 sym ~? Symbol s                 = sym == s
-
-renderTerms :: (Renderable m, Renderable u, Renderable n) => NE.NonEmpty (AlgStruct m u n) -> [Char]
-renderTerms terms = 
-    let
-        renderTerm (Negated term) = render (Negated term)
-        renderTerm term           = " + " ++ render term
-    in case NE.uncons terms of
-        (x, Just others) -> render x ++ concatMap renderTerm others
-        (x, Nothing)     -> render x
-
-renderFactors :: (Renderable m, Renderable u, Renderable n) => NE.NonEmpty (AlgStruct m u n) -> [Char]
-renderFactors factors = 
-    let 
-        (denom, num) = renderBoth . partition inverted $ NE.toList factors
-
-        renderBoth = join (***) (map render)
-
-        inverted (Inverse _) = True
-        inverted _           = False
-    in "(" ++ intercalate "*" num ++ ") / (" ++ intercalate "*" denom ++ ")"
-

@@ -18,6 +18,7 @@ common warnings
 
 library
     import:             warnings
+    
     exposed-modules:    Data.Cassie.Parser,
                         Data.Cassie.Parser.Internal,
                         Data.Cassie.Parser.Lang,
@@ -25,16 +26,16 @@ library
                         Data.Cassie.Internal,
                         Data.Cassie.Isolate,
                         -- Data.Cassie.Isolate.PolySolve,
-                        Data.Cassie.Structures,
-                        Data.Cassie.Structures.Internal,
+                        Data.Cassie.Structures,                       
+                        Data.Cassie.Substitute,
+                        Data.Cassie.Utils,
+                        Data.Cassie,
+
+    other-modules:      Data.Cassie.Structures.Internal,
                         Data.Cassie.Structures.Instances.Complex,
                         Data.Cassie.Structures.Instances.Real,
                         Data.Cassie.Structures.Magmas,
                         Data.Cassie.Structures.UnarySystems,
-                        Data.Cassie.Substitute,
-                        Data.Cassie.Utils,
-                        Data.Cassie,
-    -- other-modules:
     -- other-extensions:
     -- Build uses GHC 9.2.8 by default, use up to 4.21.0.0 to satisfy experimental WASM backend
     build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 

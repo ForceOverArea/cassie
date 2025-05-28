@@ -30,8 +30,8 @@ instance CancelMagma RealMagma where
 
     rCancel (RealMagma rm) = join (+++) RealMagma <$> rCancel rm
 
-instance Renderable RealMagma where
-    render (RealMagma rm) = render rm
+instance ShowMagma RealMagma where
+    showMagma (RealMagma rm) = showMagma rm
 
 newtype RealUnary = RealUnary TrigUnary deriving (Show, Eq, Ord)
 
@@ -41,5 +41,5 @@ instance UnaryMock RealUnary Double where
 instance CancelUnary RealUnary where
     cancel (RealUnary ru) = RealUnary <$> cancel ru
 
-instance Renderable RealUnary where
-    render (RealUnary ru) = render ru
+instance ShowUnary RealUnary where
+    showUnary (RealUnary ru) = showUnary ru

@@ -32,8 +32,8 @@ instance CancelMagma ComplexMagma where
 
     rCancel (ComplexMagma cm) = join (+++) ComplexMagma <$> rCancel cm
 
-instance Renderable ComplexMagma where
-    render (ComplexMagma cm) = render cm
+instance ShowMagma ComplexMagma where
+    showMagma (ComplexMagma cm) = showMagma cm
 
 newtype ComplexUnary = ComplexUnary TrigUnary deriving (Show, Eq, Ord)
 
@@ -43,5 +43,5 @@ instance Floating a => UnaryMock ComplexUnary a where
 instance CancelUnary ComplexUnary where
     cancel (ComplexUnary cu) = ComplexUnary <$> cancel cu
 
-instance Renderable ComplexUnary where
-    render (ComplexUnary cu) = render cu
+instance ShowUnary ComplexUnary where
+    showUnary (ComplexUnary cu) = showUnary cu

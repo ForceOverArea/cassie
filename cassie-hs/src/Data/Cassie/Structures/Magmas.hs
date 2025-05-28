@@ -1,5 +1,6 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Structures.Magmas 
     ( isolateLeftOperand
@@ -7,6 +8,7 @@ module Data.Cassie.Structures.Magmas
     , CancelMagma(..)
     , ExpnMagma(..)
     , MagmaMock(..)
+    , ShowMagma(..)
     ) where
 
 import safe Data.Cassie.Structures.Internal
@@ -26,6 +28,10 @@ class CancelMagma m where
     -- | Given a magma operation and a right operand, this function yields a
     --   function that performs the inverse operation on an algebraic structure.
     rCancel :: m -> Maybe (Either m m)
+
+class Show m => ShowMagma m where
+    showMagma :: Show a => m -> (a -> a -> String)
+    showMagma x = \l r -> show l ++ show x ++ show r
 
 data ExpnMagma = Expn | Logm | Root deriving (Show, Eq, Ord)
 
@@ -61,7 +67,7 @@ instance CancelMagma ExpnMagma where
             Logm -> Right Root
             Root -> Left Logm
 
-instance Renderable ExpnMagma where
-    render Expn = "^"
-    render Logm = ">("
-    render Root = ">("
+instance ShowMagma ExpnMagma where
+    showMagma Expn = \x y -> show x ++ " ^ " ++ show y
+    showMagma Logm = \x y -> "log<" ++ show x ++ ">(" ++ show y ++ ")"
+    showMagma Root = \x y -> "root<" ++ show x ++ ">(" ++ show y ++ ")"

@@ -23,7 +23,7 @@ module Data.Cassie.Structures
     , RealEqn
     , RealMagma(..)
     , RealUnary(..)
-    , Renderable(..)
+    , ShowAlgStruct(..)
     , Symbol
     , UnaryMock(..)
     ) where
@@ -34,14 +34,13 @@ import safe Data.Cassie.Structures.Instances.Real
 import safe Data.Cassie.Structures.UnarySystems
 import safe Data.Cassie.Structures.Internal
 
-
 class ( MagmaMock m n
       , CancelMagma m
       , UnaryMock u n
       , CancelUnary u
-      , Renderable m
-      , Renderable u
-      , Renderable n
+      , ShowMagma m
+      , ShowUnary u
+      , Show n
       , Num n
       , Fractional n
       , Eq m
@@ -54,6 +53,6 @@ instance AlgebraicStructure RealMagma RealUnary Double
 instance ( Num n
          , Floating n
          , Fractional n
-         , Renderable n
+         , Show n
          , Eq n
          ) => AlgebraicStructure ComplexMagma ComplexUnary n
