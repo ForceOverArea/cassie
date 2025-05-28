@@ -10,15 +10,14 @@ module Data.Cassie.Parser.Internal
     , p2Term
     , p3Term
     , parenthetical
-    , polyTerm
-    , product
+    , product'
     , quotient
-    , sum
+    , sum'
     , symb
     , CassieParser
     ) where
 
-import safe Prelude hiding (exponent, logBase, product, sum)
+import safe Prelude hiding (exponent, logBase)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Structures.Internal (AlgStruct(..), Symbol)
@@ -32,27 +31,37 @@ import safe Text.Parsec.Token (GenTokenParser(..))
 type CassieParser = Parsec String (Set.Set Symbol) (RealAlgStruct)
 
 expression :: CassieParser
-expression = sum
+expression = sum'
 
-sum :: CassieParser
-sum = polyTerm '+' Additive p5Term "sum"
+sum' :: CassieParser
+sum' = do
+    whiteSpace haskell
+    elements <- NE.fromList <$> p5Term `sepBy1` char '+' <?> "sum"
+    return $ case elements of
+        [x] -> x
+        _   -> foldl (+) (NE.head elements) (NE.tail elements)
 
 difference :: CassieParser
 difference = do
     minuend <- p4Term
     _ <- char '-'
-    subtrahend <- p4Term <?> "difference"
-    return $ Additive [minuend, Negated subtrahend]
+    subtrahend <- p5Term <?> "difference"
+    return $ minuend - subtrahend
 
-product :: CassieParser
-product = polyTerm '*' Multiplicative p3Term "product"
+product' :: CassieParser
+product' = do
+    whiteSpace haskell
+    elements <- NE.fromList <$> p3Term `sepBy1` char '*' <?> "product"
+    return $ case elements of
+        [x] -> x
+        _   -> foldl (*) (NE.head elements) (NE.tail elements)
 
 quotient :: CassieParser
 quotient = do
     dividend <- p2Term
     _ <- char '/'
-    divisor <- p2Term <?> "quotient"
-    return $ Multiplicative [dividend, Inverse divisor]
+    divisor <- p3Term <?> "quotient"
+    return $ dividend / divisor
 
 exponent :: CassieParser
 exponent = do
@@ -96,7 +105,7 @@ p5Term :: CassieParser
 p5Term = try difference <|> p4Term
 
 p4Term :: CassieParser 
-p4Term = try product <|> p3Term
+p4Term = try product' <|> p3Term
 
 p3Term :: CassieParser
 p3Term = try quotient <|> p2Term
@@ -109,11 +118,3 @@ p1Term = try logarithm <|> p0Term
 
 p0Term :: CassieParser
 p0Term = try function <|> try parenthetical <|> try symb <|> value
-
-polyTerm :: Char -> (NE.NonEmpty (RealAlgStruct) -> RealAlgStruct) -> CassieParser -> String -> CassieParser
-polyTerm c cnstrctr p name = do
-    whiteSpace haskell
-    elements <- p `sepBy1` char c <?> name
-    return $ case elements of
-        [x] -> x
-        _   -> cnstrctr $ NE.fromList elements
