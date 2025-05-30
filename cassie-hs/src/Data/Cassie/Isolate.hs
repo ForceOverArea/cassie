@@ -159,10 +159,7 @@ isIsolated eqn sym = case isolate sym eqn Map.empty of
 -- | Puts a snapshot of the current state of the equation being solved into the 
 --   log of steps taken in the solution. 
 logStep :: AlgebraicStructure m u n => Isolate m u n ()
-logStep = 
-    let 
-        show' = show . ShowAlgStruct
-    in do
-        eqn <- get
-        let step = show' (lhs eqn) ++ " = " ++  show' (rhs eqn)
-        tell [step]
+logStep = do
+    eqn <- get
+    let step = showAlgStruct (lhs eqn) ++ " = " ++  showAlgStruct (rhs eqn)
+    tell [step]

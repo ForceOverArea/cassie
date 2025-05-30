@@ -20,8 +20,8 @@ class CancelUnary u where
     cancel :: u -> Maybe u
 
 class Show u => ShowUnary u where
-    showUnary :: Show a => u -> (a -> String)
-    showUnary x = \y -> show x ++ "(" ++ show y ++ ")"
+    showUnary :: Show a => u -> a -> String
+    showUnary x y = show x ++ "(" ++ show y ++ ")"
 
 data TrigUnary = Sin | Cos | Tan | ASin | ACos | ATan deriving (Show, Eq, Ord)
 

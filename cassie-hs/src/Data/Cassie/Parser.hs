@@ -8,8 +8,7 @@ module Data.Cassie.Parser
 import safe Control.Arrow
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Parser.Internal
-import safe Data.Cassie.Structures.Internal (Equation(..), Symbol)
-import safe Data.Cassie.Structures.Instances.Real
+import safe Data.Cassie.Structures
 import safe Text.Parsec
 import safe Data.Cassie.Utils
 

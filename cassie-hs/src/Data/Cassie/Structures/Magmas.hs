@@ -30,8 +30,8 @@ class CancelMagma m where
     rCancel :: m -> Maybe (Either m m)
 
 class Show m => ShowMagma m where
-    showMagma :: Show a => m -> (a -> a -> String)
-    showMagma x = \l r -> show l ++ show x ++ show r
+    showMagma :: Show a => m -> a -> a -> String
+    showMagma x l r = show l ++ show x ++ show r
 
 data ExpnMagma = Expn | Logm | Root deriving (Show, Eq, Ord)
 

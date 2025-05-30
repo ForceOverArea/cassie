@@ -16,7 +16,7 @@ import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Set as Set
 import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
-import safe Data.Cassie.Internal
+import safe Data.Cassie.Utils
 import safe Data.Cassie.Evaluate (evaluate, isConst, EvalError)
 import safe Data.Cassie.Isolate (isIsolated, isolate, IsolateError, Steps)
 import safe Data.Cassie.Parser (parseEquation, CassieParserError)

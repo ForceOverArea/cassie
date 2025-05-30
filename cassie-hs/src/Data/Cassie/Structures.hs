@@ -5,6 +5,7 @@ module Data.Cassie.Structures
     ( (~?)
     , isolateLeftOperand
     , isolateRightOperand
+    , showAlgStruct
     , AlgebraicStructure
     , AlgStruct(..)
     , CancelMagma(..)
@@ -23,16 +24,17 @@ module Data.Cassie.Structures
     , RealEqn
     , RealMagma(..)
     , RealUnary(..)
-    , ShowAlgStruct(..)
     , Symbol
     , UnaryMock(..)
     ) where
 
 import safe Data.Cassie.Structures.Instances.Complex
-import safe Data.Cassie.Structures.Magmas
 import safe Data.Cassie.Structures.Instances.Real
-import safe Data.Cassie.Structures.UnarySystems
 import safe Data.Cassie.Structures.Internal
+import safe Data.Cassie.Structures.Magmas
+import safe Data.Cassie.Structures.ShowStructure
+import safe Data.Cassie.Structures.UnarySystems
+import safe Data.Complex
 
 class ( MagmaMock m n
       , CancelMagma m
@@ -47,6 +49,18 @@ class ( MagmaMock m n
       , Eq u
       , Eq n
       ) => AlgebraicStructure m u n 
+
+data Equation m u n = Equation { lhs :: AlgStruct m u n
+                               , rhs :: AlgStruct m u n
+                               }
+                               deriving (Eq, Ord)
+
+type ComplexEqn = Equation ComplexMagma ComplexUnary (Complex Double)
+
+type RealEqn = Equation RealMagma RealUnary Double
+
+instance (ShowMagma m, ShowUnary u, Show n, Num n) => Show (Equation m u n) where
+    show (Equation l r) = showAlgStruct l ++ " = " ++ showAlgStruct r
 
 instance AlgebraicStructure RealMagma RealUnary Double 
 

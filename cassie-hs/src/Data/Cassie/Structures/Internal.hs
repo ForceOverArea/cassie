@@ -7,16 +7,11 @@ module Data.Cassie.Structures.Internal
     , AlgStruct(..)
     , Context
     , CtxItem(..)
-    , Equation(..)
-    , ShowAlgStruct(..)
     , Symbol
     ) where
 
-import safe Control.Arrow 
-import safe Control.Monad
-import safe qualified Data.Map as Map
-import safe Data.List as List
 import safe qualified Data.List.NonEmpty as NE
+import safe qualified Data.Map as Map
 
 type Symbol = String
 
@@ -26,11 +21,6 @@ data CtxItem m u n
     = Func [Symbol] (AlgStruct m u n)
     | Const (AlgStruct m u n)
     deriving (Show, Eq, Ord)
-
-data Equation m u n = Equation { lhs :: AlgStruct m u n
-                               , rhs :: AlgStruct m u n
-                               }
-                               deriving (Eq, Ord)
 
 -- | A heavily abstracted representation of a mathematical expression.
 --   This record is designed to represent generalized algebraic 
@@ -73,49 +63,6 @@ data AlgStruct m u n
     | Symbol         Symbol
     deriving (Show, Eq, Ord)
 
-newtype ShowAlgStruct m u n = ShowAlgStruct (AlgStruct m u n) deriving (Eq, Ord)
-
-instance (Show m, Show u, Show n) => Show (ShowAlgStruct m u n) where
-    show (ShowAlgStruct s) = 
-        let
-            show' = show . ShowAlgStruct
-
-            renderTerm (Negated term) = show' (Negated term)
-            renderTerm term           = " + " ++ show' term
-
-            renderTerms terms = 
-                case NE.uncons terms of
-                    (x, Just others) -> show' x ++ concatMap renderTerm others
-                    (x, Nothing)     -> show' x
-
-            inverted (Inverse _) = True
-            inverted _           = False
-
-            unwrapInverse (Inverse x) = x
-            unwrapInverse x = x
-
-            renderFactors factors = 
-                let 
-                    fraction = renderBoth $ partition inverted $ NE.toList factors
-                    renderBoth = 
-                        first (map unwrapInverse) 
-                        >>> join (***) (map show')
-                in case fraction of
-                    ([], num)    -> "(" ++ intercalate "*" num ++ ")"
-                    (denom, [])  -> "1 / (" ++ intercalate "*" denom ++ ")"
-                    (denom, num) -> "(" ++ intercalate "*" num ++ ") / (" ++ intercalate "*" denom ++ ")"
-
-        in case s of
-            Additive terms          -> renderTerms terms
-            Multiplicative factors  -> renderFactors factors
-            Negated neg             -> " - " ++ show' neg
-            Inverse inv             -> "1 / " ++ show' inv
-            Magma m l r             -> (show' l) ++ (show m) ++ (show' r)
-            N_ary name args         -> name ++ "(" ++ intercalate "," (map show' args)  ++ ")"
-            Unary u x               -> show u ++ "(" ++ show' x ++ ")"
-            Nullary num             -> show num
-            Symbol sym              -> sym
-
 instance Num n => Num (AlgStruct m u n) where
     (Additive terms1) + (Additive terms2) = Additive $ terms1 <> terms2
     (Additive terms1) + x                 = Additive $ terms1 <> NE.fromList [x]
@@ -141,44 +88,6 @@ instance Fractional n => Fractional (AlgStruct m u n) where
     recip = Inverse
 
     fromRational = Nullary . fromRational
-
-instance (Show m, Show u, Show n) => Show (Equation m u n) where
-    show eqn = (show . ShowAlgStruct $ lhs eqn) ++ " = " ++ (show . ShowAlgStruct $ rhs eqn)
-
-(<%>) :: (Show m, Show u, Show n) => AlgStruct m u n -> AlgStruct m u n -> Bool
-Additive _ <%> as =
-    case as of
-        Negated _   -> True
-        Inverse _   -> True
-        Magma _ _ _ -> True
-        _           -> False
-
-Multiplicative _ <%> as =
-    case as of
-        Additive _  -> True
-        Negated _   -> True
-        Magma _ _ _ -> True
-        _           -> False
-
-Negated _ <%> _ = True
-
-Inverse _ <%> _ = True
-
-Magma _ _ _ <%> as =
-    case as of
-        Additive _       -> True
-        Multiplicative _ -> True
-        Negated _        -> True
-        Magma _ _ _      -> True
-        _                -> False
-
-N_ary _ _ <%> _ = False
-
-Unary _ _ <%> _ = False
-
-Nullary _ <%> _ = False
-
-Symbol _ <%> _ = False
 
 (~?) :: Symbol -> AlgStruct m u n -> Bool
 sym ~? Additive terms           = any (sym ~?) terms

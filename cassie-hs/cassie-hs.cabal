@@ -23,7 +23,7 @@ library
                         Data.Cassie.Parser.Internal,
                         Data.Cassie.Parser.Lang,
                         Data.Cassie.Evaluate,
-                        Data.Cassie.Internal,
+                        -- Data.Cassie.Internal,
                         Data.Cassie.Isolate,
                         -- Data.Cassie.Isolate.PolySolve,
                         Data.Cassie.Structures,                       
@@ -36,6 +36,7 @@ library
                         Data.Cassie.Structures.Instances.Real,
                         Data.Cassie.Structures.Magmas,
                         Data.Cassie.Structures.UnarySystems,
+                        Data.Cassie.Structures.ShowStructure,
     -- other-extensions:
     -- Build uses GHC 9.2.8 by default, use up to 4.21.0.0 to satisfy experimental WASM backend
     build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 

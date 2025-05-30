@@ -3,7 +3,6 @@
 module Data.Cassie.Structures.Instances.Real
     ( RealAlgStruct
     , RealCtx
-    , RealEqn
     , RealMagma(..)
     , RealUnary(..)
     ) where
@@ -15,8 +14,6 @@ import safe Data.Cassie.Structures.Magmas
 import safe Data.Cassie.Structures.UnarySystems
 
 type RealAlgStruct = AlgStruct RealMagma RealUnary Double
-
-type RealEqn = Equation RealMagma RealUnary Double
 
 type RealCtx = Context RealMagma RealUnary Double
 
