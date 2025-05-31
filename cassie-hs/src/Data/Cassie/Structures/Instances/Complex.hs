@@ -3,8 +3,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Structures.Instances.Complex
     ( ComplexAlgStruct
-    , ComplexCtx
-    , ComplexEqn
     , ComplexMagma(..)
     , ComplexUnary(..)
     ) where
@@ -18,10 +16,6 @@ import safe Data.Cassie.Structures.UnarySystems
 
 type ComplexAlgStruct = AlgStruct ComplexMagma ComplexUnary (Complex Double)
 
-type ComplexEqn = Equation ComplexMagma ComplexUnary (Complex Double)
-
-type ComplexCtx = Context ComplexMagma ComplexUnary (Complex Double)
-
 newtype ComplexMagma = ComplexMagma ExpnMagma deriving (Show, Eq, Ord)
 
 instance Floating a => MagmaMock ComplexMagma a where
@@ -32,8 +26,8 @@ instance CancelMagma ComplexMagma where
 
     rCancel (ComplexMagma cm) = join (+++) ComplexMagma <$> rCancel cm
 
-instance Renderable ComplexMagma where
-    render (ComplexMagma cm) = render cm
+instance ShowMagma ComplexMagma where
+    showMagma (ComplexMagma cm) = showMagma cm
 
 newtype ComplexUnary = ComplexUnary TrigUnary deriving (Show, Eq, Ord)
 
@@ -43,5 +37,5 @@ instance Floating a => UnaryMock ComplexUnary a where
 instance CancelUnary ComplexUnary where
     cancel (ComplexUnary cu) = ComplexUnary <$> cancel cu
 
-instance Renderable ComplexUnary where
-    render (ComplexUnary cu) = render cu
+instance ShowUnary ComplexUnary where
+    showUnary (ComplexUnary cu) = showUnary cu

@@ -5,9 +5,8 @@ module Data.Cassie.Structures.UnarySystems
     ( TrigUnary(..)
     , CancelUnary(..)
     , UnaryMock(..)
+    , ShowUnary(..)
     ) where
-
-import Data.Cassie.Structures.Internal
 
 class UnaryMock u n where
     -- | Maps a marker representing a unary system operation to its appropriate
@@ -19,6 +18,10 @@ class UnaryMock u n where
 class CancelUnary u where
     -- | Yields the inverse operation of the one given.
     cancel :: u -> Maybe u
+
+class Show u => ShowUnary u where
+    showUnary :: Show a => u -> a -> String
+    showUnary x y = show x ++ "(" ++ show y ++ ")"
 
 data TrigUnary = Sin | Cos | Tan | ASin | ACos | ATan deriving (Show, Eq, Ord)
 
@@ -40,10 +43,10 @@ instance CancelUnary TrigUnary where
             ACos -> Cos
             ATan -> Tan
 
-instance Renderable TrigUnary where
-    render Sin = "sin"
-    render Cos = "cos"
-    render Tan = "tan"
-    render ASin = "arcsin"
-    render ACos = "arccos"
-    render ATan = "arctan"
+instance ShowUnary TrigUnary where
+    showUnary Sin  = \x -> "sin(" ++ show x ++ ")"
+    showUnary Cos  = \x -> "cos(" ++ show x ++ ")"
+    showUnary Tan  = \x -> "tan(" ++ show x ++ ")"
+    showUnary ASin = \x -> "arcsin(" ++ show x ++ ")"
+    showUnary ACos = \x -> "arccos(" ++ show x ++ ")"
+    showUnary ATan = \x -> "arctan(" ++ show x ++ ")"

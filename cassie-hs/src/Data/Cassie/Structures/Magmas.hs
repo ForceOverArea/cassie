@@ -1,5 +1,6 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Structures.Magmas 
     ( isolateLeftOperand
@@ -7,6 +8,7 @@ module Data.Cassie.Structures.Magmas
     , CancelMagma(..)
     , ExpnMagma(..)
     , MagmaMock(..)
+    , ShowMagma(..)
     ) where
 
 import safe Data.Cassie.Structures.Internal
@@ -18,26 +20,60 @@ class MagmaMock m n where
 
 -- | Typeclass for values that represent a set of binary operations that form 
 --   a magma along with elements of type @n@.
-class CancelMagma m where    
+class CancelMagma m where
     -- | Given a magma operation and a left operand, this function yields a
-    --   function that performs the inverse operation on an algebraic structure.
+    --   token that indicates what partially applied binary operation isolates 
+    --   the right-hand operand in a given structure.
+    --  
+    --   Example: 
+    --
+    --   in the equation @2^x = 8@
+    -- 
+    --   where @Expn@ is a magma token type representing exponentiation (@^@) and 
+    --   @Logm@ is a magma token type representing logarithms of an arbitrary base 
+    --   (@log<x>(y)@)
+    -- 
+    --   @lCancel Expn@ should yield @Left Logm@ 
+    --
+    --   because @log<2>(2^x) = log<2>(8) = x@
+    --
+    --   i.e. because left-applied logarithms can cancel left-applied exponents
     lCancel :: m -> Maybe (Either m m)
     
-    -- | Given a magma operation and a right operand, this function yields a
-    --   function that performs the inverse operation on an algebraic structure.
+    -- | Given a magma operation and a left operand, this function yields a
+    --   token that indicates what partially applied binary operation isolates 
+    --   the right-hand operand in a given structure.
+    --  
+    --   Example: 
+    --
+    --   in the equation @x^3 = 8@
+    -- 
+    --   where @Expn@ is a magma token type representing exponentiation (@^@) and 
+    --   @Root@ is a magma token type representing roots of an arbitrary radical 
+    --   (@root<x>(y)@)
+    -- 
+    --   @rCancel Expn@ should yield @Left Root@ 
+    --
+    --   because @root<3>(x^3) = root<3>(8) = x@
+    --
+    --   i.e. because left-applied roots can cancel right-applied exponents
     rCancel :: m -> Maybe (Either m m)
+
+class Show m => ShowMagma m where
+    showMagma :: Show a => m -> a -> a -> String
+    showMagma x l r = show l ++ show x ++ show r
 
 data ExpnMagma = Expn | Logm | Root deriving (Show, Eq, Ord)
 
-isolateLeftOperand :: CancelMagma m => m -> AlgStruct m u n -> Maybe (AlgStruct m u n -> AlgStruct m u n)
-isolateLeftOperand op l = do
+isolateRightOperand :: CancelMagma m => m -> AlgStruct m u n -> Maybe (AlgStruct m u n -> AlgStruct m u n)
+isolateRightOperand op l = do
     cancellativeOp <- lCancel op
     return $ case cancellativeOp of
         Left op'  -> Magma op' l
         Right op' -> \x -> Magma op' x l
 
-isolateRightOperand :: CancelMagma m => m -> AlgStruct m u n -> Maybe (AlgStruct m u n -> AlgStruct m u n)
-isolateRightOperand op r = do
+isolateLeftOperand :: CancelMagma m => m -> AlgStruct m u n -> Maybe (AlgStruct m u n -> AlgStruct m u n)
+isolateLeftOperand op r = do
     cancellativeOp <- rCancel op
     return $ case cancellativeOp of 
         Left op'  -> Magma op' r
@@ -61,7 +97,7 @@ instance CancelMagma ExpnMagma where
             Logm -> Right Root
             Root -> Left Logm
 
-instance Renderable ExpnMagma where
-    render Expn = "^"
-    render Logm = ">("
-    render Root = ">("
+instance ShowMagma ExpnMagma where
+    showMagma Expn = \x y -> show x ++ "^" ++ show y
+    showMagma Logm = \x y -> "log<" ++ show x ++ ">(" ++ show y ++ ")"
+    showMagma Root = \x y -> "root<" ++ show x ++ ">(" ++ show y ++ ")"

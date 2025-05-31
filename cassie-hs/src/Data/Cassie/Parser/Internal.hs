@@ -10,7 +10,6 @@ module Data.Cassie.Parser.Internal
     , p2Term
     , p3Term
     , parenthetical
-    , polyTerm
     , product
     , quotient
     , sum
@@ -35,24 +34,34 @@ expression :: CassieParser
 expression = sum
 
 sum :: CassieParser
-sum = polyTerm '+' Additive p5Term "sum"
+sum = do
+    whiteSpace haskell
+    elements <- NE.fromList <$> p5Term `sepBy1` char '+' <?> "sum"
+    return $ case elements of
+        [x] -> x
+        _   -> foldl (+) (NE.head elements) (NE.tail elements)
 
 difference :: CassieParser
 difference = do
     minuend <- p4Term
     _ <- char '-'
-    subtrahend <- p4Term <?> "difference"
-    return $ Additive [minuend, Negated subtrahend]
+    subtrahend <- p5Term <?> "difference"
+    return $ minuend - subtrahend
 
 product :: CassieParser
-product = polyTerm '*' Multiplicative p3Term "product"
+product = do
+    whiteSpace haskell
+    elements <- NE.fromList <$> p3Term `sepBy1` char '*' <?> "product"
+    return $ case elements of
+        [x] -> x
+        _   -> foldl (*) (NE.head elements) (NE.tail elements)
 
 quotient :: CassieParser
 quotient = do
     dividend <- p2Term
     _ <- char '/'
-    divisor <- p2Term <?> "quotient"
-    return $ Multiplicative [dividend, Inverse divisor]
+    divisor <- p3Term <?> "quotient"
+    return $ dividend / divisor
 
 exponent :: CassieParser
 exponent = do
@@ -68,6 +77,14 @@ logarithm = do
     logBase <- angles haskell expression
     logLog <- parens haskell expression <?> "logarithm"
     return $ Magma (RealMagma Logm) logBase logLog
+
+root :: CassieParser
+root = do
+    whiteSpace haskell
+    _ <- string "root"
+    radical <- angles haskell expression
+    radicand <- parens haskell expression <?> "root"
+    return $ Magma (RealMagma Root) radical radicand
 
 function :: CassieParser
 function = do
@@ -102,18 +119,10 @@ p3Term :: CassieParser
 p3Term = try quotient <|> p2Term
 
 p2Term :: CassieParser
-p2Term = try exponent <|> p1Term
+p2Term = try exponent <|> try root <|> p1Term
 
 p1Term :: CassieParser
 p1Term = try logarithm <|> p0Term
 
 p0Term :: CassieParser
 p0Term = try function <|> try parenthetical <|> try symb <|> value
-
-polyTerm :: Char -> (NE.NonEmpty (RealAlgStruct) -> RealAlgStruct) -> CassieParser -> String -> CassieParser
-polyTerm c cnstrctr p name = do
-    whiteSpace haskell
-    elements <- p `sepBy1` char c <?> name
-    return $ case elements of
-        [x] -> x
-        _   -> cnstrctr $ NE.fromList elements

@@ -40,7 +40,7 @@ data SubstitutionError
     deriving (Show, Eq, Ord)
 
 data AlgCrumb m u n
-    = Semigroup { kind    :: AlgStruct m u n 
+    = Plural    { kind    :: AlgStruct m u n 
                 , items   :: [AlgStruct m u n]
                 , indices :: [Int]
                 }
@@ -78,10 +78,7 @@ substituteMain target replacement source = do
             newBases <- mapM (substituteMain target replacement) substructures
             rebuildOnto newBases
 
-traverseTowards :: AlgebraicStructure m u n
-    => Symbol 
-    -> AlgStruct m u n 
-    -> Substitute m u n [AlgStruct m u n]
+traverseTowards :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> Substitute m u n [AlgStruct m u n]
 traverseTowards s struct =
     case struct of
         Additive ts         -> traverseTowardsPlural s struct $ NE.toList ts
@@ -94,30 +91,23 @@ traverseTowards s struct =
         Nullary _           -> return []
         Symbol s'           -> if s == s' then return [Symbol s'] else return []
 
-traverseTowardsPlural :: AlgebraicStructure m u n 
-    => Symbol 
-    -> AlgStruct m u n 
-    -> [AlgStruct m u n]
-    -> Substitute m u n [AlgStruct m u n]
+traverseTowardsPlural :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> [AlgStruct m u n]-> Substitute m u n [AlgStruct m u n]
 traverseTowardsPlural s k terms = 
     let 
         f = map (flip elemIndices terms)
     in do
         let (has, doesnt) = partition (s ~?) terms
         let hasIndices = concat $ f has
-        pushCrumb $ Semigroup k doesnt hasIndices
+        pushCrumb $ Plural    k doesnt hasIndices
         return has
 
-traverseTowardsMagmaOp :: Symbol -> m 
-    -> AlgStruct m u n 
-    -> AlgStruct m u n 
-    -> Substitute m u n [AlgStruct m u n]
+traverseTowardsMagmaOp :: Symbol -> m -> AlgStruct m u n -> AlgStruct m u n -> Substitute m u n [AlgStruct m u n]
 traverseTowardsMagmaOp s k l r = 
     let 
         both      = pushCrumb (MagmaOp k Nothing False) >> return [l, r]
         neither   = throwErr BinaryStructureContainsNone
         leftOnly  = pushCrumb (MagmaOp k (Just r) False) >> return [l]
-        rightOnly = pushCrumb (MagmaOp k (Just l) False) >> return [r]
+        rightOnly = pushCrumb (MagmaOp k (Just l) True) >> return [r]
     in truthTable2 (s ~?) l r both neither leftOnly rightOnly
 
 traverseTowardsUnaryOp :: u -> AlgStruct m u n -> Substitute m u n (AlgStruct m u n)
@@ -130,7 +120,7 @@ rebuildOnto structures = do
         (Nothing, [x]) -> return x
         (Just crumbKind, x:_) -> do
             newBase <- case crumbKind of
-                Semigroup k terms idxs    -> rebuildSemigroup structures k terms idxs
+                Plural    k terms idxs    -> rebuildPlural structures k terms idxs
                 MagmaOp k possTerm isLeft -> rebuildMagmaOp structures k possTerm isLeft
                 UnaryOp k                 -> rebuildUnaryOp structures k x
                 Negate                    -> return $ Negated x
@@ -138,12 +128,8 @@ rebuildOnto structures = do
             rebuildOnto $ pure newBase
         _ -> throwErr IncorrectNumOfTermsToRebuild 
 
-rebuildSemigroup :: [AlgStruct m u n] 
-    -> AlgStruct m u n 
-    -> [AlgStruct m u n] 
-    -> [Int] 
-    -> Substitute m u n (AlgStruct m u n)
-rebuildSemigroup baseTerms structKind structTerms idxs = 
+rebuildPlural :: [AlgStruct m u n] -> AlgStruct m u n -> [AlgStruct m u n] -> [Int] -> Substitute m u n (AlgStruct m u n)
+rebuildPlural baseTerms structKind structTerms idxs = 
     let 
         terms = foldl rebuildTerm structTerms $ zip idxs baseTerms
         rebuildTerm ts (idx, term) = insertAt term idx ts
@@ -152,7 +138,7 @@ rebuildSemigroup baseTerms structKind structTerms idxs =
     in if numIdxs /= numTerms then
             throwErr IncorrectNumOfTermsToRebuild
         else do
-            f <- constructOneSemigroup structKind
+            f <- constructOnePlural structKind
             return $ f terms
 
 rebuildMagmaOp :: [AlgStruct m u n] -> m -> Maybe (AlgStruct m u n) -> Bool -> Substitute m u n (AlgStruct m u n)
@@ -170,12 +156,12 @@ rebuildUnaryOp _ structKind term = do
     f <- constructOneUnaryOp structKind 
     return $ f term
 
-constructOneSemigroup :: AlgStruct m u n -> Substitute m u n ([AlgStruct m u n] -> AlgStruct m u n)
-constructOneSemigroup x = 
+constructOnePlural :: AlgStruct m u n -> Substitute m u n ([AlgStruct m u n] -> AlgStruct m u n)
+constructOnePlural x = 
     case x of
         Additive _          -> return $ Additive . NE.fromList
         Multiplicative _    -> return $ Multiplicative . NE.fromList
-        -- TODO: add function reconstruction here
+        N_ary name _        -> return $ N_ary name
         _ -> throwErr StructureIsNotSemigroup
 
 constructOneMagmaOp :: m -> Substitute m u n (AlgStruct m u n -> AlgStruct m u n -> AlgStruct m u n)
