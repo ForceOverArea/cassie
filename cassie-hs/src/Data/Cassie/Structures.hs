@@ -1,127 +1,70 @@
 {-# LANGUAGE Safe #-}
-module Data.Cassie.Structures 
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+module Data.Cassie.Structures
     ( (~?)
-    , getSymbol
-    , leftHand
-    , reciprocal
-    , rightHand
+    , isolateLeftOperand
+    , isolateRightOperand
     , showAlgStruct
-    , AlgebraicStruct(..)
+    , AlgebraicStructure
+    , AlgStruct(..)
+    , CancelMagma(..)
+    , CancelUnary(..)
+    , ComplexAlgStruct
+    , ComplexEqn
+    , ComplexMagma(..)
+    , ComplexUnary(..)
     , Equation(..)
+    , MagmaMock(..)
+    , RealAlgStruct
+    , RealEqn
+    , RealMagma(..)
+    , RealUnary(..)
+    , ShowMagma(..)
+    , ShowUnary(..)
     , Symbol
+    , UnaryMock(..)
     ) where
 
-import safe Data.List
+import safe Data.Cassie.Structures.Instances.Complex
+import safe Data.Cassie.Structures.Instances.Real
+import safe Data.Cassie.Structures.Internal
+import safe Data.Cassie.Structures.Magmas
+import safe Data.Cassie.Structures.ShowStructure
+import safe Data.Cassie.Structures.UnarySystems
+import safe Data.Complex
 
--- | A type alias for a symbol that may be nested inside an algebraic structure
-type Symbol = String
+class ( MagmaMock m n
+      , CancelMagma m
+      , UnaryMock u n
+      , CancelUnary u
+      , ShowMagma m
+      , ShowUnary u
+      , Show n
+      , Num n
+      , Fractional n
+      , Eq m
+      , Eq u
+      , Eq n
+      ) => AlgebraicStructure m u n 
 
--- | An equation represented by two algebraic structures whose values are deemed to be equivalent
-newtype Equation = Equation (AlgebraicStruct, AlgebraicStruct) deriving Eq
+data Equation m u n = Equation { lhs :: AlgStruct m u n
+                               , rhs :: AlgStruct m u n
+                               }
+                               deriving (Eq, Ord)
 
-instance Show Equation where
-    show (Equation (lhs, rhs)) = showAlgStruct lhs ++ " = " ++ showAlgStruct rhs
+type ComplexEqn = Equation ComplexMagma ComplexUnary (Complex Double)
 
--- | Represents a (possibly nested) 'schoolyard algebra' structure
-data AlgebraicStruct
-    -- | Represents the sum of an unknown number of terms
-    = Sum [AlgebraicStruct]
+type RealEqn = Equation RealMagma RealUnary Double
 
-    -- | Represents the difference of an unknown number of subtrahends
-    | Difference [AlgebraicStruct]
+instance (ShowMagma m, ShowUnary u, Show n, Num n) => Show (Equation m u n) where
+    show (Equation l r) = showAlgStruct l ++ " = " ++ showAlgStruct r
 
-    -- | Represents the product of an unknown number of factors 
-    | Product [AlgebraicStruct]
+instance AlgebraicStructure RealMagma RealUnary Double 
 
-    -- | Represents the quotient of a @dividend@ and a @divisor@
-    | Quotient 
-        { dividend :: AlgebraicStruct
-        , divisor  :: AlgebraicStruct
-        }
-
-    -- | Represents a @base@ value raised to the power of @exponent@
-    | Exponent
-        { base :: AlgebraicStruct
-        , expn :: AlgebraicStruct
-        }
-
-    -- | Represents the exponent required to achieve @log@ given @base@
-    | Logarithm
-        { base :: AlgebraicStruct
-        , logm :: AlgebraicStruct
-        }
-
-    -- | Represents a function 
-    | Function 
-        { fname :: String
-        , argv  :: [AlgebraicStruct]
-        }
-
-    -- | Represents a grouped set of algebraic structures contained within parenthesis
-    | Group AlgebraicStruct
-
-    -- | Represents a raw numeric value that cannot be reversed and contains no other algebraic structures
-    | Value Double
-
-    -- | Represents a raw value that cannot be reversed and contains no other algebraic structures
-    | Symbol String
-    deriving (Show, Eq, Ord)
-
-showAlgStruct :: AlgebraicStruct -> String
-showAlgStruct (Sum terms) = intercalate " + " $ map showAlgStruct terms
-
-showAlgStruct (Difference subtrahends) = intercalate " - " $ map showAlgStruct subtrahends
-
-showAlgStruct (Product factors) = intercalate " * " $ map showAlgStruct factors
-
-showAlgStruct (Quotient sor dend) = showAlgStruct sor ++ " / " ++ showAlgStruct dend
-
-showAlgStruct (Exponent b e) = showAlgStruct b ++ " ^ " ++ showAlgStruct e
-
-showAlgStruct (Logarithm b l) = "log<" ++ showAlgStruct b ++ ">(" ++ showAlgStruct l ++ ")"
-
-showAlgStruct (Function n a) = n ++ "(" ++ intercalate "," (map showAlgStruct a) ++ ")"
-
-showAlgStruct (Group g) = "(" ++ showAlgStruct g ++ ")"
-
-showAlgStruct (Value val) = show val
-
-showAlgStruct (Symbol sym) = sym
-
--- | A binary operation that reveals whether @sym@ is present as 
---   a raw symbol in the given @AlgebraicStruct@.
-(~?) :: AlgebraicStruct -> Symbol -> Bool
-Sum terms ~? sym = any (~? sym) terms
-
-Difference subtrahends ~? sym = any (~? sym) subtrahends
-
-Product factors ~? sym = any (~? sym) factors
-
-Quotient s d ~? sym = any (~? sym) [s, d]
-
-Exponent b e ~? sym = any (~? sym) [b, e]
-
-Logarithm b l ~? sym = any (~? sym) [b, l]
-
-Function _ a ~? sym = any (~? sym) a
-
-Group g ~? sym = g ~? sym
-
-Value _ ~? _ = False
-
-Symbol x ~? sym = x == sym
-
-leftHand :: Equation -> AlgebraicStruct
-leftHand (Equation (x, _)) = x
-
-rightHand :: Equation -> AlgebraicStruct
-rightHand (Equation (_, x)) = x
-
-getSymbol :: AlgebraicStruct -> Symbol
-getSymbol (Symbol x) = x
-getSymbol _ = error "given structure was not a symbol"
-
--- | Maps a given algebraic structure to its reciprocal.
-reciprocal :: AlgebraicStruct -> AlgebraicStruct
-reciprocal (Quotient (Value 1.0) s) = s
-reciprocal x = Quotient (Value 1.0) x
+instance ( Num n
+         , Floating n
+         , Fractional n
+         , Show n
+         , Eq n
+         ) => AlgebraicStructure ComplexMagma ComplexUnary n

@@ -16,6 +16,7 @@ export async function init() {
     
     // This is a hack to make this script work with the deno dev server script.
     if (fetchedWasm.status !== 200) {
+      console.warn('Falling back on alt path for deno server. You should not see this warning in prod.');
       fetchedWasm = await fetch(
         WASM_MODULE_PATH.replace('/cassie', '')
       );

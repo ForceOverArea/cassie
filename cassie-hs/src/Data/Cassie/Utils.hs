@@ -1,52 +1,45 @@
-{- |
-Module      :  Internal
-Description :  Miscellaneous utility functions for keeping code elsewhere concise
-Copyright   :  (c) Grant Christiansen
-License     :  MIT
-
-Maintainer  :  christiansengrant18@gmail.com
-Stability   :  [unstable] | experimental | provisional | stable | frozen
-Portability :  portable
-
-Provides various utility functions for working with 3-tuples, strings, lists, 
-@NonEmpty@s, throwing errors in an @Except@ monad, and more.
--}
-
 {-# LANGUAGE Safe #-}
-module Data.Cassie.Internal 
+module Data.Cassie.Utils
     ( first'
-    , second'
-    , third
     , insertAt
     , isNonEmptyLine
+    , second'
     , splitStrAt
     , splitStrAt'
-    , throwM
+    , third
+    , throwErr
     , truthTable2
     ) where
 
 import safe Control.Arrow
 import safe Control.Monad
-import safe qualified Data.Text as Text
-import safe qualified Data.List.NonEmpty as NonEmpty
+import safe qualified Data.List.NonEmpty as NE
 import safe Control.Monad.Trans (lift, MonadTrans)
 import safe Control.Monad.Except (throwError, Except)
+import safe qualified Data.Text as Text
 
--- | Inserts a given value @x@ into a list of values at the @idx@th index.
 insertAt :: a -> Int -> [a] -> [a]
 insertAt x idx xs = (take idx xs) ++ (x:(drop idx xs))
+
+-- | Indicates whether a line of text given as a @String@ contains
+--   something other than just whitespace.
+isNonEmptyLine :: String -> Bool
+isNonEmptyLine str = 
+    let 
+        p :: Bool -> Char -> Bool
+        p b x = b || (not $ x `elem` " \n\r\t")
+    in foldl p False str
 
 -- | Splits a string at the given delimiter @Char@.
 splitStrAt :: Char -> String -> [String]
 splitStrAt c = Prelude.map (Text.unpack . Text.strip) . Text.split (== c) . Text.pack
 
 -- | Splits a string at the given delimiter @Char@, returning a @Data.List.NonEmpty@.
-splitStrAt' :: Char -> String -> NonEmpty.NonEmpty String
-splitStrAt' c = NonEmpty.map (Text.unpack . Text.strip) . NonEmpty.fromList . Text.split (== c) . Text.pack
+splitStrAt' :: Char -> String -> NE.NonEmpty String
+splitStrAt' c = NE.map (Text.unpack . Text.strip) . NE.fromList . Text.split (== c) . Text.pack
 
--- | Shorthand for throwing an @Except@ monad error.
-throwM :: MonadTrans t => e -> t (Except e) a
-throwM = lift . throwError
+throwErr :: MonadTrans t => e -> t (Except e) a
+throwErr = lift . throwError 
 
 -- | @truthTable2 p x y q1 q2 q3 q4@
 --
@@ -81,12 +74,3 @@ second' f (x, y, z) = (x, f y, z)
 --   but works on the final item in a 3-tuple.
 third :: (t -> c) -> (a, b, t) -> (a, b, c)
 third f (x, y, z) = (x, y, f z)
-
--- | Indicates whether a line of text given as a @String@ contains
---   something other than just whitespace.
-isNonEmptyLine :: String -> Bool
-isNonEmptyLine str = 
-    let 
-        p :: Bool -> Char -> Bool
-        p b x = b || (not $ x `elem` " \n\r\t")
-    in foldl p False str

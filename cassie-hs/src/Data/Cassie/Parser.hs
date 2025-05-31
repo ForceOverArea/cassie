@@ -5,14 +5,12 @@ module Data.Cassie.Parser
     , CassieParserError
     ) where
 
-import safe Prelude hiding (exponent, logBase, product, sum)
-
 import safe Control.Arrow
 import safe qualified Data.Set as Set
-import safe Data.Cassie.Internal
 import safe Data.Cassie.Parser.Internal
-import safe Data.Cassie.Structures(AlgebraicStruct(..), Equation(..), Symbol)
+import safe Data.Cassie.Structures
 import safe Text.Parsec
+import safe Data.Cassie.Utils
 
 data CassieParserError 
     = FailedToParse ParseError
@@ -33,7 +31,7 @@ instance Show CassieParserError where
     show (FoundNone eqn)
         = "found 0 expressions in given 'equation': " ++ eqn
 
-parseExpression :: String -> Either ParseError (AlgebraicStruct, Set.Set Symbol)
+parseExpression :: String -> Either ParseError (RealAlgStruct, Set.Set Symbol)
 parseExpression expr = 
     let 
         bundleFoundSyms struct = do
@@ -41,15 +39,15 @@ parseExpression expr =
             return (struct, syms)
     in runParser (expression >>= bundleFoundSyms) Set.empty expr expr
 
-parseEquation :: String -> Either CassieParserError (Equation, Set.Set Symbol)
+parseEquation :: String -> Either CassieParserError (RealEqn, Set.Set Symbol)
 parseEquation eqn =
     let 
         sides = splitStrAt '=' eqn
     in case sides of
-        [lhs, rhs] -> do
-            (lhs', lSyms) <- left FailedToParse $ parseExpression lhs 
-            (rhs', rSyms) <- left FailedToParse $ parseExpression rhs
-            return $ (Equation (lhs', rhs'), lSyms `Set.union` rSyms)
+        [lText, rText] -> do
+            (lhs', lSyms) <- left FailedToParse $ parseExpression lText
+            (rhs', rSyms) <- left FailedToParse $ parseExpression rText
+            return $ (Equation lhs' rhs', lSyms `Set.union` rSyms)
         []         -> Left $ FoundNone eqn
         [_]        -> Left $ FoundExpression eqn
         (_:_:_)    -> Left $ FoundMultiple eqn
