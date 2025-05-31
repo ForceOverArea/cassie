@@ -1,17 +1,12 @@
 :root {
-    color: #404848;
-    background-image: url('assets/images/abstract-white-wave-or-wavy-line-background-and-texture-vector-1307380358.jpg');
-    /* background-color: #b0b0b0; */
+    color: white;
+    /* background-image: url('assets/images/abstract-white-wave-or-wavy-line-background-and-texture-vector-1307380358.jpg'); */
+    background-color: white;
 }
 
 @font-face {
-    font-family: 'Minimalhard';
-    src: url('assets/fonts/Minimalhard2-9YxK.ttf');
-}
-
-@font-face {
-    font-family: 'IBMPlexMono-Regular';
-    src: url('assets/fonts/IBMPlexMono-Regular.ttf');
+    font-family: 'FiraCode';
+    src: url('assets/fonts/FiraCode-SemiBold.ttf');
 }
 
 [contenteditable] {
@@ -38,23 +33,31 @@
 .titlebar {
     /* size */
     height: 80px;
-    width: 95%;
+    width: 100%;
     /* alignment */
-    padding-left: 30px;
     /* padding-top: 15px; */
+    background-color: #5E5184;
+    filter: drop-shadow(0px 5px 15px black);
+}
+
+.title-inner {
+    padding-top: 7px;
+    padding-left: 30px;
+
+    filter: drop-shadow(2px 2px 3px black);
 }
 
 .title {
     /* cool font */
-    font-family: 'MinimalHard';
-    font-size: 80px;
+    font-family: 'Times New Roman';
+    font-size: 60px;
     /* alignment */
     padding-left: 7px;
 }
 
 .title-alt {
     /* text color for CAS in CASsie */
-    color: #FF00A2;
+    color: #daa3ff;
 }
 
 .version-tag {
@@ -66,16 +69,17 @@
     display: flex;
     flex-direction: row;
 
-    font-family: 'IBMPlexMono-Regular';
+    font-family: 'FiraCode';
     color: #D0D0D0;
     /* background-color: black; */
+    padding-top: 30px;
+    padding-bottom: 30px;
 }
 
 .editor-border {
     /* size */
     width: 60%;
     /* alignment */
-    padding-bottom: 30px;
     padding-left: 30px;
     padding-right: 30px;
 }
@@ -94,7 +98,6 @@
     display: flex;
     flex-flow: column;
 
-    padding-bottom: 30px;
     padding-right: 30px;
 }
 
