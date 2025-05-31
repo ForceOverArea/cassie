@@ -210,4 +210,4 @@ showStepsFor name soln =
 
 getSymbol :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> Symbol
 getSymbol (Symbol x) = x
-getSymbol x = error "given structure '" ++ showAlgStruct x ++ "' was not a symbol"
+getSymbol x = error $ "given structure '" ++ showAlgStruct x ++ "' was not a symbol"

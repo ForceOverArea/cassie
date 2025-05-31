@@ -107,7 +107,7 @@ traverseTowardsMagmaOp s k l r =
         both      = pushCrumb (MagmaOp k Nothing False) >> return [l, r]
         neither   = throwErr BinaryStructureContainsNone
         leftOnly  = pushCrumb (MagmaOp k (Just r) False) >> return [l]
-        rightOnly = pushCrumb (MagmaOp k (Just l) False) >> return [r]
+        rightOnly = pushCrumb (MagmaOp k (Just l) True) >> return [r]
     in truthTable2 (s ~?) l r both neither leftOnly rightOnly
 
 traverseTowardsUnaryOp :: u -> AlgStruct m u n -> Substitute m u n (AlgStruct m u n)

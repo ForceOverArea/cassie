@@ -71,7 +71,7 @@ isolateMain = do
         Unary unary x           -> isolateUnary unary x
         N_ary name args         -> isolateN_ary name args
         Nullary _               -> throwErr IsolatedConstantSomehow
-        Symbol s                
+        Symbol s
             -> if s == target then
                 return () 
             else
@@ -140,7 +140,8 @@ isolateN_ary name args = do
         case substituteFnArgs expanded argNames args of
             Left err -> throwErr $ FunctionCallErr err
             Right x  -> setLhs x
- 
+    isolateMain
+
 isolatePolyTerms :: NE.NonEmpty (AlgStruct m u n) -> Isolate m u n (NE.NonEmpty (AlgStruct m u n))
 isolatePolyTerms terms = do
     target <- asks fst

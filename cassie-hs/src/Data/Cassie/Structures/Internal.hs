@@ -64,7 +64,8 @@ instance Num n => Num (AlgStruct m u n) where
     x                     * (Multiplicative fac2) = Multiplicative $ NE.fromList [x] <> fac2
     x * y                                         = Multiplicative $ NE.fromList [x, y]
     
-    negate = Negated
+    negate (Negated x) = x
+    negate x = Negated x
 
     abs (Negated x) = x
     abs x           = x
@@ -75,7 +76,8 @@ instance Num n => Num (AlgStruct m u n) where
     fromInteger = Nullary . fromInteger
 
 instance Fractional n => Fractional (AlgStruct m u n) where
-    recip = Inverse
+    recip (Inverse x) = x
+    recip x = Inverse x
 
     fromRational = Nullary . fromRational
 

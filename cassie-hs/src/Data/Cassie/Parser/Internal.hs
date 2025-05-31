@@ -78,6 +78,14 @@ logarithm = do
     logLog <- parens haskell expression <?> "logarithm"
     return $ Magma (RealMagma Logm) logBase logLog
 
+root :: CassieParser
+root = do
+    whiteSpace haskell
+    _ <- string "root"
+    radical <- angles haskell expression
+    radicand <- parens haskell expression <?> "root"
+    return $ Magma (RealMagma Root) radical radicand
+
 function :: CassieParser
 function = do
     whiteSpace haskell
@@ -111,7 +119,7 @@ p3Term :: CassieParser
 p3Term = try quotient <|> p2Term
 
 p2Term :: CassieParser
-p2Term = try exponent <|> p1Term
+p2Term = try exponent <|> try root <|> p1Term
 
 p1Term :: CassieParser
 p1Term = try logarithm <|> p0Term
