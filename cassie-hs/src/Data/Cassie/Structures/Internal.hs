@@ -5,22 +5,12 @@
 module Data.Cassie.Structures.Internal 
     ( (~?)
     , AlgStruct(..)
-    , Context
-    , CtxItem(..)
     , Symbol
     ) where
 
 import safe qualified Data.List.NonEmpty as NE
-import safe qualified Data.Map as Map
 
 type Symbol = String
-
-type Context m u n = Map.Map String (CtxItem m u n)
-
-data CtxItem m u n
-    = Func [Symbol] (AlgStruct m u n)
-    | Const (AlgStruct m u n)
-    deriving (Show, Eq, Ord)
 
 -- | A heavily abstracted representation of a mathematical expression.
 --   This record is designed to represent generalized algebraic 

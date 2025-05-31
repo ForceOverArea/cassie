@@ -10,20 +10,18 @@ module Data.Cassie.Structures
     , AlgStruct(..)
     , CancelMagma(..)
     , CancelUnary(..)
-    , Context
     , ComplexAlgStruct
-    , ComplexCtx
     , ComplexEqn
     , ComplexMagma(..)
     , ComplexUnary(..)
-    , CtxItem(..)
     , Equation(..)
     , MagmaMock(..)
     , RealAlgStruct
-    , RealCtx
     , RealEqn
     , RealMagma(..)
     , RealUnary(..)
+    , ShowMagma(..)
+    , ShowUnary(..)
     , Symbol
     , UnaryMock(..)
     ) where

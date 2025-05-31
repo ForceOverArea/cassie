@@ -17,15 +17,20 @@ an @AlgebraicStruct@ to a numerical value given enough context.
 module Data.Cassie.Evaluate
     ( evaluate
     , isConst
+    , Context
+    , CtxItem(..)
     , EvalError
     ) where
 
-import safe qualified Data.Map as Map
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.Trans (lift)
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Substitute (substituteFnArgs, SubstitutionError)
+import safe Data.List
+import safe qualified Data.Map as Map
+
+type Context m u n = Map.Map String (CtxItem m u n)
 
 -- | An error that may be thrown by @evaluate@.
 data EvalError 
@@ -34,6 +39,19 @@ data EvalError
     | ZeroOrSingleTermPolynomial
     | FailedToCallFunction SubstitutionError
     deriving Eq
+
+data CtxItem m u n
+    = Func [Symbol] (AlgStruct m u n)
+    | Const (AlgStruct m u n)
+    deriving (Eq, Ord)
+
+instance AlgebraicStructure m u n => Show (CtxItem m u n) where
+    show (Const algStruct) =
+        case evaluate algStruct Map.empty of
+            Left _ -> showAlgStruct algStruct
+            Right val -> show val
+
+    show (Func args impl) = "(" ++ intercalate "," args ++ ") -> " ++ showAlgStruct impl
 
 instance Show EvalError where
     show (SymbolNotDefined symbol) 

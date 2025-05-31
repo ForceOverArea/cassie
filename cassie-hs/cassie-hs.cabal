@@ -23,7 +23,6 @@ library
                         Data.Cassie.Parser.Internal,
                         Data.Cassie.Parser.Lang,
                         Data.Cassie.Evaluate,
-                        -- Data.Cassie.Internal,
                         Data.Cassie.Isolate,
                         -- Data.Cassie.Isolate.PolySolve,
                         Data.Cassie.Structures,                       

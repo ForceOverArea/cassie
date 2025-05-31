@@ -2,7 +2,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Structures.Instances.Real
     ( RealAlgStruct
-    , RealCtx
     , RealMagma(..)
     , RealUnary(..)
     ) where
@@ -14,8 +13,6 @@ import safe Data.Cassie.Structures.Magmas
 import safe Data.Cassie.Structures.UnarySystems
 
 type RealAlgStruct = AlgStruct RealMagma RealUnary Double
-
-type RealCtx = Context RealMagma RealUnary Double
 
 newtype RealMagma = RealMagma ExpnMagma deriving (Show, Eq, Ord)
 

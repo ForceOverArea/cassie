@@ -16,39 +16,37 @@ newtype ShowAlgStruct m u n = ShowAlgStruct (AlgStruct m u n) deriving (Eq, Ord)
 instance (ShowMagma m, ShowUnary u, Show n, Num n) => Show (ShowAlgStruct m u n) where
     show (ShowAlgStruct s) = 
         let
-            renderTerm (Negated term) = showAdd (Negated term)
-            renderTerm term           = " + " ++ showAdd term
-
             renderTerms terms = 
                 case NE.uncons terms of
                     (x, Just others) -> showAdd x ++ concatMap renderTerm others
                     (x, Nothing)     -> showAlgStruct x
+
+            renderFactors factors = 
+                let 
+                    fraction = renderBoth $ partition inverted $ NE.toList factors
+                in case fraction of
+                    ([], num)    -> "(" ++ intercalate " * " num ++ ")"
+                    (denom, [])  -> "1 / (" ++ intercalate " * " denom ++ ")"
+                    (denom, num) -> "(" ++ intercalate " * " num ++ ") / (" ++ intercalate " * " denom ++ ")"
+
+            renderTerm (Negated term) = showAdd (Negated term)
+            renderTerm term           = " + " ++ showAdd term
+
+            renderBoth = first (map unwrapInverse) >>> join (***) (map showMul)
 
             inverted (Inverse _) = True
             inverted _           = False
 
             unwrapInverse (Inverse x) = x
             unwrapInverse x = x
-
-            renderFactors factors = 
-                let 
-                    fraction = renderBoth $ partition inverted $ NE.toList factors
-                    renderBoth = 
-                        first (map unwrapInverse) 
-                        >>> join (***) (map showMul)
-                in case fraction of
-                    ([], num)    -> "(" ++ intercalate "*" num ++ ")"
-                    (denom, [])  -> "1 / (" ++ intercalate "*" denom ++ ")"
-                    (denom, num) -> "(" ++ intercalate "*" num ++ ") / (" ++ intercalate "*" denom ++ ")"
-
         in case s of
             Additive terms          -> renderTerms terms
             Multiplicative factors  -> renderFactors factors
             Negated neg             -> " - " ++ showNeg neg
             Inverse inv             -> "1 / " ++ showInv inv
-            Magma m l r             -> showMagma m l r
+            Magma m l r             -> showMagma m (ShowAlgStruct l) (ShowAlgStruct r)
             N_ary name args         -> name ++ "(" ++ intercalate "," (map showAlgStruct args) ++ ")"
-            Unary u x               -> showUnary u x
+            Unary u x               -> showUnary u (ShowAlgStruct x)
             Nullary num             -> show num
             Symbol sym              -> sym
 
@@ -58,9 +56,9 @@ showAlgStruct = show . ShowAlgStruct
 showAlgStructWithin :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> AlgStruct m u n -> String
 showAlgStructWithin x y = 
     if x <%> y then
-        showAlgStruct x ++ "(" ++ showAlgStruct y ++ ")"
+        "(" ++ showAlgStruct y ++ ")"
     else 
-        showAlgStruct x ++ showAlgStruct y
+        showAlgStruct y
 
 showAdd :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> String
 showAdd = showAlgStructWithin (Additive . NE.singleton $ Nullary 1)
@@ -89,9 +87,9 @@ Multiplicative _ <%> as =
         -- Magma _ _ _ -> True
         _           -> False
 
-Negated _ <%> _ = True
+Negated _ <%> _ = False
 
-Inverse _ <%> _ = True
+Inverse _ <%> _ = False
 
 Magma _ _ _ <%> as =
     case as of
