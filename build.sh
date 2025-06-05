@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 WASM_REACTOR_PATH=./dist-newstyle/build/wasm32-wasi/ghc-9.12.2.20250327/cassie-wasm-0.1.0.0/x/cassie-wasm/opt/build/cassie-wasm/cassie-wasm.wasm
-PUBLIC_ASSET_DIR=./public/wasm
+PUBLIC_ASSET_DIR=./root/public/wasm
 
 # build WASM module and move to page assets dir
 echo 1/4 cleaning up...

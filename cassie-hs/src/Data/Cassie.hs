@@ -16,12 +16,12 @@ import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Set as Set
 import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
-import safe Data.Cassie.Utils
-import safe Data.Cassie.Evaluate
-import safe Data.Cassie.Isolate
 import safe Data.Cassie.Parser
 import safe Data.Cassie.Parser.Lang
 import safe Data.Cassie.Structures
+import safe Data.Cassie.Rules.Evaluate
+import safe Data.Cassie.Rules.Isolate
+import safe Data.Cassie.Utils
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.

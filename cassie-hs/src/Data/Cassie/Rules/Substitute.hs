@@ -16,7 +16,7 @@ they represent in the context of a larger problem.
 -}
 
 {-# LANGUAGE Safe #-}
-module Data.Cassie.Substitute 
+module Data.Cassie.Rules.Substitute 
     ( substitute
     , substituteFnArgs
     , SubstitutionError

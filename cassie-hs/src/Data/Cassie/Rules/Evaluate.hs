@@ -14,7 +14,7 @@ an @AlgebraicStruct@ to a numerical value given enough context.
 -}
 
 {-# LANGUAGE Safe #-}
-module Data.Cassie.Evaluate
+module Data.Cassie.Rules.Evaluate
     ( evaluate
     , isConst
     , Context
@@ -26,7 +26,7 @@ import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.Trans (lift)
 import safe Data.Cassie.Structures
-import safe Data.Cassie.Substitute (substituteFnArgs, SubstitutionError)
+import safe Data.Cassie.Rules.Substitute (substituteFnArgs, SubstitutionError)
 import safe Data.List
 import safe qualified Data.Map as Map
 

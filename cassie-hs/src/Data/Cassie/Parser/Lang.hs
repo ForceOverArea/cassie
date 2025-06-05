@@ -9,9 +9,10 @@ module Data.Cassie.Parser.Lang
     ) where
 
 import safe Control.Arrow
-import safe Data.Cassie.Evaluate
 import safe Data.Cassie.Parser.Internal
-import safe Data.Cassie.Structures (RealUnary, RealMagma, Symbol)
+import safe Data.Cassie.Rules.Evaluate
+import safe Data.Cassie.Structures.Instances.Real (RealUnary, RealMagma)
+import safe Data.Cassie.Structures.Internal (Symbol)
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 import safe Text.Parsec

@@ -14,7 +14,7 @@ solve equations given as an @AlgebraicStruct@.
 -}
 
 {-# LANGUAGE Safe #-}
-module Data.Cassie.Isolate 
+module Data.Cassie.Rules.Isolate 
     ( isIsolated
     , isolate
     , isolateMagma
@@ -27,9 +27,9 @@ import safe Control.Monad.RWS (asks, execRWST, get, gets, put, tell, RWST)
 import safe Control.Monad.Except (runExcept, Except)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Map as Map
-import safe Data.Cassie.Evaluate
+import safe Data.Cassie.Rules.Evaluate
+import safe Data.Cassie.Rules.Substitute
 import safe Data.Cassie.Structures
-import safe Data.Cassie.Substitute
 import safe Data.Cassie.Utils
 
 type Isolate m u n = RWST (Symbol, Context m u n) Steps (Equation m u n) (Except IsolateError)
