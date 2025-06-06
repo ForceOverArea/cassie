@@ -1,0 +1,63 @@
+@import url('./title.css');
+@import url('./firacode.css');
+@import url('./quick-fill.css');
+
+:root {
+    color: white;
+    /* background-image: url('assets/images/abstract-white-wave-or-wavy-line-background-and-texture-vector-1307380358.jpg'); */
+    background-color: #202028;
+}
+
+[contenteditable] {
+    outline: 0px solid transparent;
+}
+
+.outermost {
+    /* position */
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    /* size */
+    height: 100vh;
+    width: 100%;
+    /* alignment */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+
+}
+
+.version-tag {
+    font-size: 20px;
+}
+
+.editor-pane {
+    font-size: 16pt;
+    font-family: FiraCode;
+
+    color: #D0D0D0;
+
+    margin-top: 15px;
+    margin-left: 15px;
+
+    height: 100%;
+}
+
+.sym-soln-entry {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    background: linear-gradient(to right, #D0D0D0 50%, #00000000 50%);
+    transition: all 0.2s ease;
+}
+
+.sym-soln-entry:hover {
+    color: #202028;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+/* .debug { border: 1px solid red; } */

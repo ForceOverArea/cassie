@@ -1,6 +1,6 @@
 // IDs to important parts of the GUI
 const EDITOR_ID = "editor-pane";
-const SOLN_PANE_ID = "soln-pane";
+const SOLN_PANE_ID = "soln-view";
 const SYMBOLIC_TOGGLE_ID = "symbolic-toggle";
 const NUMERIC_TOGGLE_ID = "numeric-toggle";
 // Export references to important GUI elements
