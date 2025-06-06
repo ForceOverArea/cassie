@@ -1,6 +1,6 @@
 import { serveDir, serveFile } from 'jsr:@std/http/file-server';
 
-const INDEX_HTML_PATH = './index.html'
+const INDEX_HTML_PATH = './root/index.html'
 
 Deno.serve((req) => {
   const pathName = new URL(req.url).pathname;
@@ -8,7 +8,7 @@ Deno.serve((req) => {
     return serveFile(req, INDEX_HTML_PATH);
   } else if (pathName.startsWith('/public')) {
     return serveDir(req, {
-      fsRoot: './public',
+      fsRoot: './root/public',
       urlRoot: 'public',
     });
   } else {

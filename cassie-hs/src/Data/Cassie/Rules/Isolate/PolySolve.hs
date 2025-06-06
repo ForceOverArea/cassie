@@ -1,5 +1,5 @@
 {-# LANGUAGE Safe #-}
-module Data.Cassie.Isolate.PolySolve 
+module Data.Cassie.Rules.Isolate.PolySolve 
     ( commonFactors
     , factorOut
     , factorize
