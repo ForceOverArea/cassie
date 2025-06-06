@@ -10,18 +10,17 @@ module Data.Cassie
 
 import safe Control.Arrow
 import safe Control.Monad
-import safe Data.List
-import safe qualified Data.Map as Map
-import safe qualified Data.List.NonEmpty as NonEmpty
-import safe qualified Data.Set as Set
 import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, throwError, Except)
 import safe Data.Cassie.Parser
-import safe Data.Cassie.Parser.Lang
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Rules.Isolate
 import safe Data.Cassie.Utils
+import safe Data.List
+import safe qualified Data.List.NonEmpty as NonEmpty
+import safe qualified Data.Map as Map
+import safe qualified Data.Set as Set
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.
@@ -37,7 +36,6 @@ type EquationPool m u n = [(RealEqn, Symbols)]
 
 data CassieError
     = ParseError CassieParserError
-    | FunctionParseError CassieLangError
     | IsolationError IsolateError
     | EvaluationError EvalError
     | EvaluationArgError
@@ -47,7 +45,7 @@ data CassieError
 
 solvedFor :: String -> String -> CassieCtx -> Either CassieError (RealEqn, Steps)
 solvedFor eqn sym ctx = do
-    (structure, syms) <- left ParseError $ parseEquation eqn
+    (structure, syms) <- left ParseError $ parseEquation' eqn
     when (not $ sym `Set.member` syms) 
         (Left . ConstraintError $ "target symbol did not exist in equation. found symbols: " ++ show syms)
     solution <- left IsolationError $ isolate sym structure ctx
@@ -133,7 +131,7 @@ partitionEqnsAndFuncs =
             >>> partition ('=' `elem`)
 
         f1b :: [String] -> Either CassieError (EquationPool m u n)
-        f1b = mapM $ left ParseError . parseEquation
+        f1b = mapM $ left ParseError . parseEquation'
 
     in f1a >>> first f1b
 
@@ -167,7 +165,7 @@ solveAndEvalConsts xs =
     in f3 xs >>= f4a
 
 parseFunctions :: [String] -> CassieCtx -> Either CassieError (CassieCtx)
-parseFunctions funcs ctx = (left FunctionParseError) $ foldM parseFunction ctx funcs 
+parseFunctions funcs ctx = (left ParseError) $ foldM parseFunction ctx funcs 
 
 isolate' :: CassieCtx -> (RealEqn, Symbol) -> Either IsolateError (RealEqn, Steps)
 isolate' ctx (eqn, sym) = isolate sym eqn ctx

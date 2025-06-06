@@ -15,6 +15,7 @@ module Data.Cassie.Parser.Internal
     , sum
     , symb
     , CassieParser
+    , CassieParserError(..)
     ) where
 
 import safe Prelude hiding (exponent, logBase, product, sum)
@@ -27,8 +28,26 @@ import safe Text.Parsec
 import safe Text.Parsec.Language (haskell)
 import safe Text.Parsec.Token (GenTokenParser(..)) 
 
+data CassieParserError 
+    = FailedToParse ParseError
+    | FoundExpression String
+    | FoundMultiple String
+    | FoundNone String
+    | PoorlyDefinedError
+
 -- | Parser type for reading algebraic structures from plain text
 type CassieParser = Parsec String (Set.Set Symbol) (RealAlgStruct)
+
+instance Show CassieParserError where
+    show (FailedToParse err) = show "failed to parse equation: " ++ show err
+
+    show (FoundExpression expr) = "given equation is an expression because it has no '=': " ++ expr
+
+    show (FoundMultiple eqns) = "more than 1 '=' found in equation: " ++ eqns
+
+    show (FoundNone eqn) = "found 0 expressions in given 'equation': " ++ eqn
+
+    show PoorlyDefinedError = "the given function did not have all of its dependencies defined as arguments or in global context"
 
 expression :: CassieParser
 expression = sum
@@ -67,40 +86,34 @@ exponent :: CassieParser
 exponent = do
     expBase <- p1Term 
     _ <- char '^'
-    expExp <- p1Term <?> "exponent"
-    return $ Magma (RealMagma Expn) expBase expExp
+    Magma (RealMagma Expn) expBase <$> p1Term <?> "exponent"
 
 logarithm :: CassieParser
 logarithm = do
     whiteSpace haskell
     _ <- string "log"
     logBase <- angles haskell expression
-    logLog <- parens haskell expression <?> "logarithm"
-    return $ Magma (RealMagma Logm) logBase logLog
+    Magma (RealMagma Logm) logBase <$> parens haskell expression <?> "logarithm"
 
 root :: CassieParser
 root = do
     whiteSpace haskell
     _ <- string "root"
     radical <- angles haskell expression
-    radicand <- parens haskell expression <?> "root"
-    return $ Magma (RealMagma Root) radical radicand
+    Magma (RealMagma Root) radical <$> parens haskell expression <?> "root"
 
 function :: CassieParser
 function = do
     whiteSpace haskell
     funcName <- identifier haskell
-    funcArgs <- parens haskell (commaSep haskell expression) <?> "user-defined function"
-    return $ N_ary funcName funcArgs
+    N_ary funcName <$> parens haskell (commaSep haskell expression) <?> "user-defined function"
 
 parenthetical :: CassieParser
 parenthetical = whiteSpace haskell >> parens haskell expression <?> "grouped expression"
 
 -- | Parses an identifier (haskell definition) and returns an @AlgStruct.Symbol@
 value :: CassieParser
-value = do
-    val <- try (float haskell) <|> fromInteger <$> integer haskell <?> "value"
-    return $ Nullary val
+value = Nullary <$> try (float haskell) <|> fromInteger <$> integer haskell <?> "value"
 
 -- | Parses a number literal and returns an @AlgStruct.Value@
 symb :: CassieParser
@@ -108,6 +121,8 @@ symb = do
     sym <- whiteSpace haskell >> identifier haskell <?> "symbol"
     modifyState $ Set.insert sym
     return $ Symbol sym
+
+-- Private functions for establishing priority of different lexemes
 
 p5Term :: CassieParser 
 p5Term = try difference <|> p4Term

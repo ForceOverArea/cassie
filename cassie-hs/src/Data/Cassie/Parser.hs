@@ -1,35 +1,25 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Parser 
-    ( parseEquation
+    ( functionDef
+    , parseCassieFile
+    , parseEquation
+    , parseEquation'
     , parseExpression
+    , parseFunction 
     , CassieParserError
+    , ParsedCtx
+    , ParsedCtxItem
+    , Phrase(..)
+    , Symbols
     ) where
 
 import safe Control.Arrow
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Parser.Internal
+import safe Data.Cassie.Parser.Lang
 import safe Data.Cassie.Structures
 import safe Text.Parsec
 import safe Data.Cassie.Utils
-
-data CassieParserError 
-    = FailedToParse ParseError
-    | FoundExpression String
-    | FoundMultiple String
-    | FoundNone String
-
-instance Show CassieParserError where
-    show (FailedToParse err)
-        = show "failed to parse equation: " ++ show err
-
-    show (FoundExpression expr)
-        = "given equation is an expression because it has no '=': " ++ expr
-
-    show (FoundMultiple eqns)
-        = "more than 1 '=' found in equation: " ++ eqns
-
-    show (FoundNone eqn)
-        = "found 0 expressions in given 'equation': " ++ eqn
 
 parseExpression :: String -> Either ParseError (RealAlgStruct, Set.Set Symbol)
 parseExpression expr = 
@@ -39,8 +29,8 @@ parseExpression expr =
             return (struct, syms)
     in runParser (expression >>= bundleFoundSyms) Set.empty expr expr
 
-parseEquation :: String -> Either CassieParserError (RealEqn, Set.Set Symbol)
-parseEquation eqn =
+parseEquation' :: String -> Either CassieParserError (RealEqn, Set.Set Symbol)
+parseEquation' eqn =
     let 
         sides = splitStrAt '=' eqn
     in case sides of
