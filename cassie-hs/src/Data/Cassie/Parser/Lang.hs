@@ -19,7 +19,7 @@ import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Structures.Instances.Real (RealUnary, RealMagma)
 import safe Data.Cassie.Structures.Internal (Symbol)
 import safe Data.Cassie.Structures (Equation(..), RealEqn)
-import safe Data.Cassie.Utils (splitStrAt)
+import safe Data.Cassie.Utils (splitStrAt, stripEndStr)
 import safe qualified Data.Map as Map
 import safe Data.List
 import safe qualified Data.Set as Set
@@ -49,12 +49,11 @@ isEqn :: Phrase -> Bool
 isEqn (ParsedEqn _) = True
 isEqn _ = False
 
-
-
 parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn, Symbols)], ParsedCtx)
 parseCassiePhrases sourcename source = 
     let 
-        parseEqnsAndFuncs = partition isEqn <$> runParser cassieFile Set.empty sourcename source
+        parseEqnsAndFuncs = partition isEqn 
+            <$> runParser cassieFile Set.empty sourcename (stripEndStr source)
         
         addFuncToCtx ctx (ParsedFn (name, _, impl)) = Map.insert name impl ctx
         addFuncToCtx ctx _ = ctx
@@ -104,13 +103,16 @@ parseFunction ctx funcDef =
             return $ Map.insert name funcObj ctx
 
 cassieFile :: CassieLang [Phrase]
-cassieFile = phrase `sepBy1` char ';'
+cassieFile = do
+    phrases <- phrase `sepEndBy1` char ';'
+    eof
+    return phrases
 
 phrase :: CassieLang Phrase
 phrase = 
     let 
-        functionPhrase = ParsedFn <$> functionDef
-        equationPhrase = ParsedEqn <$> equation
+        functionPhrase = ParsedFn <$> (whiteSpace haskell >> functionDef)
+        equationPhrase = ParsedEqn <$> (whiteSpace haskell >> equation)
     in try functionPhrase <|> equationPhrase
 
 equation :: CassieLang (ParsedEqn, Symbols)

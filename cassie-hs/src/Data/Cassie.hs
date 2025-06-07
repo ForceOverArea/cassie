@@ -10,8 +10,8 @@ module Data.Cassie
 
 import safe Control.Arrow
 import safe Control.Monad
-import safe Control.Monad.State (get, lift, modify, execStateT, StateT)
-import safe Control.Monad.Except (runExcept, throwError, Except)
+import safe Control.Monad.State (get, modify, execStateT, StateT)
+import safe Control.Monad.Except (runExcept, Except)
 import safe Data.Cassie.Parser
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Rules.Evaluate
@@ -90,7 +90,7 @@ solveSingleUnknowns =
         ctx <- getCtx
         constrained <- filter isConstrained <$> getEqns
         case mapM (solve1Unknown ctx) constrained of
-            Left err -> lift (throwError $ IsolationError err)
+            Left err -> throwErr $ IsolationError err
             Right [] -> return False
             Right solved -> do 
                 mapM_ addSolution solved
@@ -119,8 +119,6 @@ buildCtxAndEqnPool sys = do
 
 partitionEqnsAndFuncs :: String -> Either CassieError (EquationPool, ParsedCtx)
 partitionEqnsAndFuncs source = left ParseError $ parseCassiePhrases "system" source -- TODO: find way to inject filenames here
-        
-
 
 partitionConstsAndEquations :: EquationPool -> ([(ParsedEqn, Symbol)], EquationPool)
 partitionConstsAndEquations = 

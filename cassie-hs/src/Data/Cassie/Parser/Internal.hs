@@ -59,7 +59,7 @@ parseExpression expr =
     in runParser (expression >>= bundleFoundSyms) Set.empty expr expr
 
 expression :: CassieParser
-expression = sum
+expression = sum <?> "math expression"
 
 sum :: CassieParser
 sum = do

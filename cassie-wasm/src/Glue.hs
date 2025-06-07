@@ -39,7 +39,7 @@ instance A.ToJSON CtxItem' where
 cassieWrapper :: Either CassieError (ParsedCtx, Solution) -> String
 cassieWrapper possSoln = show . A.encode
     $ case possSoln of
-        Left err   -> jsonify err
+        Left err -> jsonify err
         Right (ctx, soln) -> A.object [ "context"  A..= buildJSONContext ctx
                                       , "solution" A..= buildJSONSoln soln
                                       ]
