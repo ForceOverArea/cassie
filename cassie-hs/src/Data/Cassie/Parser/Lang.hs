@@ -1,4 +1,5 @@
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Data.Cassie.Parser.Lang 
     ( functionDef
     , isEqn
@@ -19,10 +20,11 @@ import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Structures.Instances.Real (RealUnary, RealMagma)
 import safe Data.Cassie.Structures.Internal (Symbol)
 import safe Data.Cassie.Structures (Equation(..), RealEqn)
-import safe Data.Cassie.Utils (splitStrAt, stripEndStr)
+import safe Data.Cassie.Utils (splitStrAt)
 import safe qualified Data.Map as Map
-import safe Data.List
+import safe Data.List as List
 import safe qualified Data.Set as Set
+import safe qualified Data.Text as Text
 import safe Text.Parsec
 import safe Text.Parsec.Token (GenTokenParser(..))
 import safe Text.Parsec.Language (haskell)
@@ -53,7 +55,7 @@ parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn,
 parseCassiePhrases sourcename source = 
     let 
         parseEqnsAndFuncs = partition isEqn 
-            <$> runParser cassieFile Set.empty sourcename (stripEndStr source)
+            <$> runParser cassieFile Set.empty sourcename (preprocessSource source)
         
         addFuncToCtx ctx (ParsedFn (name, _, impl)) = Map.insert name impl ctx
         addFuncToCtx ctx _ = ctx
@@ -135,3 +137,18 @@ functionDef = do
     impl <- expression
     putState Set.empty -- TODO: this feels abusive too... see above comment
     return (name, Set.fromList argNames, Func argNames impl)
+
+-- | Removes comments from the source and strips trailing whitespace to simplify parser logic. 
+preprocessSource :: String -> String
+preprocessSource = 
+    let 
+        scrubComments original = 
+            case List.uncons $ Text.splitOn "//" original of
+                Just (source, _) -> source
+                Nothing -> original
+
+        joinBack linesOfText = 
+            case List.uncons linesOfText of
+                Just (h, t) -> foldl ((<>) . (<> "\n")) h t
+                Nothing -> error "branch of control flow not used."
+    in Text.unpack . Text.stripEnd . joinBack . map scrubComments . Text.split (== '\n') . Text.pack

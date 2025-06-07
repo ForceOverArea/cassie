@@ -6,7 +6,6 @@ module Data.Cassie.Utils
     , second'
     , splitStrAt
     , splitStrAt'
-    , stripEndStr
     , third
     , throwErr
     , truthTable2
@@ -38,10 +37,6 @@ splitStrAt c = Prelude.map (Text.unpack . Text.strip) . Text.split (== c) . Text
 -- | Splits a string at the given delimiter @Char@, returning a @Data.List.NonEmpty@.
 splitStrAt' :: Char -> String -> NE.NonEmpty String
 splitStrAt' c = NE.map (Text.unpack . Text.strip) . NE.fromList . Text.split (== c) . Text.pack
-
--- | Strips trailing whitespace from a @String@
-stripEndStr :: String -> String
-stripEndStr = Text.unpack . Text.stripEnd . Text.pack
 
 throwErr :: MonadTrans t => e -> t (Except e) a
 throwErr = lift . throwError 

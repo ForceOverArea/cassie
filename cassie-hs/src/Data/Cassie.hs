@@ -12,7 +12,8 @@ import safe Control.Arrow
 import safe Control.Monad
 import safe Control.Monad.State (get, modify, execStateT, StateT)
 import safe Control.Monad.Except (runExcept, Except)
-import safe Data.Cassie.Parser
+import safe Data.Cassie.Parser.Internal (CassieParserError)
+import safe Data.Cassie.Parser.Lang
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Rules.Isolate
