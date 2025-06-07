@@ -18,21 +18,18 @@ import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Rules.Isolate
 import safe Data.Cassie.Utils
 import safe Data.List
-import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.
-type Cassie m u n = StateT (Context RealMagma RealUnary Double, EquationPool m u n, Solution m u n) (Except CassieError)
+type Cassie m u n = StateT (Context RealMagma RealUnary Double, EquationPool, Solution) (Except CassieError)
 
-type CassieCtx = Context RealMagma RealUnary Double
+type Solution = Map.Map Symbol SolutionValues
 
-type Solution m u n = Map.Map Symbol (SolutionValues m u n)
+type SolutionValues = (ParsedEqn, Steps, Either CassieError Double)
 
-type SolutionValues m u n = (RealEqn, Steps, Either CassieError Double)
-
-type EquationPool m u n = [(RealEqn, Symbols)]
+type EquationPool = [(ParsedEqn, Symbols)]
 
 data CassieError
     = ParseError CassieParserError
@@ -43,7 +40,7 @@ data CassieError
     | FailedToFullySolve
     deriving Show
 
-solvedFor :: String -> String -> CassieCtx -> Either CassieError (RealEqn, Steps)
+solvedFor :: String -> String -> ParsedCtx -> Either CassieError (ParsedEqn, Steps)
 solvedFor eqn sym ctx = do
     (structure, syms) <- left ParseError $ parseEquation' eqn
     when (not $ sym `Set.member` syms) 
@@ -51,13 +48,13 @@ solvedFor eqn sym ctx = do
     solution <- left IsolationError $ isolate sym structure ctx
     return solution
 
-solvedForValue :: String -> String -> CassieCtx -> Either CassieError (Double, RealEqn, Steps)
+solvedForValue :: String -> String -> ParsedCtx -> Either CassieError (Double, ParsedEqn, Steps)
 solvedForValue eqn sym ctx = do
     (eqn', steps) <- solvedFor eqn sym ctx
     value' <- left EvaluationError $ evaluate (rhs eqn') ctx
     return (value', eqn', steps)
 
-solveSystem :: String -> Either CassieError (CassieCtx, Solution m u n)
+solveSystem :: String -> Either CassieError (ParsedCtx, Solution)
 solveSystem sys = do
     (ctx, eqns) <- buildCtxAndEqnPool sys
     (_, _, solnInfo) <- runExcept $ execStateT solveSystemMain (ctx, eqns, Map.empty)
@@ -99,7 +96,7 @@ solveSingleUnknowns =
                 mapM_ addSolution solved
                 return True
 
-addSolution :: (RealEqn, Steps) -> Cassie m u n ()
+addSolution :: (ParsedEqn, Steps) -> Cassie m u n ()
 addSolution (eqn, steps) = do
     let name = getSymbol $ lhs eqn
     let value = rhs eqn 
@@ -112,74 +109,61 @@ updateUnknowns = do
     knowns <- getKnownConsts
     let f = second (`Set.difference` knowns)
     modifyEqns $ map f
-    return ()
 
-buildCtxAndEqnPool :: String -> Either CassieError (CassieCtx, EquationPool m u n)
+buildCtxAndEqnPool :: String -> Either CassieError (ParsedCtx, EquationPool)
 buildCtxAndEqnPool sys = do
-    let (eqns, funcs) = partitionEqnsAndFuncs sys
-    (consts, trueEqns) <- partitionConstsAndEquations <$> eqns
-    ctx <- parseFunctions funcs =<< solveAndEvalConsts consts
+    (eqns, funcs) <- partitionEqnsAndFuncs sys
+    let (consts, trueEqns) = partitionConstsAndEquations eqns
+    ctx <- Map.union funcs <$> solveAndEvalConsts consts
     return (ctx, trueEqns)
 
-partitionEqnsAndFuncs :: String -> (Either CassieError (EquationPool m u n), [String])
-partitionEqnsAndFuncs = 
-    let 
-        f1a :: String -> ([String], [String])
-        f1a = splitStrAt '\n'
-            >>> map (NonEmpty.head . splitStrAt' '#')
-            >>> filter isNonEmptyLine
-            >>> partition ('=' `elem`)
+partitionEqnsAndFuncs :: String -> Either CassieError (EquationPool, ParsedCtx)
+partitionEqnsAndFuncs source = left ParseError $ parseCassiePhrases "system" source -- TODO: find way to inject filenames here
+        
 
-        f1b :: [String] -> Either CassieError (EquationPool m u n)
-        f1b = mapM $ left ParseError . parseEquation'
 
-    in f1a >>> first f1b
-
-partitionConstsAndEquations :: EquationPool m u n -> ([(RealEqn, Symbol)], EquationPool m u n)
+partitionConstsAndEquations :: EquationPool -> ([(ParsedEqn, Symbol)], EquationPool)
 partitionConstsAndEquations = 
     let 
-        f2a :: EquationPool m u n -> (EquationPool m u n, EquationPool m u n)
+        f2a :: EquationPool -> (EquationPool, EquationPool)
         f2a = partition $ \(eq, syms) -> (Set.size syms == 1) && (isIsolated eq $ Set.findMin syms)
 
-        f2b :: EquationPool m u n -> [(RealEqn, Symbol)]
+        f2b :: EquationPool -> [(ParsedEqn, Symbol)]
         f2b = map $ second Set.findMin
 
     in f2a >>> first f2b
 
-solveAndEvalConsts :: [(RealEqn, Symbol)] -> Either CassieError (CassieCtx)
+solveAndEvalConsts :: [(ParsedEqn, Symbol)] -> Either CassieError (ParsedCtx)
 solveAndEvalConsts xs = 
     let 
-        f3 :: [(RealEqn, Symbol)] -> Either CassieError [RealEqn]
+        f3 :: [(ParsedEqn, Symbol)] -> Either CassieError [ParsedEqn]
         f3 = mapM $ isolate' Map.empty
             >>> left IsolationError 
             >>> right fst
 
-        f4a :: [RealEqn] -> Either CassieError (CassieCtx)
+        f4a :: [ParsedEqn] -> Either CassieError (ParsedCtx)
         f4a = foldM f4b Map.empty
 
-        f4b :: CassieCtx -> RealEqn -> Either CassieError (CassieCtx)
+        f4b :: ParsedCtx -> ParsedEqn -> Either CassieError (ParsedCtx)
         f4b ctx eqn = do
             (x, result) <- evaluate' Map.empty eqn
             return $ Map.insert x (Const $ Nullary result) ctx
 
     in f3 xs >>= f4a
 
-parseFunctions :: [String] -> CassieCtx -> Either CassieError (CassieCtx)
-parseFunctions funcs ctx = (left ParseError) $ foldM parseFunction ctx funcs 
-
-isolate' :: CassieCtx -> (RealEqn, Symbol) -> Either IsolateError (RealEqn, Steps)
+isolate' :: ParsedCtx -> (ParsedEqn, Symbol) -> Either IsolateError (ParsedEqn, Steps)
 isolate' ctx (eqn, sym) = isolate sym eqn ctx
 
-evaluate' :: CassieCtx -> RealEqn -> Either CassieError (Symbol, Double)
+evaluate' :: ParsedCtx -> ParsedEqn -> Either CassieError (Symbol, Double)
 evaluate' ctx (Equation (Symbol x) rhs') = do
     result <- left EvaluationError $ evaluate rhs' ctx
     return (x, result)
 evaluate' _ _ = Left EvaluationArgError
 
-getCtx :: Cassie m u n (CassieCtx)
+getCtx :: Cassie m u n (ParsedCtx)
 getCtx = let f (x, _, _) = x in f <$> get
 
-getEqns :: Cassie  m u n (EquationPool m u n)
+getEqns :: Cassie  m u n EquationPool
 getEqns = let f (_, x, _) = x in f <$> get
 
 getKnownConsts :: Cassie m u n Symbols
@@ -188,16 +172,16 @@ getKnownConsts = do
     let f = isConst . (ctx Map.!)
     return $ Set.fromList . filter f . Map.keys $ ctx
 
-modifyCtx :: (CassieCtx -> CassieCtx) -> Cassie m u n ()
+modifyCtx :: (ParsedCtx -> ParsedCtx) -> Cassie m u n ()
 modifyCtx f = modify $ first' f
 
-modifyEqns :: (EquationPool m u n -> EquationPool m u n) -> Cassie m u n ()
+modifyEqns :: (EquationPool -> EquationPool) -> Cassie m u n ()
 modifyEqns f = modify $ second' f
 
-addSoln :: Symbol -> SolutionValues m u n -> Cassie m u n ()
+addSoln :: Symbol -> SolutionValues -> Cassie m u n ()
 addSoln sym sv = modify (third $ Map.insert sym sv)
 
-showStepsFor :: Symbol -> Solution m u n -> IO () 
+showStepsFor :: Symbol -> Solution -> IO () 
 showStepsFor name soln = 
     let 
         getSteps = do

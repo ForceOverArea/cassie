@@ -10,11 +10,10 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Cassie (CassieError, Solution)
-import Data.Cassie.Isolate (Steps)
-import Data.Cassie.Parser.Lang (ParsedCtx, ParsedCtxItem)
-import Data.Cassie.Structures (RealEqn, RealMagma, RealUnary, Symbol)
+import Data.Cassie.Parser
+import Data.Cassie.Structures (Symbol)
 
-newtype Solution' = Solution' (String, RealEqn, Steps, Either CassieError Double)
+newtype Solution' = Solution' (String, ParsedEqn, [String], Either CassieError Double)
 
 instance A.ToJSON Solution' where
     toJSON (Solution' (sym, eqn, steps, val)) = 
@@ -37,7 +36,7 @@ newtype CtxItem' = CtxItem' (ParsedCtxItem)
 instance A.ToJSON CtxItem' where
     toJSON (CtxItem' ci) = A.toJSON $ show ci
 
-cassieWrapper :: Either CassieError (ParsedCtx, Solution RealMagma RealUnary Double) -> String
+cassieWrapper :: Either CassieError (ParsedCtx, Solution) -> String
 cassieWrapper possSoln = show . A.encode
     $ case possSoln of
         Left err   -> jsonify err
@@ -48,10 +47,10 @@ cassieWrapper possSoln = show . A.encode
 buildJSONContext :: ParsedCtx -> A.Value
 buildJSONContext = A.toJSON . AKM.fromMap . Map.map CtxItem' . Map.mapKeys AK.fromString
 
-buildJSONSoln :: Solution RealMagma RealUnary Double -> A.Value
+buildJSONSoln :: Solution -> A.Value
 buildJSONSoln soln = A.toJSON $ map (buildSingleSolnObject soln) (Map.keys soln)
 
-buildSingleSolnObject :: Solution RealMagma RealUnary Double -> Symbol -> A.Value
+buildSingleSolnObject :: Solution -> Symbol -> A.Value
 buildSingleSolnObject soln name = 
     let 
         (symbolic, steps, numeric) = soln Map.! name

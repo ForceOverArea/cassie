@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
 import Data.Cassie (solveSystem)

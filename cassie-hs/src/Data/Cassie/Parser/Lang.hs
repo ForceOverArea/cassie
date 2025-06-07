@@ -1,11 +1,14 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Parser.Lang 
     ( functionDef
-    , parseCassieFile
+    , isEqn
+    , parseCassiePhrases
     , parseEquation
+    , parseEquation'
     , parseFunction 
     , ParsedCtx
     , ParsedCtxItem
+    , ParsedEqn
     , Phrase(..)
     , Symbols
     ) where
@@ -15,8 +18,10 @@ import safe Data.Cassie.Parser.Internal
 import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Structures.Instances.Real (RealUnary, RealMagma)
 import safe Data.Cassie.Structures.Internal (Symbol)
-import safe Data.Cassie.Structures (Equation(..))
+import safe Data.Cassie.Structures (Equation(..), RealEqn)
+import safe Data.Cassie.Utils (splitStrAt)
 import safe qualified Data.Map as Map
+import safe Data.List
 import safe qualified Data.Set as Set
 import safe Text.Parsec
 import safe Text.Parsec.Token (GenTokenParser(..))
@@ -30,20 +35,55 @@ type ParsedCtx = Context RealMagma RealUnary Double
 -- | The concrete type of @CtxItem m u n@ that parsing Cassie syntax will yield.
 type ParsedCtxItem = CtxItem RealMagma RealUnary Double
 
-type ParsedEqn = Equation RealMagma RealUnary Double
+-- | This may change if/when support for matrices/complex numbers is added. 
+type ParsedEqn = RealEqn
 
 type Symbols = Set.Set Symbol
 
 data Phrase
-    = ParsedEqn ParsedEqn
+    = ParsedEqn (ParsedEqn, Symbols)
     | ParsedFn (Symbol, Symbols, ParsedCtxItem)
     deriving (Show, Eq, Ord)
 
-parseCassieFile :: String -> String -> Either CassieParserError [Phrase]
-parseCassieFile sourcename source = left FailedToParse $ runParser cassieFile Set.empty sourcename source
+isEqn :: Phrase -> Bool
+isEqn (ParsedEqn _) = True
+isEqn _ = False
+
+
+
+parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn, Symbols)], ParsedCtx)
+parseCassiePhrases sourcename source = 
+    let 
+        parseEqnsAndFuncs = partition isEqn <$> runParser cassieFile Set.empty sourcename source
+        
+        addFuncToCtx ctx (ParsedFn (name, _, impl)) = Map.insert name impl ctx
+        addFuncToCtx ctx _ = ctx
+
+        foldCtx = foldl addFuncToCtx Map.empty 
+
+        unwrapPhraseEqn (ParsedEqn eqn) = eqn
+        unwrapPhraseEqn _ = error "branch of control flow not used"
+
+        processPhrases = (map unwrapPhraseEqn) *** foldCtx
+    in left FailedToParse $ processPhrases <$> parseEqnsAndFuncs
+
 
 parseEquation :: String -> Either CassieParserError ParsedEqn
-parseEquation source = left FailedToParse $ runParser equation Set.empty source source
+parseEquation source = left FailedToParse $ fst <$> runParser equation Set.empty source source
+
+-- | This function is deprecated. Consider using @parseEquation@ instead. 
+parseEquation' :: String -> Either CassieParserError (ParsedEqn, Set.Set Symbol)
+parseEquation' eqn =
+    let 
+        sides = splitStrAt '=' eqn
+    in case sides of
+        [lText, rText] -> do
+            (lhs', lSyms) <- left FailedToParse $ parseExpression lText
+            (rhs', rSyms) <- left FailedToParse $ parseExpression rText
+            return $ (Equation lhs' rhs', lSyms `Set.union` rSyms)
+        []         -> Left $ FoundNone eqn
+        [_]        -> Left $ FoundExpression eqn
+        (_:_:_)    -> Left $ FoundMultiple eqn
 
 parseFunction :: ParsedCtx -> String -> Either CassieParserError ParsedCtx
 parseFunction ctx funcDef = 
@@ -69,15 +109,18 @@ cassieFile = phrase `sepBy1` char ';'
 phrase :: CassieLang Phrase
 phrase = 
     let 
-        functionPhrase = ParsedFn <$> try functionDef
+        functionPhrase = ParsedFn <$> functionDef
         equationPhrase = ParsedEqn <$> equation
     in try functionPhrase <|> equationPhrase
 
-equation :: CassieLang ParsedEqn
+equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
     leftHand <- expression 
     _ <- char '='
-    Equation leftHand <$> expression
+    syms <- getState    -- TODO: this feels like abuse of stateful behavior... 
+    putState Set.empty
+    eqn <- Equation leftHand <$> expression
+    return (eqn, syms)
 
 functionDef :: CassieLang (Symbol, Symbols, ParsedCtxItem)
 functionDef = do
@@ -88,4 +131,5 @@ functionDef = do
     _ <- string "->"
     whiteSpace haskell
     impl <- expression
+    putState Set.empty -- TODO: this feels abusive too... see above comment
     return (name, Set.fromList argNames, Func argNames impl)
