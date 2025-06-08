@@ -69,8 +69,8 @@ parseCassiePhrases sourcename source =
     in left FailedToParse $ processPhrases <$> parseEqnsAndFuncs
 
 
-parseEquation :: String -> Either CassieParserError ParsedEqn
-parseEquation source = left FailedToParse $ fst <$> runParser equation Set.empty source source
+parseEquation :: String -> Either CassieParserError (ParsedEqn, Symbols)
+parseEquation source = left FailedToParse $ runParser equation Set.empty source source
 
 -- | This function is deprecated. Consider using @parseEquation@ instead. 
 parseEquation' :: String -> Either CassieParserError (ParsedEqn, Set.Set Symbol)
@@ -121,9 +121,9 @@ equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
     leftHand <- expression 
     _ <- char '='
+    eqn <- Equation leftHand <$> expression
     syms <- getState    -- TODO: this feels like abuse of stateful behavior... 
     putState Set.empty
-    eqn <- Equation leftHand <$> expression
     return (eqn, syms)
 
 functionDef :: CassieLang (Symbol, Symbols, ParsedCtxItem)
