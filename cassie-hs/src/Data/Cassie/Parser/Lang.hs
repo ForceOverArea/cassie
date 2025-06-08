@@ -1,11 +1,15 @@
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Data.Cassie.Parser.Lang 
     ( functionDef
-    , parseCassieFile
+    , isEqn
+    , parseCassiePhrases
     , parseEquation
+    , parseEquation'
     , parseFunction 
     , ParsedCtx
     , ParsedCtxItem
+    , ParsedEqn
     , Phrase(..)
     , Symbols
     ) where
@@ -15,9 +19,12 @@ import safe Data.Cassie.Parser.Internal
 import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Structures.Instances.Real (RealUnary, RealMagma)
 import safe Data.Cassie.Structures.Internal (Symbol)
-import safe Data.Cassie.Structures (Equation(..))
+import safe Data.Cassie.Structures (Equation(..), RealEqn)
+import safe Data.Cassie.Utils (splitStrAt)
 import safe qualified Data.Map as Map
+import safe Data.List as List
 import safe qualified Data.Set as Set
+import safe qualified Data.Text as Text
 import safe Text.Parsec
 import safe Text.Parsec.Token (GenTokenParser(..))
 import safe Text.Parsec.Language (haskell)
@@ -30,20 +37,54 @@ type ParsedCtx = Context RealMagma RealUnary Double
 -- | The concrete type of @CtxItem m u n@ that parsing Cassie syntax will yield.
 type ParsedCtxItem = CtxItem RealMagma RealUnary Double
 
-type ParsedEqn = Equation RealMagma RealUnary Double
+-- | This may change if/when support for matrices/complex numbers is added. 
+type ParsedEqn = RealEqn
 
 type Symbols = Set.Set Symbol
 
 data Phrase
-    = ParsedEqn ParsedEqn
+    = ParsedEqn (ParsedEqn, Symbols)
     | ParsedFn (Symbol, Symbols, ParsedCtxItem)
     deriving (Show, Eq, Ord)
 
-parseCassieFile :: String -> String -> Either CassieParserError [Phrase]
-parseCassieFile sourcename source = left FailedToParse $ runParser cassieFile Set.empty sourcename source
+isEqn :: Phrase -> Bool
+isEqn (ParsedEqn _) = True
+isEqn _ = False
 
-parseEquation :: String -> Either CassieParserError ParsedEqn
+parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn, Symbols)], ParsedCtx)
+parseCassiePhrases sourcename source = 
+    let 
+        parseEqnsAndFuncs = partition isEqn 
+            <$> runParser cassieFile Set.empty sourcename (preprocessSource source)
+        
+        addFuncToCtx ctx (ParsedFn (name, _, impl)) = Map.insert name impl ctx
+        addFuncToCtx ctx _ = ctx
+
+        foldCtx = foldl addFuncToCtx Map.empty 
+
+        unwrapPhraseEqn (ParsedEqn eqn) = eqn
+        unwrapPhraseEqn _ = error "branch of control flow not used"
+
+        processPhrases = (map unwrapPhraseEqn) *** foldCtx
+    in left FailedToParse $ processPhrases <$> parseEqnsAndFuncs
+
+
+parseEquation :: String -> Either CassieParserError (ParsedEqn, Symbols)
 parseEquation source = left FailedToParse $ runParser equation Set.empty source source
+
+-- | This function is deprecated. Consider using @parseEquation@ instead. 
+parseEquation' :: String -> Either CassieParserError (ParsedEqn, Set.Set Symbol)
+parseEquation' eqn =
+    let 
+        sides = splitStrAt '=' eqn
+    in case sides of
+        [lText, rText] -> do
+            (lhs', lSyms) <- left FailedToParse $ parseExpression lText
+            (rhs', rSyms) <- left FailedToParse $ parseExpression rText
+            return $ (Equation lhs' rhs', lSyms `Set.union` rSyms)
+        []         -> Left $ FoundNone eqn
+        [_]        -> Left $ FoundExpression eqn
+        (_:_:_)    -> Left $ FoundMultiple eqn
 
 parseFunction :: ParsedCtx -> String -> Either CassieParserError ParsedCtx
 parseFunction ctx funcDef = 
@@ -64,20 +105,26 @@ parseFunction ctx funcDef =
             return $ Map.insert name funcObj ctx
 
 cassieFile :: CassieLang [Phrase]
-cassieFile = phrase `sepBy1` char ';'
+cassieFile = do
+    phrases <- phrase `sepEndBy1` char ';'
+    eof
+    return phrases
 
 phrase :: CassieLang Phrase
 phrase = 
     let 
-        functionPhrase = ParsedFn <$> try functionDef
-        equationPhrase = ParsedEqn <$> equation
+        functionPhrase = ParsedFn <$> (whiteSpace haskell >> functionDef)
+        equationPhrase = ParsedEqn <$> (whiteSpace haskell >> equation)
     in try functionPhrase <|> equationPhrase
 
-equation :: CassieLang ParsedEqn
+equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
     leftHand <- expression 
     _ <- char '='
-    Equation leftHand <$> expression
+    eqn <- Equation leftHand <$> expression
+    syms <- getState    -- TODO: this feels like abuse of stateful behavior... 
+    putState Set.empty
+    return (eqn, syms)
 
 functionDef :: CassieLang (Symbol, Symbols, ParsedCtxItem)
 functionDef = do
@@ -88,4 +135,20 @@ functionDef = do
     _ <- string "->"
     whiteSpace haskell
     impl <- expression
+    putState Set.empty -- TODO: this feels abusive too... see above comment
     return (name, Set.fromList argNames, Func argNames impl)
+
+-- | Removes comments from the source and strips trailing whitespace to simplify parser logic. 
+preprocessSource :: String -> String
+preprocessSource = 
+    let 
+        scrubComments original = 
+            case List.uncons $ Text.splitOn "//" original of
+                Just (source, _) -> source
+                Nothing -> original
+
+        joinBack linesOfText = 
+            case List.uncons linesOfText of
+                Just (h, t) -> foldl ((<>) . (<> "\n")) h t
+                Nothing -> error "branch of control flow not used."
+    in Text.unpack . Text.stripEnd . joinBack . map scrubComments . Text.split (== '\n') . Text.pack

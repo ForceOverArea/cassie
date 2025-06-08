@@ -10,6 +10,7 @@ module Data.Cassie.Parser.Internal
     , p2Term
     , p3Term
     , parenthetical
+    , parseExpression
     , product
     , quotient
     , sum
@@ -49,8 +50,16 @@ instance Show CassieParserError where
 
     show PoorlyDefinedError = "the given function did not have all of its dependencies defined as arguments or in global context"
 
+parseExpression :: String -> Either ParseError (RealAlgStruct, Set.Set Symbol)
+parseExpression expr = 
+    let 
+        bundleFoundSyms struct = do
+            syms <- getState
+            return (struct, syms)
+    in runParser (expression >>= bundleFoundSyms) Set.empty expr expr
+
 expression :: CassieParser
-expression = sum
+expression = sum <?> "math expression"
 
 sum :: CassieParser
 sum = do
