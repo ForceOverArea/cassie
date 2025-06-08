@@ -2,7 +2,7 @@
 module Main where
 
 import Data.Cassie
-import qualified Data.Map as Map
+-- import qualified Data.Map as Map
 import Glue (cassieWrapper)
 import GHC.Wasm.Prim
 
