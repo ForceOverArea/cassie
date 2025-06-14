@@ -11,7 +11,6 @@ module Data.Cassie.Parser.Lang
     , ParsedCtxItem
     , ParsedEqn
     , Phrase(..)
-    , Symbols
     ) where
 
 import safe Control.Arrow
@@ -43,9 +42,9 @@ type ParsedEqn = RealEqn
 type Import = (String, [Symbol])
 
 data Phrase
-    = ParsedEqn (ParsedEqn, Symbols)
-    | ParsedConst (ParsedEqn, Symbols)
-    | ParsedFn (Symbol, Symbols, ParsedCtxItem)
+    = ParsedConst  (Symbol, Symbols, ParsedCtxItem)
+    | ParsedEqn    (ParsedEqn, Symbols)
+    | ParsedFn     (Symbol, Symbols, ParsedCtxItem)
     | ParsedImport (String, [Symbol])
     deriving (Show, Eq, Ord)
 
@@ -53,11 +52,11 @@ parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn,
 parseCassiePhrases sourcename source = 
     let 
         processPhrases x = ( foldl addEqnToPool mempty x
-                           , foldl addFuncToCtx mempty x
+                           , foldl addFuncToCtx (foldl addConstToCtx mempty x) x
                            , foldl addImport mempty x
                            )
 
-        addConstToCtx ctx (ParsedConst constAndSyms) = Map.insert constAndSyms 
+        addConstToCtx ctx (ParsedConst (name, _, expr)) = Map.insert name expr ctx 
         addConstToCtx ctx _ = ctx
 
         addEqnToPool pool (ParsedEqn eqnAndSyms) = eqnAndSyms:pool
@@ -68,11 +67,14 @@ parseCassiePhrases sourcename source =
 
         addImport importList (ParsedImport importInfo) = importInfo:importList
         addImport importList _ = importList
-    in left FailedToParse $ processPhrases <$> runParser 
-        cassieFile 
-        Set.empty 
-        sourcename 
-        (preprocessSource source)
+
+    in left FailedToParse 
+        $ processPhrases 
+        <$> runParser 
+            cassieFile 
+            Set.empty 
+            sourcename 
+            (preprocessSource source)
 
 parseEquation :: String -> Either CassieParserError (ParsedEqn, Symbols)
 parseEquation source = left FailedToParse $ runParser equation Set.empty source source
@@ -119,10 +121,24 @@ phrase =
         equationPhrase = ParsedEqn <$> (whiteSpace haskell >> equation)
         functionPhrase = ParsedFn <$> (whiteSpace haskell >> functionDef)
         importPhrase = ParsedImport <$> (whiteSpace haskell >> importStatement)
-    in importPhrase <|> try functionPhrase <|> equationPhrase
+    in importPhrase 
+        <|> try constantPhrase 
+        <|> try functionPhrase 
+        <|> equationPhrase
 
-constant :: CassieLang (ParsedEqn, Symbols)
-constant = string "const" >> equation
+-- Top-level lexemes for top-level solver application
+
+constant :: CassieLang (Symbol, Symbols, ParsedCtxItem)
+constant = do
+    name <- whiteSpace haskell 
+        >> string "const"
+        >> identifier haskell
+    expr <- char '='
+        >> expression
+    syms <- getSymsAndReset
+    _ <- semi haskell 
+        <?> "constant"
+    return (name, syms, Const expr)
 
 equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
@@ -130,7 +146,8 @@ equation = do
     eqn <- char '='
         >> Equation leftHand <$> expression
     syms <- getSymsAndReset
-    _ <- semi haskell
+    _ <- semi haskell 
+        <?> "equation"
     return (eqn, syms)
 
 functionDef :: CassieLang (Symbol, Symbols, ParsedCtxItem)
@@ -138,20 +155,24 @@ functionDef = do
     name <- string "fn" 
         >> whiteSpace haskell 
         >> identifier haskell
-    argNames <- operator haskell "->"
+    argNames <- string "->"
         >> parens haskell (commaSep haskell $ identifier haskell)
     impl <- whiteSpace haskell 
         >> expression
     semi haskell
-        >> putState Set.empty
+        >> putState Set.empty 
+        <?> "function definition"
     return (name, Set.fromList argNames, Func argNames impl)
 
 importStatement :: CassieLang (String, [Symbol])
 importStatement = do
     pathSegments <- reserved haskell "import" 
         >> sepBy1 (dot haskell) (identifier haskell)
-    imports <- parens haskell (commaSep1 haskell $ identifier haskell) <?> "import statement"
+    imports <- parens haskell (commaSep1 haskell $ identifier haskell) 
+        <?> "import statement"
     return (intercalate "/" pathSegments, imports)
+
+-- Language-specific utility functions
 
 -- | Removes comments from the source and strips trailing whitespace to simplify parser logic. 
 preprocessSource :: String -> String
