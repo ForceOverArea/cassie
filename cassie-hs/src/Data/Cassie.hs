@@ -8,19 +8,7 @@ module Data.Cassie
     , Solution
     ) where
 
-import safe Control.Arrow
-import safe Control.Monad
-import safe Control.Monad.Except (runExcept, Except)
-import safe Control.Monad.State (get, modify, execStateT, StateT)
-import safe Data.Cassie.Parser.Internal (CassieParserError)
-import safe Data.Cassie.Parser.Lang
-import safe Data.Cassie.Rules.Evaluate
-import safe Data.Cassie.Rules.Isolate
-import safe Data.Cassie.Structures
-import safe Data.Cassie.Utils
-import safe qualified Data.Map as Map
-import safe Data.List
-import safe qualified Data.Set as Set
+import Data.Cassie.Solver
 
 -- | The Cassie 'compiler' monad for statefully building a 
 --   solution to a system of equations.
@@ -39,27 +27,7 @@ data CassieError
     | EvaluationArgError
     | ConstraintError String
     | FailedToFullySolve
-    deriving Show
-
-solvedFor :: String -> String -> ParsedCtx -> Either CassieError (ParsedEqn, Steps)
-solvedFor eqn sym ctx = do
-    (structure, syms) <- left ParseError $ parseEquation' eqn
-    when (not $ sym `Set.member` syms) 
-        (Left . ConstraintError $ "target symbol did not exist in equation. found symbols: " ++ show syms)
-    solution <- left IsolationError $ isolate sym structure ctx
-    return solution
-
-solvedForValue :: String -> String -> ParsedCtx -> Either CassieError (Double, ParsedEqn, Steps)
-solvedForValue eqn sym ctx = do
-    (eqn', steps) <- solvedFor eqn sym ctx
-    value' <- left EvaluationError $ evaluate (rhs eqn') ctx
-    return (value', eqn', steps)
-
-solveSystem :: String -> Either CassieError (ParsedCtx, Solution)
-solveSystem sys = do
-    (ctx, eqns) <- buildCtxAndEqnPool sys
-    (_, _, solnInfo) <- runExcept $ execStateT solveSystemMain (ctx, eqns, Map.empty)
-    return (ctx, solnInfo)
+    deriving (Show, Eq)
 
 solveSystemMain :: Cassie m u n ()
 solveSystemMain = do
@@ -84,7 +52,7 @@ solveSystemMain = do
 
 solveSingleUnknowns :: Cassie m u n Bool
 solveSingleUnknowns = 
-    let 
+    let
         isConstrained = (1 ==) . Set.size . snd
         solve1Unknown ctx = isolate' ctx . second Set.findMin
     in do
@@ -93,7 +61,7 @@ solveSingleUnknowns =
         case mapM (solve1Unknown ctx) constrained of
             Left err -> throwErr $ IsolationError err
             Right [] -> return False
-            Right solved -> do 
+            Right solved -> do
                 mapM_ addSolution solved
                 return True
 
@@ -113,13 +81,15 @@ updateUnknowns = do
 
 buildCtxAndEqnPool :: String -> Either CassieError (ParsedCtx, EquationPool)
 buildCtxAndEqnPool sys = do
-    (eqns, funcs) <- partitionEqnsAndFuncs sys
+    (imports, eqns, funcs) <- partitionEqnsAndFuncs sys -- TODO: handle imports
     let (consts, trueEqns) = partitionConstsAndEquations eqns
     ctx <- Map.union funcs <$> solveAndEvalConsts consts
     return (ctx, trueEqns)
 
-partitionEqnsAndFuncs :: String -> Either CassieError (EquationPool, ParsedCtx)
-partitionEqnsAndFuncs source = left ParseError $ parseCassiePhrases "system" source -- TODO: find way to inject filenames here
+partitionEqnsAndFuncs :: String -> Either CassieError ([Import], EquationPool, ParsedCtx)
+partitionEqnsAndFuncs source = do 
+    (eqnPool, ctx, imports) <- left ParseError $ parseCassiePhrases "system" source -- TODO: find way to inject filenames here
+    return (imports, eqnPool, ctx)
 
 partitionConstsAndEquations :: EquationPool -> ([(ParsedEqn, Symbol)], EquationPool)
 partitionConstsAndEquations = 
@@ -132,7 +102,7 @@ partitionConstsAndEquations =
 
     in f2a >>> first f2b
 
-solveAndEvalConsts :: [(ParsedEqn, Symbol)] -> Either CassieError (ParsedCtx)
+solveAndEvalConsts :: [(ParsedEqn, Symbol)] -> Either CassieError ParsedCtx
 solveAndEvalConsts xs = 
     let 
         f3 :: [(ParsedEqn, Symbol)] -> Either CassieError [ParsedEqn]
@@ -140,10 +110,10 @@ solveAndEvalConsts xs =
             >>> left IsolationError 
             >>> right fst
 
-        f4a :: [ParsedEqn] -> Either CassieError (ParsedCtx)
+        f4a :: [ParsedEqn] -> Either CassieError ParsedCtx
         f4a = foldM f4b Map.empty
 
-        f4b :: ParsedCtx -> ParsedEqn -> Either CassieError (ParsedCtx)
+        f4b :: ParsedCtx -> ParsedEqn -> Either CassieError ParsedCtx
         f4b ctx eqn = do
             (x, result) <- evaluate' Map.empty eqn
             return $ Map.insert x (Const $ Nullary result) ctx
