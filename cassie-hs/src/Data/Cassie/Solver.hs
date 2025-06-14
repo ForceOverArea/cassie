@@ -1,11 +1,26 @@
+{-# LANGUAGE Safe #-}
 module Data.Cassie.Solver 
     ( solvedFor
     , solvedForValue
     , solveSystem
+    , showStepsFor
+    , CassieError
+    , Solution
     ) where
 
-import Data.Cassie.Parser.Internal
-import Data.Cassie.Parser.Lang
+import safe Control.Arrow
+import safe Control.Monad
+import safe Control.Monad.State (execStateT)
+import safe Control.Monad.Except (runExcept)
+import safe Data.Cassie.Parser.Lang
+import safe Data.Cassie.Rules.Evaluate
+import safe Data.Cassie.Rules.Isolate
+import safe Data.Cassie.Solver.Context
+import safe Data.Cassie.Solver.EqSolve
+import safe Data.Cassie.Solver.Internal
+import safe Data.Cassie.Structures
+import safe qualified Data.Set as Set
+import safe qualified Data.Map as Map
 
 solvedFor :: String -> String -> ParsedCtx -> Either CassieError (ParsedEqn, Steps)
 solvedFor eqn sym ctx = do
