@@ -2,11 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Data.Cassie.Parser.Lang 
     ( functionDef
-    , isEqn
     , parseCassiePhrases
     , parseEquation
     , parseEquation'
     , parseFunction 
+    , Import
     , ParsedCtx
     , ParsedCtxItem
     , ParsedEqn
@@ -40,34 +40,35 @@ type ParsedCtxItem = CtxItem RealMagma RealUnary Double
 -- | This may change if/when support for matrices/complex numbers is added. 
 type ParsedEqn = RealEqn
 
-type Symbols = Set.Set Symbol
+type Import = (String, [Symbol])
 
 data Phrase
     = ParsedEqn (ParsedEqn, Symbols)
     | ParsedFn (Symbol, Symbols, ParsedCtxItem)
+    | ParsedImport (String, [Symbol])
     deriving (Show, Eq, Ord)
 
-isEqn :: Phrase -> Bool
-isEqn (ParsedEqn _) = True
-isEqn _ = False
-
-parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn, Symbols)], ParsedCtx)
+parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn, Symbols)], ParsedCtx, [Import])
 parseCassiePhrases sourcename source = 
     let 
-        parseEqnsAndFuncs = partition isEqn 
-            <$> runParser cassieFile Set.empty sourcename (preprocessSource source)
-        
+        processPhrases x = ( foldl addEqnToPool mempty x
+                           , foldl addFuncToCtx mempty x
+                           , foldl addImport mempty x
+                           )
+
+        addEqnToPool pool (ParsedEqn eqnAndSyms) = eqnAndSyms:pool
+        addEqnToPool pool _ = pool
+
         addFuncToCtx ctx (ParsedFn (name, _, impl)) = Map.insert name impl ctx
         addFuncToCtx ctx _ = ctx
 
-        foldCtx = foldl addFuncToCtx Map.empty 
-
-        unwrapPhraseEqn (ParsedEqn eqn) = eqn
-        unwrapPhraseEqn _ = error "branch of control flow not used"
-
-        processPhrases = (map unwrapPhraseEqn) *** foldCtx
-    in left FailedToParse $ processPhrases <$> parseEqnsAndFuncs
-
+        addImport importList (ParsedImport importInfo) = importInfo:importList
+        addImport importList _ = importList
+    in left FailedToParse $ processPhrases <$> runParser 
+        cassieFile 
+        Set.empty 
+        sourcename 
+        (preprocessSource source)
 
 parseEquation :: String -> Either CassieParserError (ParsedEqn, Symbols)
 parseEquation source = left FailedToParse $ runParser equation Set.empty source source
@@ -97,7 +98,7 @@ parseFunction ctx funcDef =
             return (name, fnImpl, capSyms `Set.difference` argSyms)
 
         knowns = Set.fromList (Map.keys $ Map.filter isConst ctx)
-    in do 
+    in do
         (name, funcObj, dependencies) <- left FailedToParse parseResult
         if dependencies `Set.difference` knowns /= Set.empty then
             Left PoorlyDefinedError
@@ -105,25 +106,24 @@ parseFunction ctx funcDef =
             return $ Map.insert name funcObj ctx
 
 cassieFile :: CassieLang [Phrase]
-cassieFile = do
-    phrases <- phrase `sepEndBy1` char ';'
-    eof
-    return phrases
+cassieFile = manyTill phrase eof
 
 phrase :: CassieLang Phrase
 phrase = 
     let 
-        functionPhrase = ParsedFn <$> (whiteSpace haskell >> functionDef)
         equationPhrase = ParsedEqn <$> (whiteSpace haskell >> equation)
-    in try functionPhrase <|> equationPhrase
+        functionPhrase = ParsedFn <$> (whiteSpace haskell >> functionDef)
+        importPhrase = ParsedImport <$> (whiteSpace haskell >> importStatement)
+    in importPhrase <|> try functionPhrase <|> equationPhrase
 
 equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
-    leftHand <- expression 
+    leftHand <- expression
     _ <- char '='
     eqn <- Equation leftHand <$> expression
-    syms <- getState    -- TODO: this feels like abuse of stateful behavior... 
+    syms <- getState
     putState Set.empty
+    _ <- semi haskell
     return (eqn, syms)
 
 functionDef :: CassieLang (Symbol, Symbols, ParsedCtxItem)
@@ -131,12 +131,20 @@ functionDef = do
     _ <- string "fn"
     whiteSpace haskell
     name <- identifier haskell
-    argNames <- parens haskell $ commaSep haskell $ identifier haskell
-    _ <- string "->"
+    argNames <- parens haskell (commaSep haskell $ identifier haskell)
+    _ <- reserved haskell "->"
     whiteSpace haskell
     impl <- expression
-    putState Set.empty -- TODO: this feels abusive too... see above comment
+    _ <- semi haskell
+    putState Set.empty
     return (name, Set.fromList argNames, Func argNames impl)
+
+importStatement :: CassieLang (String, [Symbol])
+importStatement = do
+    reserved haskell "import"
+    pathSegments <- sepBy1 (dot haskell) (identifier haskell)
+    imports <- parens haskell (commaSep1 haskell $ identifier haskell) <?> "import statement"
+    return (intercalate "/" pathSegments, imports)
 
 -- | Removes comments from the source and strips trailing whitespace to simplify parser logic. 
 preprocessSource :: String -> String
