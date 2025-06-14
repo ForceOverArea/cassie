@@ -44,6 +44,7 @@ type Import = (String, [Symbol])
 
 data Phrase
     = ParsedEqn (ParsedEqn, Symbols)
+    | ParsedConst (ParsedEqn, Symbols)
     | ParsedFn (Symbol, Symbols, ParsedCtxItem)
     | ParsedImport (String, [Symbol])
     deriving (Show, Eq, Ord)
@@ -55,6 +56,9 @@ parseCassiePhrases sourcename source =
                            , foldl addFuncToCtx mempty x
                            , foldl addImport mempty x
                            )
+
+        addConstToCtx ctx (ParsedConst constAndSyms) = Map.insert constAndSyms 
+        addConstToCtx ctx _ = ctx
 
         addEqnToPool pool (ParsedEqn eqnAndSyms) = eqnAndSyms:pool
         addEqnToPool pool _ = pool
@@ -111,38 +115,41 @@ cassieFile = manyTill phrase eof
 phrase :: CassieLang Phrase
 phrase = 
     let 
+        constantPhrase = ParsedConst <$> (whiteSpace haskell >> constant)
         equationPhrase = ParsedEqn <$> (whiteSpace haskell >> equation)
         functionPhrase = ParsedFn <$> (whiteSpace haskell >> functionDef)
         importPhrase = ParsedImport <$> (whiteSpace haskell >> importStatement)
     in importPhrase <|> try functionPhrase <|> equationPhrase
 
+constant :: CassieLang (ParsedEqn, Symbols)
+constant = string "const" >> equation
+
 equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
-    leftHand <- expression
-    _ <- char '='
-    eqn <- Equation leftHand <$> expression
-    syms <- getState
-    putState Set.empty
+    leftHand <- expression 
+    eqn <- char '='
+        >> Equation leftHand <$> expression
+    syms <- getSymsAndReset
     _ <- semi haskell
     return (eqn, syms)
 
 functionDef :: CassieLang (Symbol, Symbols, ParsedCtxItem)
 functionDef = do
-    _ <- string "fn"
-    whiteSpace haskell
-    name <- identifier haskell
-    argNames <- parens haskell (commaSep haskell $ identifier haskell)
-    _ <- reserved haskell "->"
-    whiteSpace haskell
-    impl <- expression
-    _ <- semi haskell
-    putState Set.empty
+    name <- string "fn" 
+        >> whiteSpace haskell 
+        >> identifier haskell
+    argNames <- operator haskell "->"
+        >> parens haskell (commaSep haskell $ identifier haskell)
+    impl <- whiteSpace haskell 
+        >> expression
+    semi haskell
+        >> putState Set.empty
     return (name, Set.fromList argNames, Func argNames impl)
 
 importStatement :: CassieLang (String, [Symbol])
 importStatement = do
-    reserved haskell "import"
-    pathSegments <- sepBy1 (dot haskell) (identifier haskell)
+    pathSegments <- reserved haskell "import" 
+        >> sepBy1 (dot haskell) (identifier haskell)
     imports <- parens haskell (commaSep1 haskell $ identifier haskell) <?> "import statement"
     return (intercalate "/" pathSegments, imports)
 
@@ -160,3 +167,9 @@ preprocessSource =
                 Just (h, t) -> foldl ((<>) . (<> "\n")) h t
                 Nothing -> error "branch of control flow not used."
     in Text.unpack . Text.stripEnd . joinBack . map scrubComments . Text.split (== '\n') . Text.pack
+
+getSymsAndReset :: CassieLang Symbols
+getSymsAndReset = do
+    parsedSyms <- getState
+    putState Set.empty
+    return parsedSyms

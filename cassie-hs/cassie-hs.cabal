@@ -51,6 +51,7 @@ library
                         Data.Cassie.Solver.Context,
                         Data.Cassie.Solver.EqSolve,
                         Data.Cassie.Solver.Imports,
+                        Data.Cassie.Solver.Internal,
                         Data.Cassie.Structures.Internal,
                         Data.Cassie.Structures.Instances.Complex,
                         Data.Cassie.Structures.Instances.Real,
