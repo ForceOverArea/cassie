@@ -38,6 +38,10 @@ solvedForValue eqn sym ctx = do
 
 solveSystem :: String -> Either CassieError (ParsedCtx, Solution)
 solveSystem sys = do
-    (ctx, eqns) <- buildCtxAndEqnPool sys
-    (_, _, solnInfo) <- runExcept $ execStateT solveSystemMain (ctx, eqns, Map.empty)
-    return (ctx, solnInfo)
+    (_imports ,ctx, eqns) <- buildGlobalCtx sys
+    (finalCtx, unsolvedEqns, solnInfo) <- runExcept 
+        $ execStateT solveSystemMain (ctx, eqns, Map.empty)
+    if length unsolvedEqns > 0 then
+        return $ Left 
+    else 
+        return (ctx, solnInfo)

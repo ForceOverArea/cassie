@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Structures
     ( (~?)
+    , getSyms
     , isolateLeftOperand
     , isolateRightOperand
     , showAlgStruct

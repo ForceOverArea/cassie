@@ -56,10 +56,10 @@ solveSingleUnknowns =
 
 addSolution :: (ParsedEqn, Steps) -> Cassie m u n ()
 addSolution (eqn, steps) = do
-    let name = getSymbol $ lhs eqn
-    let value = rhs eqn 
+    let (name, value) = (getSymbol . lhs &&& rhs) eqn
     numSoln <- flip evaluate' eqn <$> getCtx
-    modifyCtx $ Map.insert name (Const value)
+    deps <- Set.intersection (getSyms value) <$> getKnowns
+    modifyCtx $ Map.insert name (Known value deps)
     addSoln name (eqn, steps, snd <$> numSoln)
     
 updateUnknowns :: Cassie m u n ()
@@ -68,9 +68,11 @@ updateUnknowns = do
     let f = second (`Set.difference` knowns)
     modifyEqns $ map f
 
-
-getCtx :: Cassie m u n (ParsedCtx)
+getCtx :: Cassie m u n ParsedCtx
 getCtx = let f (x, _, _) = x in f <$> get
+
+getKnowns :: Cassie m u n Symbols
+getKnowns = Set.fromList . Map.keys <$> getCtx
 
 getEqns :: Cassie  m u n EquationPool
 getEqns = let f (_, x, _) = x in f <$> get

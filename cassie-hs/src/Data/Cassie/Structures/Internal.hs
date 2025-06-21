@@ -4,11 +4,13 @@
 {-# LANGUAGE InstanceSigs #-}
 module Data.Cassie.Structures.Internal 
     ( (~?)
+    , getSyms
     , AlgStruct(..)
     , Symbol
     ) where
 
 import safe qualified Data.List.NonEmpty as NE
+import safe qualified Data.Set as Set
 
 type Symbol = String
 
@@ -81,6 +83,7 @@ instance Fractional n => Fractional (AlgStruct m u n) where
 
     fromRational = Nullary . fromRational
 
+-- | Indicates whether the given symbol is present in the given structure.
 (~?) :: Symbol -> AlgStruct m u n -> Bool
 sym ~? Additive terms           = any (sym ~?) terms
 sym ~? Multiplicative factors   = any (sym ~?) factors
@@ -91,3 +94,15 @@ sym ~? N_ary _ args             = any (sym ~?) args
 sym ~? Unary _ x                = sym ~? x
 _   ~? Nullary _                = False
 sym ~? Symbol s                 = sym == s
+
+-- | Retrieves all the symbols present in a given algebraic structure. 
+getSyms :: AlgStruct m u n -> Set.Set Symbol
+getSyms (Additive terms)         = Set.unions $ NE.map getSyms terms
+getSyms (Multiplicative factors) = Set.unions $ NE.map getSyms factors
+getSyms (Negated neg)            = getSyms neg
+getSyms (Inverse inv)            = getSyms inv 
+getSyms (Magma _ l r)            = getSyms l `Set.union` getSyms r
+getSyms (N_ary _ args)           = Set.unions $ map getSyms args
+getSyms (Unary _ x)              = getSyms x
+getSyms (Nullary _)              = mempty
+getSyms (Symbol s)               = Set.singleton s

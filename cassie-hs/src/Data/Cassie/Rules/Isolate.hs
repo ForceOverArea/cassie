@@ -165,9 +165,9 @@ getFn :: String -> Isolate m u n ([Symbol], AlgStruct m u n)
 getFn fnName = do
     ctx <- asks snd
     case fnName `Map.lookup` ctx of
-        Just (Func syms expanded) -> return (syms, expanded)
-        Just (Const _)            -> throwErr NotAFunction
-        Nothing                   -> throwErr FunctionNotDefined
+        Just (Func syms expanded _) -> return (syms, expanded)
+        Just (Known _ _)            -> throwErr NotAFunction
+        Nothing                     -> throwErr FunctionNotDefined
 
 isIsolated :: AlgebraicStructure m u n => Equation m u n -> Symbol -> Bool
 isIsolated eqn sym = case isolate sym eqn Map.empty of

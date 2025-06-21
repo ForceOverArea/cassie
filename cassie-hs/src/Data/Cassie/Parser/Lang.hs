@@ -39,13 +39,13 @@ type ParsedCtxItem = CtxItem RealMagma RealUnary Double
 -- | This may change if/when support for matrices/complex numbers is added. 
 type ParsedEqn = RealEqn
 
-type Import = (String, [Symbol])
+type Import = (FilePath, Symbols)
 
 data Phrase
-    = ParsedConst  (Symbol, Symbols, ParsedCtxItem)
+    = ParsedConst  (Symbol, ParsedCtxItem)
     | ParsedEqn    (ParsedEqn, Symbols)
-    | ParsedFn     (Symbol, Symbols, ParsedCtxItem)
-    | ParsedImport (String, [Symbol])
+    | ParsedFn     (Symbol, ParsedCtxItem)
+    | ParsedImport (String, Symbols)
     deriving (Show, Eq, Ord)
 
 parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn, Symbols)], ParsedCtx, [Import])
@@ -56,13 +56,13 @@ parseCassiePhrases sourcename source =
                            , foldl addImport mempty x
                            )
 
-        addConstToCtx ctx (ParsedConst (name, _, expr)) = Map.insert name expr ctx 
+        addConstToCtx ctx (ParsedConst (name, expr)) = Map.insert name expr ctx 
         addConstToCtx ctx _ = ctx
 
         addEqnToPool pool (ParsedEqn eqnAndSyms) = eqnAndSyms:pool
         addEqnToPool pool _ = pool
 
-        addFuncToCtx ctx (ParsedFn (name, _, impl)) = Map.insert name impl ctx
+        addFuncToCtx ctx (ParsedFn (name, impl)) = Map.insert name impl ctx
         addFuncToCtx ctx _ = ctx
 
         addImport importList (ParsedImport importInfo) = importInfo:importList
@@ -89,24 +89,21 @@ parseEquation' eqn =
             (lhs', lSyms) <- left FailedToParse $ parseExpression lText
             (rhs', rSyms) <- left FailedToParse $ parseExpression rText
             return $ (Equation lhs' rhs', lSyms `Set.union` rSyms)
-        []         -> Left $ FoundNone eqn
-        [_]        -> Left $ FoundExpression eqn
-        (_:_:_)    -> Left $ FoundMultiple eqn
+        []      -> Left $ FoundNone eqn
+        [_]     -> Left $ FoundExpression eqn
+        (_:_:_) -> Left $ FoundMultiple eqn
 
 parseFunction :: ParsedCtx -> String -> Either CassieParserError ParsedCtx
 parseFunction ctx funcDef = 
     let 
-        parseResult = runParser parseConstrainedFunction Set.empty funcDef funcDef
-
-        parseConstrainedFunction = do
-            (name, argSyms, fnImpl) <- functionDef
-            capSyms <- getState
-            return (name, fnImpl, capSyms `Set.difference` argSyms)
-
+        parseResult = runParser functionDef Set.empty funcDef funcDef
         knowns = Set.fromList (Map.keys $ Map.filter isConst ctx)
     in do
-        (name, funcObj, dependencies) <- left FailedToParse parseResult
-        if dependencies `Set.difference` knowns /= Set.empty then
+        (name, funcObj) <- left FailedToParse parseResult
+        let deps = case funcObj of
+                (Func _ _ x) -> x
+                _ -> error "branch of control flow not used"
+        if deps `Set.difference` knowns /= Set.empty then
             Left PoorlyDefinedError
         else
             return $ Map.insert name funcObj ctx
@@ -128,7 +125,7 @@ phrase =
 
 -- Top-level lexemes for top-level solver application
 
-constant :: CassieLang (Symbol, Symbols, ParsedCtxItem)
+constant :: CassieLang (Symbol, ParsedCtxItem)
 constant = do
     name <- whiteSpace haskell 
         >> string "const"
@@ -138,7 +135,7 @@ constant = do
     syms <- getSymsAndReset
     _ <- semi haskell 
         <?> "constant"
-    return (name, syms, Const expr)
+    return (name, Known expr syms)
 
 equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
@@ -150,25 +147,26 @@ equation = do
         <?> "equation"
     return (eqn, syms)
 
-functionDef :: CassieLang (Symbol, Symbols, ParsedCtxItem)
+functionDef :: CassieLang (Symbol, ParsedCtxItem)
 functionDef = do
-    name <- string "fn" 
-        >> whiteSpace haskell 
+    name <- string "fn"
+        >> whiteSpace haskell
         >> identifier haskell
     argNames <- string "->"
         >> parens haskell (commaSep haskell $ identifier haskell)
     impl <- whiteSpace haskell 
         >> expression
-    semi haskell
-        >> putState Set.empty 
+    syms <- (`Set.difference` Set.fromList argNames) 
+        <$> (semi haskell >> getSymsAndReset)
         <?> "function definition"
-    return (name, Set.fromList argNames, Func argNames impl)
+    return (name, Func argNames impl syms)
 
-importStatement :: CassieLang (String, [Symbol])
+importStatement :: CassieLang (String, Symbols)
 importStatement = do
     pathSegments <- reserved haskell "import" 
         >> sepBy1 (dot haskell) (identifier haskell)
-    imports <- parens haskell (commaSep1 haskell $ identifier haskell) 
+    imports <- Set.fromList
+        <$> parens haskell (commaSep1 haskell $ identifier haskell) 
         <?> "import statement"
     return (intercalate "/" pathSegments, imports)
 

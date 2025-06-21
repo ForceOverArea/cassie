@@ -1,6 +1,6 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Solver.Context
-    ( buildCtxAndEqnPool
+    ( buildGlobalCtx
     , evaluate'
     , isolate'
     ) where
@@ -17,12 +17,18 @@ import safe Data.List as List
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 
-buildCtxAndEqnPool :: String -> Either CassieError (ParsedCtx, EquationPool)
-buildCtxAndEqnPool sys = do
-    (_imports, eqns, funcs) <- partitionEqnsAndFuncs sys -- TODO: handle imports
+-- | Builds the global context of a system prior to solving it. This 
+--   consists of 3 things:
+--
+--   1. A list of imported modules that the file (may) depend on
+--   2. A @Context@ map structure of symbols to functions or constant values
+--   3. A pool of equations parsed out in the system. 
+buildGlobalCtx :: String -> Either CassieError ([Import], ParsedCtx, EquationPool)
+buildGlobalCtx sys = do
+    (imports, eqns, funcs) <- partitionEqnsAndFuncs sys -- TODO: handle imports
     let (consts, trueEqns) = partitionConstsAndEquations eqns
     ctx <- Map.union funcs <$> solveAndEvalConsts consts
-    return (ctx, trueEqns)
+    return (imports, ctx, trueEqns)
 
 partitionEqnsAndFuncs :: String -> Either CassieError ([Import], EquationPool, ParsedCtx)
 partitionEqnsAndFuncs source = do 
@@ -54,10 +60,9 @@ solveAndEvalConsts xs =
         f4b :: ParsedCtx -> ParsedEqn -> Either CassieError ParsedCtx
         f4b ctx eqn = do
             (x, result) <- evaluate' Map.empty eqn
-            return $ Map.insert x (Const $ Nullary result) ctx
+            return $ Map.insert x (Known (Nullary result) Set.empty) ctx
 
     in f3 xs >>= f4a
-
 
 isolate' :: ParsedCtx -> (ParsedEqn, Symbol) -> Either IsolateError (ParsedEqn, Steps)
 isolate' ctx (eqn, sym) = isolate sym eqn ctx

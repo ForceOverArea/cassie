@@ -29,6 +29,7 @@ import safe Data.Cassie.Structures
 import safe Data.Cassie.Rules.Substitute (substituteFnArgs, SubstitutionError)
 import safe Data.List
 import safe qualified Data.Map as Map
+import safe qualified Data.Set as Set
 
 type Context m u n = Map.Map String (CtxItem m u n)
 
@@ -41,17 +42,22 @@ data EvalError
     deriving Eq
 
 data CtxItem m u n
-    = Func [Symbol] (AlgStruct m u n)
-    | Const (AlgStruct m u n)
+    = Func  { arguments      :: [Symbol]
+            , implementation :: AlgStruct m u n
+            , dependencies   :: Set.Set Symbol
+            }
+    | Known { symbolic       :: AlgStruct m u n
+            , dependencies   :: Set.Set Symbol
+            }
     deriving (Eq, Ord)
 
 instance AlgebraicStructure m u n => Show (CtxItem m u n) where
-    show (Const algStruct) =
+    show (Known algStruct _) =
         case evaluate algStruct Map.empty of
             Left _ -> showAlgStruct algStruct
             Right val -> show val
 
-    show (Func args impl) = "(" ++ intercalate "," args ++ ") -> " ++ showAlgStruct impl
+    show (Func args impl _) = "(" ++ intercalate "," args ++ ") -> " ++ showAlgStruct impl
 
 instance Show EvalError where
     show (SymbolNotDefined symbol) 
@@ -117,7 +123,7 @@ getConst :: String -> Evaluate m u n (AlgStruct m u n)
 getConst s = do
     cst <- asks (Map.lookup s)
     case cst of
-        Just (Const v) -> return v
+        Just (Known v _) -> return v
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Fetches a function with the given name from the @Context@. 
@@ -125,10 +131,10 @@ getFunc :: String -> Evaluate m u n ([Symbol], AlgStruct m u n)
 getFunc s = do
     fn <- asks (Map.lookup s)
     case fn of
-        Just (Func c f) -> return (c, f)
+        Just (Func c f _) -> return (c, f)
         _ -> lift . throwError $ SymbolNotDefined s
 
--- | Indicates whether a given @CtxItem@ is a @Const@-constructor value.
+-- | Indicates whether a given @CtxItem@ is a @Known@-constructor value.
 isConst :: CtxItem m u n -> Bool
-isConst (Const _)  = True
-isConst (Func _ _) = False
+isConst (Known _ _)  = True
+isConst (Func _ _ _) = False
