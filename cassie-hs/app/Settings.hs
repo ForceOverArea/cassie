@@ -16,17 +16,20 @@ data CassieJSON = CassieJSON
     , report     :: CassieReportOpts 
     , solution   :: CassieSolnOpts
     }
+    deriving Show
 
 data CassieReportOpts = CassieReportOpts 
     { title  :: String
     , author :: String
     }
+    deriving Show
 
 data CassieSolnOpts = CassieSolnOpts 
     { numeric   :: [String] 
     , constants :: [String] 
     , symbolic  :: [String] 
     }
+    deriving Show
 
 instance FromJSON CassieJSON where
     parseJSON = withObject "Cassie.json" $ \v -> CassieJSON 

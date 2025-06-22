@@ -1,10 +1,13 @@
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Solver.Internal
     ( Cassie
+    , CassieT
     , CassieError(..)
     , EquationPool
     , Solution
-    , SolutionValues
+    , SolutionItem(..)
     ) where
 
 import safe Control.Monad.Except (ExceptT)
@@ -23,20 +26,29 @@ type Cassie m u n = CassieT m u n Identity
 
 type CassieT mg u n m = StateT (ParsedCtx, EquationPool, Solution) (ExceptT CassieError m)
 
-type Solution = Map.Map Symbol SolutionValues
+type Solution = Map.Map Symbol SolutionItem
 
-type SolutionValues = (ParsedEqn, Steps, Either CassieError Double)
+-- | Similar to @CtxItem@, but contains metadata not needed by the 
+--   @evalulate@ function. 
+data SolutionItem = SolutionItem
+    { eqn     :: ParsedEqn
+    , steps   :: Steps
+    , possVal :: Either CassieError Double
+    }
+    deriving (Show, Eq)
 
 type EquationPool = [(ParsedEqn, Symbols)]
 
 data CassieError
-    = ParseError CassieParserError
-    | IsolationError IsolateError
-    | EvaluationError EvalError
+    = ConstraintError String
     | EvaluationArgError
-    | ConstraintError String
-    | FailedToFullySolve
-    | FileDoesNotExist 
-    | FoundRecursiveImport
+    | EvaluationError EvalError
     | FailedToConstrain EquationPool
+    | FailedToFullySolve
+    | FileDoesNotExist FilePath
+    | FoundRecursiveImport
+    | IsolationError IsolateError
+    | ImportsNotAllowed
+    | ImportNotFound (String, [Symbols])
+    | ParseError CassieParserError
     deriving (Show, Eq)

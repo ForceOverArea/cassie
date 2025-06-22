@@ -18,10 +18,8 @@ common warnings
 
 executable cassie-cli
     import:             warnings
-    ghc-options:        -no-hs-main -optl-Wl,--export=solveSystemHs -optl-mexec-model=reactor
     main-is:            Main.hs
     other-modules:      Settings
-    -- other-extensions:
     build-depends:      
                         base               ^>= 4.21.0.0,
                         aeson               >= 2.2.3.0,
@@ -36,8 +34,6 @@ library
     import:             warnings
     
     exposed-modules:    Data.Cassie.Parser,
-                        Data.Cassie.Parser.Internal,
-                        Data.Cassie.Parser.Lang,
                         Data.Cassie.Rules,
                         Data.Cassie.Solver,
                         Data.Cassie.Structures,                  
@@ -48,6 +44,8 @@ library
                         Data.Cassie.Rules.Isolate,
                         -- Data.Cassie.Rules.Isolate.PolySolve,
                         Data.Cassie.Rules.Substitute,
+                        Data.Cassie.Parser.Internal,
+                        Data.Cassie.Parser.Lang,
                         Data.Cassie.Solver.Context,
                         Data.Cassie.Solver.EqSolve,
                         Data.Cassie.Solver.Imports,

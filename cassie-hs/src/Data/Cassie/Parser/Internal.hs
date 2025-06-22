@@ -147,7 +147,9 @@ value = Nullary <$> try (float haskell)
 -- | Parses a number literal and returns an @AlgStruct.Value@
 symb :: CassieParser 
 symb = do
-    sym <- identifier haskell <?> "symbol"
+    sym <- whiteSpace haskell
+        >> identifier haskell 
+        <?> "symbol"
     modifyState $ Set.insert sym 
     return $ Symbol sym
 

@@ -48,12 +48,12 @@ data Phrase
     | ParsedImport (String, Symbols)
     deriving (Show, Eq, Ord)
 
-parseCassiePhrases :: String -> String -> Either CassieParserError ([(ParsedEqn, Symbols)], ParsedCtx, [Import])
+parseCassiePhrases :: FilePath -> String -> Either CassieParserError ([Import], ParsedCtx, [(ParsedEqn, Symbols)])
 parseCassiePhrases sourcename source = 
     let 
-        processPhrases x = ( foldl addEqnToPool mempty x
+        processPhrases x = ( foldl addImport mempty x
                            , foldl addFuncToCtx (foldl addConstToCtx mempty x) x
-                           , foldl addImport mempty x
+                           , foldl addEqnToPool mempty x
                            )
 
         addConstToCtx ctx (ParsedConst (name, expr)) = Map.insert name expr ctx 
@@ -152,9 +152,9 @@ functionDef = do
     name <- string "fn"
         >> whiteSpace haskell
         >> identifier haskell
-    argNames <- string "->"
-        >> parens haskell (commaSep haskell $ identifier haskell)
+    argNames <- parens haskell (commaSep haskell $ identifier haskell)
     impl <- whiteSpace haskell 
+        >> string "->"
         >> expression
     syms <- (`Set.difference` Set.fromList argNames) 
         <$> (semi haskell >> getSymsAndReset)
@@ -163,8 +163,10 @@ functionDef = do
 
 importStatement :: CassieLang (String, Symbols)
 importStatement = do
+    whiteSpace haskell
     pathSegments <- reserved haskell "import" 
-        >> sepBy1 (dot haskell) (identifier haskell)
+        >> sepBy1 (identifier haskell) (dot haskell)
+    whiteSpace haskell
     imports <- Set.fromList
         <$> parens haskell (commaSep1 haskell $ identifier haskell) 
         <?> "import statement"
