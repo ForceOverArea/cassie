@@ -11,7 +11,7 @@ main = error "not necessary"
 
 -- | Exports the Cassie solver as a function.
 solveSystemHs :: JSString -> JSString
-solveSystemHs = toJSString . cassieWrapper . solveSystem . fromJSString
+solveSystemHs = toJSString . cassieWrapper . solveSystem "system" . fromJSString
 
 -- | Exports Cassie's symbolic isolation algorithm.
 -- solveEqnForHs :: JSString -> JSString -> JSString

@@ -9,24 +9,24 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import Data.Cassie (CassieError, Solution)
-import Data.Cassie.Parser
+import Data.Cassie.Solver (CassieError, Solution, SolutionItem(..))
+import Data.Cassie.Parser (ParsedEqn, ParsedCtxItem, ParsedCtx)
 import Data.Cassie.Structures (Symbol)
 
 newtype Solution' = Solution' (String, ParsedEqn, [String], Either CassieError Double)
 
 instance A.ToJSON Solution' where
-    toJSON (Solution' (sym, eqn, steps, val)) = 
+    toJSON (Solution' (sym, solvedEqn, work, val)) = 
         let 
             unwrap :: Either CassieError Double -> A.Value
             unwrap x = case x of
                 Right y  -> jsonify y
                 Left err -> jsonify err
 
-            stepsLogStr = intercalate "\n" steps
-
+            stepsLogStr = intercalate "\n" work
+            
         in A.object [ "symbol"     A..= A.toJSON sym
-                    , "equation"   A..= jsonify eqn
+                    , "equation"   A..= jsonify solvedEqn
                     , "steps"      A..= A.toJSON stepsLogStr
                     , "maybeValue" A..= unwrap val
                     ]
@@ -53,8 +53,8 @@ buildJSONSoln soln = A.toJSON $ map (buildSingleSolnObject soln) (Map.keys soln)
 buildSingleSolnObject :: Solution -> Symbol -> A.Value
 buildSingleSolnObject soln name = 
     let 
-        (symbolic, steps, numeric) = soln Map.! name
-    in A.toJSON $ Solution' (name, symbolic, steps, numeric)
+        SolutionItem symbolic work numeric = soln Map.! name
+    in A.toJSON $ Solution' (name, symbolic, work, numeric)
 
 jsonify :: Show a => a -> A.Value
 jsonify = (A.String . Text.show)

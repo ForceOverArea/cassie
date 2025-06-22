@@ -16,6 +16,20 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
+executable cassie
+    import:             warnings
+    main-is:            Main.hs
+    other-modules:      Settings
+    build-depends:      
+                        base               ^>= 4.21.0.0,
+                        aeson               >= 2.2.3.0,
+                        cassie-hs           >= 0.1.0.0,
+                        containers          >= 0.6.5.1,
+                        mtl                 >= 2.3.1,
+                        text                >= 1.2.5.0,
+    hs-source-dirs:     app
+    default-language:   Haskell2010
+
 executable cassie-wasm
     import:             warnings
     ghc-options:        -no-hs-main -optl-Wl,--export=solveSystemHs -optl-mexec-model=reactor
@@ -29,7 +43,7 @@ executable cassie-wasm
                         containers          >= 0.6.5.1,
                         ghc-experimental    >= 9.1202.0,
                         text                >= 1.2.5.0,
-    hs-source-dirs:     app
+    hs-source-dirs:     reactor
     default-language:   Haskell2010
 
 library

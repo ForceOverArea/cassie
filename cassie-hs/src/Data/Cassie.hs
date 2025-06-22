@@ -6,6 +6,7 @@ module Data.Cassie
     , showStepsFor
     , CassieError
     , Solution
+    , SolutionItem(..)
     ) where
 
 import Data.Cassie.Solver

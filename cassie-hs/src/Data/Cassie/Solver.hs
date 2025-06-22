@@ -9,6 +9,7 @@ module Data.Cassie.Solver
     , showStepsFor
     , CassieError
     , Solution
+    , SolutionItem(..)
     ) where
 
 import safe Control.Arrow
