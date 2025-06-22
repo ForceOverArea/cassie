@@ -18,8 +18,6 @@ import safe Control.Monad.Except (runExcept)
 import safe Data.Cassie.Parser.Lang
 import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Rules.Isolate
-import safe Data.Cassie.Solver.Context
-import safe Data.Cassie.Solver.EqSolve
 import safe Data.Cassie.Solver.Imports
 import safe Data.Cassie.Solver.Internal
 import safe Data.Cassie.Structures

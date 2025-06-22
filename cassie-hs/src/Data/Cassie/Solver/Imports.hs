@@ -11,14 +11,15 @@ import safe Control.Monad.State (execStateT)
 import safe Control.Monad.Trans
 import safe Control.Monad.Except (throwError, ExceptT, MonadError)
 import safe Data.Cassie.Parser.Lang 
-import safe Data.Cassie.Solver.Context (buildGlobalCtx)
-import safe Data.Cassie.Solver.EqSolve (solveSystemMain)
 import safe Data.Cassie.Solver.Internal
 import System.Directory 
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 
 type CassieImport = ExceptT CassieError IO
+
+cassieFileExt :: String
+cassieFileExt = ".cas"
 
 buildImportedCtx :: Set.Set String -> ParsedCtx -> Import -> IO (Either CassieError ParsedCtx)
 buildImportedCtx parentPaths ctx (importPath, importSet) = runExceptT 
@@ -32,7 +33,7 @@ getCtxFromImport parentPaths ctx (importPath, importSet) =
         needsExporting x _ = x `Set.member` importSet
     in do
         moduleFilePath <- liftIO 
-            $ (++ "/" ++ importPath ++ ".cas") 
+            $ (++ "/" ++ importPath ++ cassieFileExt) 
             <$> getCurrentDirectory
         (childImports, childCtx, childEqns) <- tryBuildModuleCtx moduleFilePath
         checkForRecursion parentPaths childImports

@@ -1,4 +1,4 @@
-{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
@@ -8,7 +8,6 @@ import safe Control.Monad.Except (runExcept)
 import safe Control.Monad.Reader (asks, runReaderT, ReaderT)
 import safe Control.Monad.State (execStateT)
 import safe Control.Monad.Trans (liftIO)
--- import Data.Aeson (eitherDecodeFileStrict)
 import safe Data.Cassie.Parser (parseCassiePhrases)
 import safe Data.Cassie.Solver (buildImportedCtx, solveSystemMain)
 import safe qualified Data.Map as Map 
