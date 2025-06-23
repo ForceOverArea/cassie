@@ -25,7 +25,8 @@ data CassieReportOpts = CassieReportOpts
     deriving Show
 
 data CassieSolnOpts = CassieSolnOpts 
-    { numeric   :: [String] 
+    { whitelist :: Bool
+    , numeric   :: [String] 
     , constants :: [String] 
     , symbolic  :: [String] 
     }
@@ -44,7 +45,8 @@ instance FromJSON CassieReportOpts where
 
 instance FromJSON CassieSolnOpts where
     parseJSON = withObject "solution options" $ \v -> CassieSolnOpts
-        <$> v .: "numeric"
+        <$> v .: "whitelist"
+        <*> v .: "numeric"
         <*> v .: "constants"
         <*> v .: "symbolic"
 

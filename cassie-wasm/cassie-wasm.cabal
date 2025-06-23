@@ -19,7 +19,9 @@ common warnings
 executable cassie
     import:             warnings
     main-is:            Main.hs
-    other-modules:      Settings
+    other-modules:      Formatting,
+                        Internal,
+                        Settings,
     build-depends:      
                         base               ^>= 4.21.0.0,
                         aeson               >= 2.2.3.0,
