@@ -7,6 +7,7 @@ module Data.Cassie.Parser
     , parseExpression
     , parseFunction 
     , CassieParserError
+    , Import
     , ParsedCtx
     , ParsedCtxItem
     , ParsedEqn

@@ -8,6 +8,7 @@ module Data.Cassie.Solver
     , solveSystemMain
     , showStepsFor
     , CassieError
+    , EquationPool
     , Solution
     , SolutionItem(..)
     ) where

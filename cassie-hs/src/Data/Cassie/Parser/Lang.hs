@@ -6,6 +6,7 @@ module Data.Cassie.Parser.Lang
     , parseEquation
     , parseEquation'
     , parseFunction 
+    , EquationPool
     , Import
     , ParsedCtx
     , ParsedCtxItem
@@ -29,6 +30,8 @@ import safe Text.Parsec.Token (GenTokenParser(..))
 import safe Text.Parsec.Language (haskell)
 
 type CassieLang a = Parsec String Symbols a
+
+type EquationPool = [(ParsedEqn, Symbols)]
 
 -- | The concrete type of @Context m u n@ that parsing Cassie syntax will yield.
 type ParsedCtx = Context RealMagma RealUnary Double

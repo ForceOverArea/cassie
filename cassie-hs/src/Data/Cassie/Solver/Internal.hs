@@ -47,8 +47,6 @@ data SolutionItem = SolutionItem
     }
     deriving (Show, Eq)
 
-type EquationPool = [(ParsedEqn, Symbols)]
-
 data CassieError
     = ConstraintError String
     | EvaluationArgError
