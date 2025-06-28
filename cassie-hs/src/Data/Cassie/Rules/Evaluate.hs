@@ -31,7 +31,7 @@ import safe Data.List
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 
-type Context m u n = Map.Map String (CtxItem m u n)
+type Context mg u n = Map.Map String (CtxItem mg u n)
 
 -- | An error that may be thrown by @evaluate@.
 data EvalError 
@@ -41,21 +41,17 @@ data EvalError
     | FailedToCallFunction SubstitutionError
     deriving Eq
 
-data CtxItem m u n
+data CtxItem mg u n
     = Func  { arguments      :: [Symbol]
-            , implementation :: AlgStruct m u n
+            , implementation :: AlgStruct mg u n
             , dependencies   :: Set.Set Symbol
             }
-    | Known { symbolic       :: AlgStruct m u n
-            , dependencies   :: Set.Set Symbol
+    | Known { numeric        :: n
             }
     deriving (Eq, Ord)
 
-instance AlgebraicStructure m u n => Show (CtxItem m u n) where
-    show (Known algStruct _) =
-        case evaluate algStruct Map.empty of
-            Left _ -> showAlgStruct algStruct
-            Right val -> show val
+instance AlgebraicStructure mg u n => Show (CtxItem mg u n) where
+    show (Known val) = show val
 
     show (Func args impl _) = "(" ++ intercalate "," args ++ ") -> " ++ showAlgStruct impl
 
@@ -80,15 +76,15 @@ instance Show EvalError where
 
 -- | The @Evaluate@ monad transformer stack for providing immutable access to
 --   a @Context@ and reporting errors when attempting to evaluate an @AlgebraicStruct@. 
-type Evaluate m u n = ReaderT (Context m u n) (Except EvalError)
+type Evaluate mg u n = ReaderT (Context mg u n) (Except EvalError)
 
 -- | Evaluates a given @AlgebraicStruct@ to a numeric value given some @Context@.
 --   This function may fail, returning a @Left EvalError@ in the process.
-evaluate :: AlgebraicStructure m u n => AlgStruct m u n -> Context m u n -> Either EvalError n
-evaluate expr ctx = runExcept $ runReaderT (evaluateMain expr) ctx
+evaluate :: AlgebraicStructure mg u n => Context mg u n -> AlgStruct mg u n -> Either EvalError n
+evaluate ctx expr = runExcept $ runReaderT (evaluateMain expr) ctx
 
 -- | The main control flow for evaluating an @AlgebraicStruct@ to a numeric value.
-evaluateMain :: AlgebraicStructure m u n => AlgStruct m u n -> Evaluate m u n n
+evaluateMain :: AlgebraicStructure mg u n => AlgStruct mg u n -> Evaluate mg u n n
 evaluateMain y = case y of
     Additive ts       -> sum <$> mapM evaluateMain ts
     Multiplicative fs -> product <$> mapM evaluateMain fs
@@ -103,10 +99,10 @@ evaluateMain y = case y of
         return $ evalUnary op x'
     N_ary n a         -> evaluateFunction n a
     Nullary n         -> return n
-    Symbol s          -> getConst s >>= evaluateMain
+    Symbol s          -> Nullary <$> getConst s >>= evaluateMain
 
 -- | Control flow for evaluating a function with a number of arguments.
-evaluateFunction :: AlgebraicStructure m u n => String -> [AlgStruct m u n] -> Evaluate m u n n
+evaluateFunction :: AlgebraicStructure mg u n => String -> [AlgStruct mg u n] -> Evaluate mg u n n
 evaluateFunction n args = do
     (argNames, func) <- getFunc n
     if length argNames == length args then
@@ -119,15 +115,15 @@ evaluateFunction n args = do
         lift . throwError $ InvalidArguments (length argNames) (length args)
 
 -- | Fetches a constant value with the given name from the @Context@.
-getConst :: String -> Evaluate m u n (AlgStruct m u n)
+getConst :: String -> Evaluate mg u n n
 getConst s = do
     cst <- asks (Map.lookup s)
     case cst of
-        Just (Known v _) -> return v
+        Just (Known v) -> return v
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Fetches a function with the given name from the @Context@. 
-getFunc :: String -> Evaluate m u n ([Symbol], AlgStruct m u n)
+getFunc :: String -> Evaluate mg u n ([Symbol], AlgStruct mg u n)
 getFunc s = do
     fn <- asks (Map.lookup s)
     case fn of
@@ -135,6 +131,6 @@ getFunc s = do
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Indicates whether a given @CtxItem@ is a @Known@-constructor value.
-isConst :: CtxItem m u n -> Bool
-isConst (Known _ _)  = True
+isConst :: CtxItem mg u n -> Bool
+isConst (Known _)  = True
 isConst (Func _ _ _) = False

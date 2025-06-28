@@ -20,33 +20,33 @@ type Symbol = String
 --   mock of Haskell's @Num@ class.
 -- 
 --   TODO: add explanation of properties type params should satisfy
-data AlgStruct m u n
+data AlgStruct mg u n
     -- | Additive binary operation of elements
-    = Additive       (NE.NonEmpty (AlgStruct m u n))
+    = Additive       (NE.NonEmpty (AlgStruct mg u n))
 
     -- | Multiplicative binary operation of elements
-    | Multiplicative (NE.NonEmpty (AlgStruct m u n))
+    | Multiplicative (NE.NonEmpty (AlgStruct mg u n))
     
     -- | Unary negation of elements - essentially a mock of Haskell's 
     --   @Num a@ @negate@ function. This specifically represents the 
     --   additive inverse of the contained structure.
-    | Negated        (AlgStruct m u n)
+    | Negated        (AlgStruct mg u n)
 
     -- | Unary inversion of elements - essentially a mock of Haskell's
     --   @Fractional a@ @recip@ function. This specifically represents 
     --   the multiplicative inverse of the contained structure.
-    | Inverse        (AlgStruct m u n)
+    | Inverse        (AlgStruct mg u n)
 
     -- | Magma over binary operation(s) indicated by a value of type @m@ 
     --   on elements of type @n@.
-    | Magma          m (AlgStruct m u n) (AlgStruct m u n)
+    | Magma          mg (AlgStruct mg u n) (AlgStruct mg u n)
 
     -- | An operation of arbitrary arity, useful for working with user-defined functions
-    | N_ary          String [AlgStruct m u n]
+    | N_ary          String [AlgStruct mg u n]
 
     -- | Unary system over operation(s) indicated by a value of type @u@
     --   on elements of type @n@.
-    | Unary          u (AlgStruct m u n)
+    | Unary          u (AlgStruct mg u n)
 
     -- | A raw element in the algebraic structure
     | Nullary        n
@@ -55,7 +55,7 @@ data AlgStruct m u n
     | Symbol         Symbol
     deriving (Show, Eq, Ord)
 
-instance Num n => Num (AlgStruct m u n) where
+instance Num n => Num (AlgStruct mg u n) where
     (Additive terms1) + (Additive terms2) = Additive $ terms1 <> terms2
     (Additive terms1) + x                 = Additive $ terms1 <> NE.fromList [x]
     x + (Additive terms2)                 = Additive $ NE.fromList [x] <> terms2
@@ -77,14 +77,14 @@ instance Num n => Num (AlgStruct m u n) where
 
     fromInteger = Nullary . fromInteger
 
-instance Fractional n => Fractional (AlgStruct m u n) where
+instance Fractional n => Fractional (AlgStruct mg u n) where
     recip (Inverse x) = x
     recip x = Inverse x
 
     fromRational = Nullary . fromRational
 
 -- | Indicates whether the given symbol is present in the given structure.
-(~?) :: Symbol -> AlgStruct m u n -> Bool
+(~?) :: Symbol -> AlgStruct mg u n -> Bool
 sym ~? Additive terms           = any (sym ~?) terms
 sym ~? Multiplicative factors   = any (sym ~?) factors
 sym ~? Negated neg              = sym ~? neg
@@ -96,7 +96,7 @@ _   ~? Nullary _                = False
 sym ~? Symbol s                 = sym == s
 
 -- | Retrieves all the symbols present in a given algebraic structure. 
-getSyms :: AlgStruct m u n -> Set.Set Symbol
+getSyms :: AlgStruct mg u n -> Set.Set Symbol
 getSyms (Additive terms)         = Set.unions $ NE.map getSyms terms
 getSyms (Multiplicative factors) = Set.unions $ NE.map getSyms factors
 getSyms (Negated neg)            = getSyms neg

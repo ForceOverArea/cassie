@@ -15,7 +15,7 @@ import safe Control.Arrow
 import safe Control.Monad
 import safe qualified Data.List.NonEmpty as NE
 import safe Control.Monad.Trans (lift, MonadTrans)
-import safe Control.Monad.Except (throwError, Except)
+import safe Control.Monad.Except (throwError, ExceptT)
 import safe qualified Data.Text as Text
 
 insertAt :: a -> Int -> [a] -> [a]
@@ -38,7 +38,7 @@ splitStrAt c = Prelude.map (Text.unpack . Text.strip) . Text.split (== c) . Text
 splitStrAt' :: Char -> String -> NE.NonEmpty String
 splitStrAt' c = NE.map (Text.unpack . Text.strip) . NE.fromList . Text.split (== c) . Text.pack
 
-throwErr :: MonadTrans t => e -> t (Except e) a
+throwErr :: (MonadTrans t, Monad m) => e -> t (ExceptT e m) a
 throwErr = lift . throwError 
 
 -- | @truthTable2 p x y q1 q2 q3 q4@

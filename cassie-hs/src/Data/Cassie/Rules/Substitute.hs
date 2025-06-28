@@ -39,13 +39,13 @@ data SubstitutionError
     | UnaryStructureContainsNone
     deriving (Show, Eq, Ord)
 
-data AlgCrumb m u n
-    = Plural    { kind    :: AlgStruct m u n 
-                , items   :: [AlgStruct m u n]
+data AlgCrumb mg u n
+    = Plural    { kind    :: AlgStruct mg u n 
+                , items   :: [AlgStruct mg u n]
                 , indices :: [Int]
                 }
-    | MagmaOp   { magKind :: m
-                , other   :: Maybe (AlgStruct m u n)
+    | MagmaOp   { magKind :: mg
+                , other   :: Maybe (AlgStruct mg u n)
                 , hasLeft :: Bool
                 }
     | UnaryOp   { unyKind :: u
@@ -54,19 +54,19 @@ data AlgCrumb m u n
     | Invert
     deriving (Show, Eq)
 
-type Substitute m u n = StateT [AlgCrumb m u n] (Except SubstitutionError)
+type Substitute mg u n = StateT [AlgCrumb mg u n] (Except SubstitutionError)
 
-substitute :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> AlgStruct m u n -> Either SubstitutionError (AlgStruct m u n)
+substitute :: AlgebraicStructure mg u n => Symbol -> AlgStruct mg u n -> AlgStruct mg u n -> Either SubstitutionError (AlgStruct mg u n)
 substitute target replacement source = runExcept $ fst <$> runStateT (substituteMain target replacement source) []
 
-substituteFnArgs :: AlgebraicStructure m u n => AlgStruct m u n -> [Symbol] -> ([AlgStruct m u n] -> Either SubstitutionError (AlgStruct m u n))
+substituteFnArgs :: AlgebraicStructure mg u n => AlgStruct mg u n -> [Symbol] -> ([AlgStruct mg u n] -> Either SubstitutionError (AlgStruct mg u n))
 substituteFnArgs impl args = 
     let 
         foldFunc = flip $ uncurry substitute
         subArgs  = foldM foldFunc impl
     in subArgs . zip args
 
-substituteMain :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> AlgStruct m u n -> Substitute m u n (AlgStruct m u n) 
+substituteMain :: AlgebraicStructure mg u n => Symbol -> AlgStruct mg u n -> AlgStruct mg u n -> Substitute mg u n (AlgStruct mg u n) 
 substituteMain target replacement source = do
     children <- traverseTowards target source
     case children of
@@ -78,7 +78,7 @@ substituteMain target replacement source = do
             newBases <- mapM (substituteMain target replacement) substructures
             rebuildOnto newBases
 
-traverseTowards :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> Substitute m u n [AlgStruct m u n]
+traverseTowards :: AlgebraicStructure mg u n => Symbol -> AlgStruct mg u n -> Substitute mg u n [AlgStruct mg u n]
 traverseTowards s struct =
     case struct of
         Additive ts         -> traverseTowardsPlural s struct $ NE.toList ts
@@ -91,7 +91,7 @@ traverseTowards s struct =
         Nullary _           -> return []
         Symbol s'           -> if s == s' then return [Symbol s'] else return []
 
-traverseTowardsPlural :: AlgebraicStructure m u n => Symbol -> AlgStruct m u n -> [AlgStruct m u n]-> Substitute m u n [AlgStruct m u n]
+traverseTowardsPlural :: AlgebraicStructure mg u n => Symbol -> AlgStruct mg u n -> [AlgStruct mg u n]-> Substitute mg u n [AlgStruct mg u n]
 traverseTowardsPlural s k terms = 
     let 
         f = map (flip elemIndices terms)
@@ -101,7 +101,7 @@ traverseTowardsPlural s k terms =
         pushCrumb $ Plural    k doesnt hasIndices
         return has
 
-traverseTowardsMagmaOp :: Symbol -> m -> AlgStruct m u n -> AlgStruct m u n -> Substitute m u n [AlgStruct m u n]
+traverseTowardsMagmaOp :: Symbol -> mg -> AlgStruct mg u n -> AlgStruct mg u n -> Substitute mg u n [AlgStruct mg u n]
 traverseTowardsMagmaOp s k l r = 
     let 
         both      = pushCrumb (MagmaOp k Nothing False) >> return [l, r]
@@ -110,10 +110,10 @@ traverseTowardsMagmaOp s k l r =
         rightOnly = pushCrumb (MagmaOp k (Just l) True) >> return [r]
     in truthTable2 (s ~?) l r both neither leftOnly rightOnly
 
-traverseTowardsUnaryOp :: u -> AlgStruct m u n -> Substitute m u n (AlgStruct m u n)
+traverseTowardsUnaryOp :: u -> AlgStruct mg u n -> Substitute mg u n (AlgStruct mg u n)
 traverseTowardsUnaryOp k x = (pushCrumb $ UnaryOp k) >> return x
 
-rebuildOnto :: [AlgStruct m u n] -> Substitute m u n (AlgStruct m u n)
+rebuildOnto :: [AlgStruct mg u n] -> Substitute mg u n (AlgStruct mg u n)
 rebuildOnto structures = do
     crumb <- popCrumb
     case (crumb, structures) of
@@ -128,7 +128,7 @@ rebuildOnto structures = do
             rebuildOnto $ pure newBase
         _ -> throwErr IncorrectNumOfTermsToRebuild 
 
-rebuildPlural :: [AlgStruct m u n] -> AlgStruct m u n -> [AlgStruct m u n] -> [Int] -> Substitute m u n (AlgStruct m u n)
+rebuildPlural :: [AlgStruct mg u n] -> AlgStruct mg u n -> [AlgStruct mg u n] -> [Int] -> Substitute mg u n (AlgStruct mg u n)
 rebuildPlural baseTerms structKind structTerms idxs = 
     let 
         terms = foldl rebuildTerm structTerms $ zip idxs baseTerms
@@ -141,7 +141,7 @@ rebuildPlural baseTerms structKind structTerms idxs =
             f <- constructOnePlural structKind
             return $ f terms
 
-rebuildMagmaOp :: [AlgStruct m u n] -> m -> Maybe (AlgStruct m u n) -> Bool -> Substitute m u n (AlgStruct m u n)
+rebuildMagmaOp :: [AlgStruct mg u n] -> mg -> Maybe (AlgStruct mg u n) -> Bool -> Substitute mg u n (AlgStruct mg u n)
 rebuildMagmaOp baseArgs structKind possTerm isLeft = do
     f <- constructOneMagmaOp structKind
     case (possTerm, baseArgs) of
@@ -151,12 +151,12 @@ rebuildMagmaOp baseArgs structKind possTerm isLeft = do
             | otherwise -> return $ f x term
         _ -> throwErr IncorrectNumOfTermsToRebuild
 
-rebuildUnaryOp :: [AlgStruct m u n] -> u -> AlgStruct m u n -> Substitute m u n (AlgStruct m u n)
+rebuildUnaryOp :: [AlgStruct mg u n] -> u -> AlgStruct mg u n -> Substitute mg u n (AlgStruct mg u n)
 rebuildUnaryOp _ structKind term = do
     f <- constructOneUnaryOp structKind 
     return $ f term
 
-constructOnePlural :: AlgStruct m u n -> Substitute m u n ([AlgStruct m u n] -> AlgStruct m u n)
+constructOnePlural :: AlgStruct mg u n -> Substitute mg u n ([AlgStruct mg u n] -> AlgStruct mg u n)
 constructOnePlural x = 
     case x of
         Additive _          -> return $ Additive . NE.fromList
@@ -164,16 +164,16 @@ constructOnePlural x =
         N_ary name _        -> return $ N_ary name
         _ -> throwErr StructureIsNotSemigroup
 
-constructOneMagmaOp :: m -> Substitute m u n (AlgStruct m u n -> AlgStruct m u n -> AlgStruct m u n)
+constructOneMagmaOp :: mg -> Substitute mg u n (AlgStruct mg u n -> AlgStruct mg u n -> AlgStruct mg u n)
 constructOneMagmaOp x = return (Magma x)
 
-constructOneUnaryOp :: u -> Substitute m u n (AlgStruct m u n -> AlgStruct m u n)
+constructOneUnaryOp :: u -> Substitute mg u n (AlgStruct mg u n -> AlgStruct mg u n)
 constructOneUnaryOp x = return (Unary x)
 
-pushCrumb :: AlgCrumb m u n -> Substitute m u n ()
+pushCrumb :: AlgCrumb mg u n -> Substitute mg u n ()
 pushCrumb c = get >>= put . (c:)
 
-popCrumb :: Substitute m u n (Maybe (AlgCrumb m u n))
+popCrumb :: Substitute mg u n (Maybe (AlgCrumb mg u n))
 popCrumb = do
     ccs <- get
     case uncons ccs of

@@ -35,22 +35,22 @@ import safe Data.Cassie.Structures.ShowStructure
 import safe Data.Cassie.Structures.UnarySystems
 import safe Data.Complex
 
-class ( MagmaMock m n
-      , CancelMagma m
+class ( MagmaMock mg n
+      , CancelMagma mg
       , UnaryMock u n
       , CancelUnary u
-      , ShowMagma m
+      , ShowMagma mg
       , ShowUnary u
       , Show n
       , Num n
       , Fractional n
-      , Eq m
+      , Eq mg
       , Eq u
       , Eq n
-      ) => AlgebraicStructure m u n 
+      ) => AlgebraicStructure mg u n 
 
-data Equation m u n = Equation { lhs :: AlgStruct m u n
-                               , rhs :: AlgStruct m u n
+data Equation mg u n = Equation { lhs :: AlgStruct mg u n
+                               , rhs :: AlgStruct mg u n
                                }
                                deriving (Eq, Ord)
 
@@ -58,7 +58,7 @@ type ComplexEqn = Equation ComplexMagma ComplexUnary (Complex Double)
 
 type RealEqn = Equation RealMagma RealUnary Double
 
-instance (ShowMagma m, ShowUnary u, Show n, Num n) => Show (Equation m u n) where
+instance (ShowMagma mg, ShowUnary u, Show n, Num n) => Show (Equation mg u n) where
     show (Equation l r) = showAlgStruct l ++ " = " ++ showAlgStruct r
 
 instance AlgebraicStructure RealMagma RealUnary Double 

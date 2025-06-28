@@ -11,9 +11,9 @@ import safe Data.Cassie.Structures.UnarySystems
 import safe Data.List as List
 import safe qualified Data.List.NonEmpty as NE
 
-newtype ShowAlgStruct m u n = ShowAlgStruct (AlgStruct m u n) deriving (Eq, Ord)
+newtype ShowAlgStruct mg u n = ShowAlgStruct (AlgStruct mg u n) deriving (Eq, Ord)
 
-instance (ShowMagma m, ShowUnary u, Show n, Num n) => Show (ShowAlgStruct m u n) where
+instance (ShowMagma mg, ShowUnary u, Show n, Num n) => Show (ShowAlgStruct mg u n) where
     show (ShowAlgStruct s) = 
         let
             renderTerms terms = 
@@ -50,29 +50,29 @@ instance (ShowMagma m, ShowUnary u, Show n, Num n) => Show (ShowAlgStruct m u n)
             Nullary num             -> show num
             Symbol sym              -> sym
 
-showAlgStruct :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> String
+showAlgStruct :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> String
 showAlgStruct = show . ShowAlgStruct
 
-showAlgStructWithin :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> AlgStruct m u n -> String
+showAlgStructWithin :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> AlgStruct mg u n -> String
 showAlgStructWithin x y = 
     if x <%> y then
         "(" ++ showAlgStruct y ++ ")"
     else 
         showAlgStruct y
 
-showAdd :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> String
+showAdd :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> String
 showAdd = showAlgStructWithin (Additive . NE.singleton $ Nullary 1)
 
-showMul :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> String
+showMul :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> String
 showMul = showAlgStructWithin (Multiplicative . NE.singleton $ Nullary 1)
 
-showNeg :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> String
+showNeg :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> String
 showNeg = showAlgStructWithin (Negated $ Nullary 1)
 
-showInv :: (ShowMagma m, ShowUnary u, Show n, Num n) => AlgStruct m u n -> String
+showInv :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> String
 showInv = showAlgStructWithin (Inverse $ Nullary 1)
 
-(<%>) :: (Show m, Show u, Show n) => AlgStruct m u n -> AlgStruct m u n -> Bool
+(<%>) :: (Show mg, Show u, Show n) => AlgStruct mg u n -> AlgStruct mg u n -> Bool
 Additive _ <%> as =
     case as of
         -- Negated _   -> True
