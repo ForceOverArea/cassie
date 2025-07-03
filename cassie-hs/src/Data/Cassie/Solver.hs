@@ -5,7 +5,6 @@ module Data.Cassie.Solver
     , solvedFor
     , solvedForValue
     , solveSystem
-    , solveSystemMain
     , showStepsFor
     , CassieError
     , EquationPool
@@ -15,7 +14,7 @@ module Data.Cassie.Solver
 
 import safe Control.Arrow
 import safe Control.Monad
-import safe Control.Monad.State (execStateT)
+import safe Control.Monad.RWS (execRWST)
 import safe Control.Monad.Except (runExcept)
 import safe Data.Cassie.Parser.Lang
 import safe Data.Cassie.Rules.Evaluate
@@ -26,7 +25,7 @@ import safe Data.Cassie.Structures
 import safe qualified Data.Set as Set
 import safe qualified Data.Map as Map
 
-solvedFor :: String -> String -> ParsedCtx -> Either CassieError (ParsedEqn, Steps)
+solvedFor :: String -> String -> Context mg u n -> Either CassieError (Equation mg u n, Steps)
 solvedFor unsolved sym ctx = do
     (structure, syms) <- left ParseError $ parseEquation' unsolved
     when (not $ sym `Set.member` syms) 
@@ -34,19 +33,19 @@ solvedFor unsolved sym ctx = do
     solution <- left IsolationError $ isolate sym structure ctx
     return solution
 
-solvedForValue :: String -> String -> ParsedCtx -> Either CassieError (Double, ParsedEqn, Steps)
+solvedForValue :: String -> String -> Context mg u n -> Either CassieError (Double, Equation mg u n, Steps)
 solvedForValue unsolved sym ctx = do
     (solvedEqn, steps') <- solvedFor unsolved sym ctx
     value' <- left EvaluationError $ evaluate (rhs solvedEqn) ctx
     return (value', solvedEqn, steps')
 
-solveSystem :: FilePath -> String -> Either CassieError (ParsedCtx, Solution)
+solveSystem :: FilePath -> String -> Either CassieError (Context mg u n, Solution)
 solveSystem fp sys = do
     (imports, ctx, eqns) <- buildGlobalCtx fp sys
     when ([] /= imports) 
         $ Left ImportsNotAllowed
     (_finalCtx, unsolvedEqns, solnInfo) <- runExcept 
-        $ execStateT solveSystemMain (ctx, eqns, Map.empty)
+        $ execStateT solveConstrainedMain (ctx, eqns, Map.empty)
     when (length unsolvedEqns > 0)
         $ Left FailedToFullySolve
     return (ctx, solnInfo)
