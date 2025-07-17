@@ -16,6 +16,7 @@ module Data.Cassie.Structures
     , ComplexMagma(..)
     , ComplexUnary(..)
     , Equation(..)
+    , ExpnMagma(..)
     , MagmaMock(..)
     , RealAlgStruct
     , RealEqn
@@ -24,6 +25,7 @@ module Data.Cassie.Structures
     , ShowMagma(..)
     , ShowUnary(..)
     , Symbol
+    , TrigUnary(..)
     , UnaryMock(..)
     ) where
 

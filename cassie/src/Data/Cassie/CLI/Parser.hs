@@ -1,5 +1,5 @@
 {-# LANGUAGE Safe #-}
-module Data.Cassie.Parser 
+module Data.Cassie.CLI.Parser 
     ( functionDef
     , parseCassiePhrases
     , parseEquation
@@ -15,5 +15,6 @@ module Data.Cassie.Parser
     , Symbols
     ) where
 
-import safe Data.Cassie.Parser.Internal
-import safe Data.Cassie.Parser.Lang
+import safe Data.Cassie.CLI.Parser.Internal
+import safe Data.Cassie.CLI.Parser.Lang
+import safe Data.Cassie.CLI.Parser.ParsedTypes

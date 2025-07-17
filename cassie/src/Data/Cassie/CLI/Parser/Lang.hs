@@ -1,26 +1,22 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Data.Cassie.Parser.Lang 
+module Data.Cassie.CLI.Parser.Lang 
     ( functionDef
     , parseCassiePhrases
     , parseEquation
     , parseEquation'
     , parseFunction 
-    , EquationPool
     , Import
-    , ParsedCtx
-    , ParsedCtxItem
     , ParsedEqn
     , Phrase(..)
     ) where
 
 import safe Control.Arrow
-import safe Data.Cassie.Parser.Internal
-import safe Data.Cassie.Rules.Evaluate
-import safe Data.Cassie.Structures.Instances.Real (RealUnary, RealMagma)
-import safe Data.Cassie.Structures.Internal (Symbol)
-import safe Data.Cassie.Structures (Equation(..), RealEqn)
-import safe Data.Cassie.Utils (splitStrAt)
+import safe Data.Cassie.CLI.Parser.Internal
+import safe Data.Cassie.CLI.Parser.ParsedTypes
+import safe Data.Cassie.Rules
+import safe Data.Cassie.Structures
+import safe Data.Cassie.CLI.Utils (splitStrAt)
 import safe qualified Data.Map as Map
 import safe Data.List as List
 import safe qualified Data.Set as Set
@@ -30,17 +26,6 @@ import safe Text.Parsec.Token (GenTokenParser(..))
 import safe Text.Parsec.Language (haskell)
 
 type CassieLang a = Parsec String Symbols a
-
-type EquationPool = [(ParsedEqn, Symbols)]
-
--- | The concrete type of @Context m u n@ that parsing Cassie syntax will yield.
-type ParsedCtx = Context RealMagma RealUnary Double
-
--- | The concrete type of @CtxItem m u n@ that parsing Cassie syntax will yield.
-type ParsedCtxItem = CtxItem RealMagma RealUnary Double
-
--- | This may change if/when support for matrices/complex numbers is added. 
-type ParsedEqn = RealEqn
 
 type Import = (FilePath, Symbols)
 

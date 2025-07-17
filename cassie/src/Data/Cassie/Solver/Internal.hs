@@ -9,14 +9,15 @@ module Data.Cassie.Solver.Internal
     , EquationPool
     , Solution
     , SolutionItem(..)
+    , Symbols
     ) where
 
 import safe Control.Arrow
 import safe Control.Monad.Identity (Identity)
 import safe Control.Monad.Except (ExceptT)
 import safe Control.Monad.RWS (ask, get, modify, RWST)
-import safe Data.Cassie.Rules.Isolate
 import safe Data.Cassie.Rules.Evaluate
+import safe Data.Cassie.Rules.Isolate
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Utils
 import safe Data.List as List 
@@ -55,11 +56,9 @@ data CassieError mg u n
     | EvaluationError EvalError
     | FailedToConstrain (EquationPool mg u n)
     | FailedToFullySolve
-    | FileDoesNotExist FilePath
-    | FoundRecursiveImport
-    | IsolationError IsolateError
     | ImportsNotAllowed
     | ImportNotFound (String, [Symbols])
+    | IsolationError IsolateError
     deriving (Show, Eq)
 
 solveConstrainedMain :: (Monad m, AlgebraicStructure mg u n) => CassieT mg u n m ()

@@ -165,7 +165,7 @@ getFn fnName = do
     ctx <- asks snd
     case fnName `Map.lookup` ctx of
         Just (Func syms expanded _) -> return (syms, expanded)
-        Just (Known _)          -> throwErr NotAFunction
+        Just (Known _ _)            -> throwErr NotAFunction
         Nothing                     -> throwErr FunctionNotDefined
 
 -- | Puts a snapshot of the current state of the equation being solved into the 

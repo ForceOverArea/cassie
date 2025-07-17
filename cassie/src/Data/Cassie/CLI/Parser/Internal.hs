@@ -1,6 +1,6 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedLists #-}
-module Data.Cassie.Parser.Internal 
+module Data.Cassie.CLI.Parser.Internal 
     ( difference
     , expression
     , function
@@ -23,18 +23,16 @@ module Data.Cassie.Parser.Internal
 import safe Prelude hiding (exponent, logBase, product, sum)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
-import safe Data.Cassie.Structures.Internal (AlgStruct(..), Symbol)
-import safe Data.Cassie.Structures.Magmas 
-import safe Data.Cassie.Structures.Instances.Real
+import safe Data.Cassie.Solver.Internal (Symbols) 
+import safe Data.Cassie.Structures.Instances.Real (RealMagma(..), RealAlgStruct)
+import safe Data.Cassie.Structures.Internal (AlgStruct(..))
+import safe Data.Cassie.Structures.Magmas (ExpnMagma(..))
 import safe Text.Parsec
 import safe Text.Parsec.Language (haskell)
 import safe Text.Parsec.Token (GenTokenParser(..)) 
 
 -- | Parser type for reading algebraic structures from plain text
 type CassieParser = Parsec String Symbols RealAlgStruct
-
--- | Type alias for a set of symbols
-type Symbols = Set.Set Symbol
 
 data CassieParserError 
     = FailedToParse ParseError

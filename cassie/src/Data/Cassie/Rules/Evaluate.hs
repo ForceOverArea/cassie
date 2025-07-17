@@ -46,12 +46,13 @@ data CtxItem mg u n
             , implementation :: AlgStruct mg u n
             , dependencies   :: Set.Set Symbol
             }
-    | Known { numeric        :: n
+    | Known { numeric        :: AlgStruct mg u n
+            , dependencies   :: Set.Set Symbol
             }
     deriving (Eq, Ord)
 
 instance AlgebraicStructure mg u n => Show (CtxItem mg u n) where
-    show (Known val) = show val
+    show (Known val _) = show val
 
     show (Func args impl _) = "(" ++ intercalate "," args ++ ") -> " ++ showAlgStruct impl
 
@@ -99,7 +100,7 @@ evaluateMain y = case y of
         return $ evalUnary op x'
     N_ary n a         -> evaluateFunction n a
     Nullary n         -> return n
-    Symbol s          -> Nullary <$> getConst s >>= evaluateMain
+    Symbol s          -> getConst s >>= evaluateMain
 
 -- | Control flow for evaluating a function with a number of arguments.
 evaluateFunction :: AlgebraicStructure mg u n => String -> [AlgStruct mg u n] -> Evaluate mg u n n
@@ -115,11 +116,11 @@ evaluateFunction n args = do
         lift . throwError $ InvalidArguments (length argNames) (length args)
 
 -- | Fetches a constant value with the given name from the @Context@.
-getConst :: String -> Evaluate mg u n n
+getConst :: String -> Evaluate mg u n (AlgStruct mg u n)
 getConst s = do
     cst <- asks (Map.lookup s)
     case cst of
-        Just (Known v) -> return v
+        Just (Known v _) -> return v
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Fetches a function with the given name from the @Context@. 
@@ -132,5 +133,5 @@ getFunc s = do
 
 -- | Indicates whether a given @CtxItem@ is a @Known@-constructor value.
 isConst :: CtxItem mg u n -> Bool
-isConst (Known _)  = True
+isConst (Known _ _)  = True
 isConst (Func _ _ _) = False

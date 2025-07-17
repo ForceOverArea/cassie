@@ -1,10 +1,14 @@
+{-# LANGUAGE Safe #-}
 module Data.Cassie.Rules 
     ( evaluate
+    , isConst
     , isolate
     , substitute
+    , Context
     , CtxItem(..)
     , EvalError
     , IsolateError
+    , Steps
     , SubstitutionError
     ) where
 
