@@ -25,10 +25,12 @@ library
                         Data.Cassie.Structures,
                         
     other-modules:      Data.Cassie.CLI.Module,
+                        Data.Cassie.CLI.Module.Internal,
                         Data.Cassie.CLI.MonadLookup,
                         Data.Cassie.CLI.Parser,
                         Data.Cassie.CLI.Parser.Internal,
                         Data.Cassie.CLI.Parser.Lang,
+                        Data.Cassie.CLI.Parser.Lexemes,
                         Data.Cassie.CLI.Parser.ParsedTypes,
                         Data.Cassie.CLI.Utils,
                         Data.Cassie.Rules.Evaluate,
@@ -61,7 +63,8 @@ executable cassie
                         Internal,
                         Settings,
     
-    build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 
+    build-depends:      aeson       >= 2.2.3.0,
+                        base        >= 4.16.4.0 && <= 4.21.0.0, 
                         cassie      >= 0.1.0.0,
                         containers  >= 0.6.5.1,
                         directory   >= 1.3.9.0,

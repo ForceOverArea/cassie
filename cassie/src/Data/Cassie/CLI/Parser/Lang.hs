@@ -12,9 +12,10 @@ module Data.Cassie.CLI.Parser.Lang
     ) where
 
 import safe Control.Arrow
-import safe Data.Cassie.CLI.Parser.Internal
+import safe Data.Cassie.CLI.Parser.Internal 
+import safe Data.Cassie.CLI.Parser.Lexemes
 import safe Data.Cassie.CLI.Parser.ParsedTypes
-import safe Data.Cassie.Rules
+import safe Data.Cassie.Rules.Evaluate (isConst, CtxItem(..))
 import safe Data.Cassie.Structures
 import safe Data.Cassie.CLI.Utils (splitStrAt)
 import safe qualified Data.Map as Map

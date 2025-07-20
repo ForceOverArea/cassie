@@ -1,6 +1,6 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.CLI 
-    (
+    ( 
     ) where
 
 import safe Data.Cassie.CLI.Parser

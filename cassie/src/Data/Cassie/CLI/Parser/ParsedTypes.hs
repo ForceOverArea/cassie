@@ -2,8 +2,11 @@
 module Data.Cassie.CLI.Parser.ParsedTypes 
     ( ParsedCtx
     , ParsedCtxItem
+    , ParsedElement
     , ParsedEqn
     , ParsedEqPool
+    , ParsedMagma
+    , ParsedUnary
     ) where
 
 import safe Data.Cassie.Rules.Evaluate (Context, CtxItem)
