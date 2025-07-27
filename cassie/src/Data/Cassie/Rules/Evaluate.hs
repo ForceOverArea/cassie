@@ -19,7 +19,7 @@ module Data.Cassie.Rules.Evaluate
     , isConst
     , Context
     , CtxItem(..)
-    , EvalError
+    , EvalError(..)
     ) where
 
 import safe Control.Monad.Except (runExcept, throwError, Except)
@@ -36,7 +36,7 @@ type Context mg u n = Map.Map String (CtxItem mg u n)
 -- | An error that may be thrown by @evaluate@.
 data EvalError 
     = SymbolNotDefined String
-    | InvalidArguments Int Int
+    | InvalidArguments' Int Int
     | ZeroOrSingleTermPolynomial
     | FailedToCallFunction SubstitutionError
     deriving Eq
@@ -62,7 +62,7 @@ instance Show EvalError where
         ++ symbol 
         ++ "'"
 
-    show (InvalidArguments expected actual) 
+    show (InvalidArguments' expected actual) 
         = "a function was called without the correct number of arguments (expected " 
         ++ show expected 
         ++ ", actual " 
@@ -113,7 +113,7 @@ evaluateFunction n args = do
             Left err -> lift . throwError $ FailedToCallFunction err
             Right result -> evaluateMain result
     else 
-        lift . throwError $ InvalidArguments (length argNames) (length args)
+        lift . throwError $ InvalidArguments' (length argNames) (length args)
 
 -- | Fetches a constant value with the given name from the @Context@.
 getConst :: String -> Evaluate mg u n (AlgStruct mg u n)

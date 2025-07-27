@@ -52,9 +52,9 @@ class ( MagmaMock mg n
       ) => AlgebraicStructure mg u n 
 
 data Equation mg u n = Equation { lhs :: AlgStruct mg u n
-                               , rhs :: AlgStruct mg u n
-                               }
-                               deriving (Eq, Ord)
+                                , rhs :: AlgStruct mg u n
+                                }
+                                deriving (Eq, Ord)
 
 type ComplexEqn = Equation ComplexMagma ComplexUnary (Complex Double)
 

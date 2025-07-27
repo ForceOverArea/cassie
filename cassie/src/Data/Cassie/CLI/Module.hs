@@ -36,11 +36,10 @@ solveModular :: ( Monoid (m FilePath)
                 , MonadError ParsedCassieError m
                 , MonadLookup FilePath String m
                 ) 
-    => ParsedCtx
-    -> String
+    => FilePath
     -> m (Either ParsedCassieError (ParsedCtx, ParsedSoln))
-solveModular initialCtx thisModule = runExceptT 
-    $ solveModularSystem Set.empty initialCtx Map.empty (thisModule, Set.empty)
+solveModular thisModule = runExceptT 
+    $ solveModularSystem mempty mempty mempty (thisModule, mempty)
 
 -- | Builds a context from parsing imported modules.
 --   

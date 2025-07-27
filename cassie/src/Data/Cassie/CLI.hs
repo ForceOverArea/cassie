@@ -1,10 +1,18 @@
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Data.Cassie.CLI 
-    ( 
+    ( cassieMain
     ) where
 
-import safe Data.Cassie.CLI.Parser
+import safe Control.Monad.Except (MonadError)
+import safe Data.Cassie.CLI.Parser.ParsedTypes 
 import safe Data.Cassie.CLI.Module
 import safe Data.Cassie.CLI.MonadLookup
-import safe Data.Cassie.CLI.Parser
-import safe Data.Cassie.CLI.Utils
+
+cassieMain :: ( MonadError ParsedCassieError m
+              , MonadLookup FilePath String m
+              , Monoid (m FilePath)
+              ) 
+    => FilePath 
+    -> m (Either ParsedCassieError (ParsedCtx, ParsedSoln))
+cassieMain = solveModular

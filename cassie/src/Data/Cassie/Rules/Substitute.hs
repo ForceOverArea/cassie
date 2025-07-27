@@ -19,7 +19,7 @@ they represent in the context of a larger problem.
 module Data.Cassie.Rules.Substitute 
     ( substitute
     , substituteFnArgs
-    , SubstitutionError
+    , SubstitutionError(..)
     ) where
 
 import safe Control.Monad

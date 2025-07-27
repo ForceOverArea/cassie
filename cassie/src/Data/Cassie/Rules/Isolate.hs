@@ -17,7 +17,7 @@ solve equations given as an @AlgebraicStruct@.
 module Data.Cassie.Rules.Isolate 
     ( isolate
     , isolateMagma
-    , IsolateError
+    , IsolateError(..)
     , Steps
     ) where
 
