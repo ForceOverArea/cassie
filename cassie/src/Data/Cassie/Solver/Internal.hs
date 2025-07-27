@@ -15,7 +15,7 @@ module Data.Cassie.Solver.Internal
 import safe Control.Arrow
 import safe Control.Monad.Identity (Identity)
 import safe Control.Monad.Except (ExceptT)
-import safe Control.Monad.RWS (ask, get, modify, RWST)
+import safe Control.Monad.RWS (ask, get, modify, tell, RWST)
 import safe Data.Cassie.CLI.Module.Internal (CassieModuleError)
 import safe Data.Cassie.CLI.Parser.Internal (CassieParserError)
 import safe Data.Cassie.Rules.Evaluate
@@ -31,7 +31,7 @@ import safe qualified Data.Set as Set
 type Cassie mg u n = CassieT mg u n Identity
 
 -- | 
-type CassieT mg u n m = RWST (Context mg u n) () (Solution mg u n, EquationPool mg u n) (ExceptT (CassieError mg u n) m)
+type CassieT mg u n m = RWST (Context mg u n) [String] (Solution mg u n, EquationPool mg u n) (ExceptT (CassieError mg u n) m)
 
 -- | A type alias for a map of equations (possibly with repeated keys)
 type EquationPool mg u n = [(Equation mg u n, Symbols)]
@@ -71,6 +71,7 @@ data CassieError mg u n
 
 solveConstrainedMain :: (Monad m, AlgebraicStructure mg u n) => CassieT mg u n m ()
 solveConstrainedMain = do
+    get >>= tell . (:[]) . show
     updateUnknowns
     madeProgress <- solveSingleUnknowns
     if madeProgress then
@@ -94,6 +95,7 @@ solveSingleUnknowns =
         else do
             isoSolutions <- throwErr . IsolationError ||| pure 
                 $ mapM (isolate' ctx) cnstrnd
+            -- TODO: is a check for collisions necessary?
             modifySoln . Map.union . Map.fromList . getSolnData ctx $ isoSolutions
             modifyEqns $ const remaining
             return True
@@ -118,9 +120,9 @@ getEqns = snd <$> get
 -- | Returns the known VALUES in the solver's numeric context map.
 getKnowns :: Monad m => CassieT mg u n m Symbols
 getKnowns = do
-    ctx <- getSolved
-    let f = (`Map.member` ctx)
-    return $ Set.fromList . filter f . Map.keys $ ctx
+    solvedKnowns <- Map.keys <$> getSolved 
+    givenKnowns <- Map.keys <$> getCtx
+    return . Set.fromList $ solvedKnowns ++ givenKnowns
 
 modifySoln :: Monad m =>  (Solution mg u n -> Solution mg u n) -> CassieT mg u n m ()
 modifySoln f = do

@@ -3,18 +3,15 @@
 module Main where
 
 import safe Control.Arrow
-import safe Control.Monad
-import safe Control.Monad.Except (runExcept)
 import safe Control.Monad.Reader (asks, runReaderT)
-import safe Control.Monad.State (execStateT)
 import safe Control.Monad.Trans (liftIO)
-import safe Data.Cassie.Parser
-import safe Data.Cassie.Solver
-import safe qualified Data.Map as Map 
-import safe qualified Data.Set as Set 
-import safe qualified Data.Text as Text
+import safe Data.Cassie.CLI (cassieMain, ParsedSoln)
+import safe Data.List as List
+import safe qualified Data.Map as Map
+import safe qualified Data.Set as Set
 import safe Internal (CassieCLI)
-import safe Settings (parseCassieJSON, CassieJSON(..))
+import safe Formatting ()
+import safe Settings (parseCassieJSON, CassieJSON(..), CassieSolnOpts(..))
 
 main :: IO ()
 main = do
@@ -24,36 +21,26 @@ main = do
 
 cassieCliMain :: CassieCLI ()
 cassieCliMain = do
-        (imports, fnCtx, equations) <- parseModule
-        importedCtx <- addImportsToCtx imports fnCtx
-        let possSolution = unwrapEither . runExcept 
-                $ execStateT solveSystemMain 
-                (importedCtx, equations, Map.empty)
-        outputFilepath <- getSolnFilepath
-        liftIO 
-            $ writeFile outputFilepath
-            $ show possSolution
+    ep <- asks entryPoint
+    keySolutions <- asks 
+        $ constrained . solution &&& numeric . solution
+        >>> uncurry (++)
+        >>> Set.fromList
+    result <- liftIO $ cassieMain ep keySolutions
+    let ((_ctx, soln), _showSteps) = (unwrapEither *** mapM_ putStrLn) result
+    -- liftIO showSteps
+    liftIO $ putStrLn "Context: " >> print _ctx 
+    solutionText <- renderSymbolicSolns soln 
+    liftIO . putStrLn $ solutionText
+    liftIO $ writeFile (ep ++ ".soln.txt") solutionText
 
-parseModule :: CassieCLI ([Import], ParsedCtx, EquationPool)
-parseModule = do
-    cassieSourceFilepath <- asks entryPoint
-    cassieSource <- liftIO $ readFile cassieSourceFilepath
-    either 
-        (error . show)
-        return
-        $ parseCassiePhrases cassieSourceFilepath cassieSource 
-
-addImportsToCtx :: [Import] -> ParsedCtx -> CassieCLI ParsedCtx
-addImportsToCtx imports fnCtx = 
-    let
-        foldImportedCtxs = buildImportedCtx Set.empty . unwrapEither
-    in liftIO $ unwrapEither <$> foldM foldImportedCtxs (pure fnCtx) imports
-
-getSolnFilepath :: CassieCLI String
-getSolnFilepath = Text.unpack 
-    . Text.replace ".cas" ".txt" 
-    . Text.pack 
-    <$> asks entryPoint
+renderSymbolicSolns :: ParsedSoln -> CassieCLI String
+renderSymbolicSolns soln = 
+    let 
+        renderSoln k v = k ++ show v
+    in do
+        return . intercalate "\n" . Map.elems 
+            $ Map.mapWithKey renderSoln soln
 
 -- | Retrieves the @Right@-constructed value from an @Either@, calling 
 --   @error . show@ on the @Left@-constructed value.

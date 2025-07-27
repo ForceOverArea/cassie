@@ -25,10 +25,10 @@ data CassieReportOpts = CassieReportOpts
     deriving Show
 
 data CassieSolnOpts = CassieSolnOpts 
-    { whitelist :: Bool
-    , numeric   :: [String] 
-    , constants :: [String] 
-    , symbolic  :: [String] 
+    { whitelist   :: Bool
+    , numeric     :: [String] 
+    , constrained :: [String] 
+    , symbolic    :: [String] 
     }
     deriving Show
 

@@ -2,17 +2,25 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Data.Cassie.CLI 
     ( cassieMain
+    , ParsedCtx
+    , ParsedCtxItem
+    , ParsedElement
+    , ParsedEqn
+    , ParsedEqPool
+    , ParsedMagma
+    , ParsedSoln
+    , ParsedUnary
     ) where
 
-import safe Control.Monad.Except (MonadError)
 import safe Data.Cassie.CLI.Parser.ParsedTypes 
 import safe Data.Cassie.CLI.Module
 import safe Data.Cassie.CLI.MonadLookup
+import safe Data.Cassie.Solver.Internal
 
-cassieMain :: ( MonadError ParsedCassieError m
-              , MonadLookup FilePath String m
+cassieMain :: ( MonadLookup FilePath String m
               , Monoid (m FilePath)
               ) 
     => FilePath 
-    -> m (Either ParsedCassieError (ParsedCtx, ParsedSoln))
+    -> Symbols
+    -> m (Either ParsedCassieError (ParsedCtx, ParsedSoln), [String])
 cassieMain = solveModular

@@ -9,8 +9,9 @@ module Data.Cassie.CLI.Module
 
 import safe Control.Arrow
 import safe Control.Monad
-import safe Control.Monad.Except (runExceptT, throwError, ExceptT, MonadError)
+import safe Control.Monad.Except (runExceptT, throwError, ExceptT)
 import safe Control.Monad.RWS (execRWST)
+import safe Control.Monad.Writer (runWriterT, tell, WriterT)
 import safe Control.Monad.Trans
 import safe Data.Cassie.CLI.Module.Internal (CassieModuleError(..))
 import safe Data.Cassie.CLI.MonadLookup
@@ -20,7 +21,7 @@ import safe Data.Cassie.Solver.Internal
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 
-type CassieModuleT = ExceptT ParsedCassieError
+type CassieModuleT m = ExceptT ParsedCassieError (WriterT [String] m)
 
 type ParsedCassieError = CassieError ParsedMagma ParsedUnary ParsedElement
 
@@ -33,20 +34,21 @@ cassieFileExt = ".cas"
 --   @MonadLookup@), this function recursively solves a chain of 
 --   dependent systems of equations.
 solveModular :: ( Monoid (m FilePath)
-                , MonadError ParsedCassieError m
                 , MonadLookup FilePath String m
                 ) 
     => FilePath
-    -> m (Either ParsedCassieError (ParsedCtx, ParsedSoln))
-solveModular thisModule = runExceptT 
-    $ solveModularSystem mempty mempty mempty (thisModule, mempty)
+    -> Symbols
+    -> m (Either ParsedCassieError ((ParsedCtx, ParsedSoln)), [String])
+solveModular thisModule keySolutions = 
+    let 
+        x = solveModularSystem mempty mempty mempty (thisModule, keySolutions)
+    in runWriterT $ runExceptT x
 
 -- | Builds a context from parsing imported modules.
 --   
 --   
 --   This is effectively @main@ for the CASsie CLI.
 solveModularSystem :: ( Monoid (m FilePath)
-                      , MonadError ParsedCassieError m
                       , MonadLookup FilePath String m
                       ) 
     => Set.Set String 
@@ -62,11 +64,12 @@ solveModularSystem dependentModules importedCtx importedSoln (localModule, local
             $ solveModularSystem 
             $ localModule `Set.insert` dependentModules
     in do
-        moduleFilePath <- lift $ (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
+        moduleFilePath <- lift .lift $ (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
         (localDependencies, localCtx, localEqns) <- tryBuildModuleCtx moduleFilePath
         if localDependencies == [] then do
-            ((localSoln, unsolved), _log) <- execRWST solveConstrainedMain localCtx (Map.empty, localEqns)
+            ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain localCtx (Map.empty, localEqns)
             assertConstrained unsolved
+            tell solnLog
             return (exports localCtx, exports localSoln)
         else do
             checkForRecursion dependentModules localDependencies
@@ -74,8 +77,9 @@ solveModularSystem dependentModules importedCtx importedSoln (localModule, local
                 foldChildImports 
                 (importedCtx `Map.union` localCtx, importedSoln)
                 localDependencies
-            ((localSoln, unsolved), _log) <- execRWST solveConstrainedMain importedCtx' (importedSoln', localEqns)
+            ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain importedCtx' (importedSoln', localEqns)
             assertConstrained unsolved
+            tell solnLog
             return (importedCtx', importedSoln' `exportUnion` localSoln) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
 
 tryBuildModuleCtx :: MonadLookup FilePath String m 
@@ -93,7 +97,7 @@ tryGetModuleSource :: (Monad m, MonadLookup FilePath String m)
     => FilePath 
     -> CassieModuleT m String
 tryGetModuleSource fp 
-    = (lift $ lookupM fp) 
+    = (lift .lift $ lookupM fp) 
     >>= maybe 
         (throwError . ImportError $ FileDoesNotExist fp) 
         return
@@ -110,7 +114,7 @@ buildGlobalCtx = curry (left ParserError . uncurry parseCassiePhrases)
 -- | Checks a given import for recursive dependencies, 
 --   throwing @FoundRecursiveImport@ when a recursive
 --   dependency is found.
-checkForRecursion :: (MonadError ParsedCassieError m) 
+checkForRecursion :: Monad m 
     => Set.Set String 
     -> [(String, Symbols)] 
     -> CassieModuleT m ()
@@ -118,7 +122,7 @@ checkForRecursion parentPaths childImports =
     let 
         recursiveImports = parentPaths `Set.intersection` (Set.fromList $ map fst childImports)
     in when (Set.empty /= recursiveImports)
-        $ lift . throwError . ImportError $ FoundRecursiveImport
+        $ throwError . ImportError $ FoundRecursiveImport
 
 -- | Throws a @FailedToContstrain@ error when the given equation pool is not empty.
 assertConstrained :: Monad m => ParsedEqPool -> CassieModuleT m ()

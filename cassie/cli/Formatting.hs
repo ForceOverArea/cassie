@@ -1,12 +1,13 @@
+{-# LANGUAGE Safe #-}
 module Formatting
-    ( 
+    (
     ) where
 
-import Control.Monad.Reader (asks)
-import Internal (CassieCLI)
-import Settings (CassieJSON(..), CassieSolnOpts(..))
+-- import safe Control.Monad.Reader (asks)
+-- import safe Control.Monad.Trans (liftIO)
+-- import safe Data.Cassie.CLI (ParsedSoln)
+-- import safe Data.List
+-- import safe qualified Data.Map as Map
+-- import safe Internal (CassieCLI)
+-- import safe Settings (CassieJSON(..), CassieSolnOpts(..))
 
-renderSymbolicSolns :: CassieCLI String
-renderSymbolicSolns = do
-    symbolicSolns <- asks $ symbolic . solution
-    return ""

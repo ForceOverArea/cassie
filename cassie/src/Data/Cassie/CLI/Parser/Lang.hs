@@ -118,6 +118,7 @@ constant :: CassieLang (Symbol, ParsedCtxItem)
 constant = do
     name <- whiteSpace haskell 
         >> string "const"
+        >> whiteSpace haskell
         >> identifier haskell
     expr <- char '='
         >> expression
