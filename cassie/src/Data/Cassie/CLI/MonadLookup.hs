@@ -9,7 +9,8 @@ import safe Control.Monad.Reader (ReaderT)
 import safe Control.Monad.RWS (ask, get, RWST)
 import safe Control.Monad.State (StateT)
 import safe qualified Data.Map as Map
-import System.Directory (doesFileExist)
+import safe Data.Maybe
+import System.Directory (doesFileExist, getCurrentDirectory)
 
 -- | A class for monad types that have a meaningful way of 
 --   mapping some key type @k@ to some value type @a@. This 
@@ -24,6 +25,17 @@ class Monad m => MonadLookup k a m | m -> k a where
     --   @(ReaderT (Map.Map k a) m)@ monad providing a literal map or
     --   @IO@ providing filesystem access.
     lookupM :: k -> m (Maybe a)
+
+    -- | Provides a prefix to add to keys if it makes sense to have one.
+    --   In the @IO@ monad, this is useful as it can indicate the current
+    --   directory a process is running in. In other contexts, this 
+    --   function is likely not as useful. By default, it returns @mempty@ 
+    --   for the type @m k@.
+    pathRoot :: Monoid (m k) =>  m k
+    pathRoot = mempty
+
+    memberM :: k -> m Bool
+    memberM = fmap isJust . lookupM
 
 instance (Monad m, Ord k) => MonadLookup k a (ReaderT (Map.Map k a) m) where
     lookupM k = Map.lookup k <$> ask
@@ -44,3 +56,5 @@ instance MonadLookup FilePath String IO where
             Just <$> readFile fp
         else
             return Nothing
+
+    pathRoot = getCurrentDirectory

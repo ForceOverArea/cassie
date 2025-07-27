@@ -6,6 +6,7 @@ module Data.Cassie.CLI.Parser.ParsedTypes
     , ParsedEqn
     , ParsedEqPool
     , ParsedMagma
+    , ParsedSoln
     , ParsedUnary
     ) where
 
@@ -19,11 +20,14 @@ type ParsedCtx = Context ParsedMagma ParsedUnary ParsedElement
 -- | The concrete type of @CtxItem mg u n@ that parsing Cassie syntax will yield.
 type ParsedCtxItem = CtxItem ParsedMagma ParsedUnary ParsedElement
 
--- | This concrete type of @Equation mg u n@ that parsing Cassie syntax will yield.
+-- | The concrete type of @Equation mg u n@ that parsing Cassie syntax will yield.
 type ParsedEqn = Equation ParsedMagma ParsedUnary ParsedElement
 
--- | A Concrete 
+-- | A concrete instance of @EquationPool mg u n@ used by higher-level Cassie code.  
 type ParsedEqPool = EquationPool ParsedMagma ParsedUnary ParsedElement
+
+-- | A concrete instance of @Solution mg u n@ used by higher-level Cassie code.
+type ParsedSoln = Solution ParsedMagma ParsedUnary ParsedElement
 
 {-
     Below types can be changed to alter what data is parsed from Cassie syntax 
