@@ -3,7 +3,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 module Data.Cassie.CLI.Module
-    ( solveModular
+    ( cassieBaseLibrary
+    , cassieConfigDir
+    , cassieFileExt
+    , solveModular
     , ParsedCassieError
     ) where
 
@@ -13,7 +16,7 @@ import safe Control.Monad.Except (runExceptT, throwError, ExceptT)
 import safe Control.Monad.RWS (execRWST)
 import safe Control.Monad.Writer (runWriterT, tell, WriterT)
 import safe Control.Monad.Trans
-import safe Data.Cassie.CLI.Module.Internal (CassieModuleError(..))
+import safe Data.Cassie.CLI.Module.Internal
 import safe Data.Cassie.CLI.MonadLookup
 import safe Data.Cassie.CLI.Parser.Lang (parseCassiePhrases, Import)
 import safe Data.Cassie.CLI.Parser.ParsedTypes
@@ -24,10 +27,6 @@ import safe qualified Data.Set as Set
 type CassieModuleT m = ExceptT ParsedCassieError (WriterT [String] m)
 
 type ParsedCassieError = CassieError ParsedMagma ParsedUnary ParsedElement
-
--- | The file extension used by Cassie source files.
-cassieFileExt :: String
-cassieFileExt = ".cas"
 
 -- | Given an initial context and a module path (either in the 
 --   filesystem provided by @IO@ or a virtual one implementing
@@ -62,7 +61,7 @@ solveModularSystem dependentModules importedCtx importedSoln (localModule, local
             $ solveModularSystem 
             $ localModule `Set.insert` dependentModules
     in do
-        moduleFilePath <- lift . lift $ (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
+        moduleFilePath <- getModuleOrBaseLibrary localModule
         (localDependencies, localCtx, localEqns) <- tryBuildModuleCtx moduleFilePath
         if localDependencies == [] then do
             ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain localCtx (Map.empty, localEqns)
@@ -79,6 +78,18 @@ solveModularSystem dependentModules importedCtx importedSoln (localModule, local
             assertConstrained unsolved
             tell solnLog
             return (importedCtx', importedSoln' `exportUnion` localSoln) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
+
+getModuleOrBaseLibrary :: (MonadLookup FilePath String m, Monoid (m FilePath)) 
+    => String 
+    -> CassieModuleT m String
+getModuleOrBaseLibrary localModule =
+    let
+        cassieBaseLibFilename = cassieBaseLibrary ++ cassieFileExt
+    in lift . lift $ 
+        if localModule == cassieBaseLibrary then
+            (++ cassieConfigDir ++ "/" ++ cassieBaseLibFilename) <$> pathHome 
+        else
+            (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
 
 tryBuildModuleCtx :: MonadLookup FilePath String m 
     => FilePath 

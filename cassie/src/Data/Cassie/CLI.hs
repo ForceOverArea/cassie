@@ -1,7 +1,8 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Data.Cassie.CLI 
-    ( cassieMain
+    ( cassieConfigDir
+    , cassieMain
     , ParsedCtx
     , ParsedCtxItem
     , ParsedElement

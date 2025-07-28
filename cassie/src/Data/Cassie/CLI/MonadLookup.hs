@@ -10,7 +10,7 @@ import safe Control.Monad.RWS (ask, get, RWST)
 import safe Control.Monad.State (StateT)
 import safe qualified Data.Map as Map
 import safe Data.Maybe
-import System.Directory (doesFileExist, getCurrentDirectory)
+import System.Directory (doesFileExist, getCurrentDirectory, getHomeDirectory)
 
 -- | A class for monad types that have a meaningful way of 
 --   mapping some key type @k@ to some value type @a@. This 
@@ -31,9 +31,17 @@ class Monad m => MonadLookup k a m | m -> k a where
     --   directory a process is running in. In other contexts, this 
     --   function is likely not as useful. By default, it returns @mempty@ 
     --   for the type @m k@.
-    pathRoot :: Monoid (m k) =>  m k
+    pathRoot :: Monoid (m k) => m k
     pathRoot = mempty
 
+    -- | Similar to @MonadLookup.pathRoot@, but returns the current user's 
+    --   home directory path within the IO monad. In other contexts, this 
+    --   function is likely not as useful. By default, it returns @mempty@
+    --   for the type @m k@.
+    pathHome :: Monoid (m k) => m k
+    pathHome = mempty
+
+    -- | Indicates whether the given path exists in the monad context's map.
     memberM :: k -> m Bool
     memberM = fmap isJust . lookupM
 
@@ -58,3 +66,5 @@ instance MonadLookup FilePath String IO where
             return Nothing
 
     pathRoot = getCurrentDirectory
+
+    pathHome = getHomeDirectory

@@ -1,7 +1,6 @@
 {-# LANGUAGE Trustworthy #-}
 module Internal 
-    ( cassieBaseLibrary
-    , cassieJSONTemplate
+    ( cassieJSONTemplate
     , consoleLogger
     , ensureConfigDirectoryExists
     , noLogger
@@ -9,18 +8,19 @@ module Internal
     ) where
 
 import Control.Monad
+import Data.Cassie.CLI (cassieConfigDir)
 import System.Directory (createDirectoryIfMissing, doesFileExist, getHomeDirectory)
 
 type Logger = String -> IO ()
 
 cassieConfigPath :: IO FilePath
-cassieConfigPath =  (++ "/.config/cassie") <$> getHomeDirectory 
+cassieConfigPath =  (++ cassieConfigDir) <$> getHomeDirectory 
+
+cassieBaseLibrary :: IO FilePath
+cassieBaseLibrary = (++ "/Base.cas") <$> cassieConfigPath
 
 cassieJSONTemplate :: IO FilePath
 cassieJSONTemplate = (++ "/Template.json") <$> cassieConfigPath 
-
-cassieBaseLibrary :: IO FilePath
-cassieBaseLibrary = (++ "/Cassie.cas") <$> cassieConfigPath
 
 cassieJSONTemplateSource :: String
 cassieJSONTemplateSource = "\
