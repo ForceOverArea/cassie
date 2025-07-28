@@ -59,9 +59,12 @@ library
 executable cassie
     import:             warnings
     main-is:            Main.hs
-    other-modules:      Formatting,
+    other-modules:      Init,
                         Internal,
-                        Settings,
+                        Solve,
+                        Solve.Formatting,
+                        Solve.Internal,
+                        Solve.Settings,
     
     build-depends:      aeson       >= 2.2.3.0,
                         base        >= 4.16.4.0 && <= 4.21.0.0, 

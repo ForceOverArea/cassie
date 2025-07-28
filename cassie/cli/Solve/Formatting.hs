@@ -1,5 +1,5 @@
 {-# LANGUAGE Safe #-}
-module Formatting
+module Solve.Formatting
     (
     ) where
 

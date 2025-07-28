@@ -1,6 +1,6 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Settings 
+module Solve.Settings 
     ( CassieJSON(..)
     , CassieReportOpts(..)
     , CassieSolnOpts(..)
@@ -47,7 +47,7 @@ instance FromJSON CassieSolnOpts where
     parseJSON = withObject "solution options" $ \v -> CassieSolnOpts
         <$> v .: "whitelist"
         <*> v .: "numeric"
-        <*> v .: "constants"
+        <*> v .: "constrained"
         <*> v .: "symbolic"
 
 parseCassieJSON :: String -> CassieJSON

@@ -39,10 +39,8 @@ solveModular :: ( Monoid (m FilePath)
     => FilePath
     -> Symbols
     -> m (Either ParsedCassieError ((ParsedCtx, ParsedSoln)), [String])
-solveModular thisModule keySolutions = 
-    let 
-        x = solveModularSystem mempty mempty mempty (thisModule, keySolutions)
-    in runWriterT $ runExceptT x
+solveModular thisModule keySolutions = runWriterT . runExceptT 
+    $ solveModularSystem mempty mempty mempty (thisModule, keySolutions)
 
 -- | Builds a context from parsing imported modules.
 --   
@@ -64,7 +62,7 @@ solveModularSystem dependentModules importedCtx importedSoln (localModule, local
             $ solveModularSystem 
             $ localModule `Set.insert` dependentModules
     in do
-        moduleFilePath <- lift .lift $ (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
+        moduleFilePath <- lift . lift $ (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
         (localDependencies, localCtx, localEqns) <- tryBuildModuleCtx moduleFilePath
         if localDependencies == [] then do
             ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain localCtx (Map.empty, localEqns)
