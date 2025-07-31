@@ -1,8 +1,10 @@
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Data.Cassie.CLI.Utils
     ( isNonEmptyLine
     , splitStrAt
     , splitStrAt'
+    , startsWith
     ) where
 
 import safe qualified Data.List.NonEmpty as NE
@@ -14,7 +16,7 @@ isNonEmptyLine :: String -> Bool
 isNonEmptyLine str = 
     let 
         p :: Bool -> Char -> Bool
-        p b x = b || (not $ x `elem` " \n\r\t")
+        p b x = b || (not $ x `elem` [' ', '\n', '\r', '\t'])
     in foldl p False str
 
 -- | Splits a string at the given delimiter @Char@.
@@ -24,3 +26,6 @@ splitStrAt c = Prelude.map (Text.unpack . Text.strip) . Text.split (== c) . Text
 -- | Splits a string at the given delimiter @Char@, returning a @Data.List.NonEmpty@.
 splitStrAt' :: Char -> String -> NE.NonEmpty String
 splitStrAt' c = NE.map (Text.unpack . Text.strip) . NE.fromList . Text.split (== c) . Text.pack
+
+startsWith :: String -> String -> Bool
+startsWith word = (`Text.isPrefixOf` Text.pack word) . Text.pack

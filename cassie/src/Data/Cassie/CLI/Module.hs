@@ -7,6 +7,8 @@ module Data.Cassie.CLI.Module
     , cassieConfigDir
     , cassieFileExt
     , solveModular
+    , splitStrAt
+    , startsWith
     , ParsedCassieError
     ) where
 
@@ -20,7 +22,9 @@ import safe Data.Cassie.CLI.Module.Internal
 import safe Data.Cassie.CLI.MonadLookup
 import safe Data.Cassie.CLI.Parser.Lang (parseCassiePhrases, Import)
 import safe Data.Cassie.CLI.Parser.ParsedTypes
+import safe Data.Cassie.CLI.Utils (splitStrAt, startsWith)
 import safe Data.Cassie.Solver.Internal
+import safe Data.List as List
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
 
@@ -53,7 +57,7 @@ solveModularSystem :: ( Monoid (m FilePath)
     -> ParsedSoln
     -> (String, Symbols) 
     -> CassieModuleT m (ParsedCtx, ParsedSoln)
-solveModularSystem dependentModules importedCtx importedSoln (localModule, localExports) = 
+solveModularSystem dependentModules accumCtx accumSoln (localModule, localExports) = 
     let 
         exports = Map.filterWithKey $ \x _ -> x `Set.member` localExports
         exportUnion x = exports . (x `Map.union`) 
@@ -63,31 +67,41 @@ solveModularSystem dependentModules importedCtx importedSoln (localModule, local
     in do
         moduleFilePath <- getModuleOrBaseLibrary localModule
         (localDependencies, localCtx, localEqns) <- tryBuildModuleCtx moduleFilePath
+        tell ["local context for " ++ moduleFilePath ++ ": ", show localCtx, "local equations: ", show localEqns]
         if localDependencies == [] then do
             ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain localCtx (Map.empty, localEqns)
             assertConstrained unsolved
-            tell solnLog
-            return (exports localCtx, exports localSoln)
+            tell [ "Exports: ", show (exports localCtx, exports localSoln) ]
+            tell $ "Solution: ":solnLog
+            return ( (exports localCtx) `Map.union` accumCtx
+                   , (exports localSoln) `Map.union` accumSoln
+                   )
         else do
             checkForRecursion dependentModules localDependencies
             (importedCtx', importedSoln') <- foldM 
                 foldChildImports 
-                (importedCtx `Map.union` localCtx, importedSoln)
+                (localCtx `Map.union` accumCtx, accumSoln) -- TODO: should this union be here? 
                 localDependencies
+            tell $ [ ""
+                   , "imported context post-fold for " ++ moduleFilePath ++ ": ", show importedCtx'
+                   , "imported solution post-fold for " ++ moduleFilePath ++ ": ", show importedSoln'
+                   ]
             ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain importedCtx' (importedSoln', localEqns)
             assertConstrained unsolved
             tell solnLog
-            return (importedCtx', importedSoln' `exportUnion` localSoln) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
+            return ( accumCtx `Map.union` exports importedCtx'
+                   , accumSoln `Map.union` (importedSoln' `exportUnion` localSoln)
+                   ) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
 
 getModuleOrBaseLibrary :: (MonadLookup FilePath String m, Monoid (m FilePath)) 
     => String 
     -> CassieModuleT m String
-getModuleOrBaseLibrary localModule =
+getModuleOrBaseLibrary localModule = 
     let
-        cassieBaseLibFilename = cassieBaseLibrary ++ cassieFileExt
-    in lift . lift $ 
-        if localModule == cassieBaseLibrary then
-            (++ cassieConfigDir ++ "/" ++ cassieBaseLibFilename) <$> pathHome 
+        baseModuleRelPath = intercalate "/" . drop 1 $ splitStrAt '/' localModule
+    in lift . lift 
+        $ if localModule `startsWith` "Cassie" then
+            (++ cassieConfigDir ++ "/" ++ baseModuleRelPath ++ cassieFileExt) <$> pathHome 
         else
             (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
 

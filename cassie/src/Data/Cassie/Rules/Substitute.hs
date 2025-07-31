@@ -34,9 +34,10 @@ data SubstitutionError
     = BadStructure
     | BinaryStructureContainsNone
     | FoundWrongSymbol
-    | IncorrectNumOfTermsToRebuild
+    | IncorrectNumOfTermsToRebuild Int Int
     | StructureIsNotSemigroup
     | UnaryStructureContainsNone
+    | MalformedStructure
     deriving (Show, Eq, Ord)
 
 data AlgCrumb mg u n
@@ -56,10 +57,17 @@ data AlgCrumb mg u n
 
 type Substitute mg u n = StateT [AlgCrumb mg u n] (Except SubstitutionError)
 
-substitute :: AlgebraicStructure mg u n => Symbol -> AlgStruct mg u n -> AlgStruct mg u n -> Either SubstitutionError (AlgStruct mg u n)
+substitute :: AlgebraicStructure mg u n 
+    => Symbol 
+    -> AlgStruct mg u n 
+    -> AlgStruct mg u n 
+    -> Either SubstitutionError (AlgStruct mg u n)
 substitute target replacement source = runExcept $ fst <$> runStateT (substituteMain target replacement source) []
 
-substituteFnArgs :: AlgebraicStructure mg u n => AlgStruct mg u n -> [Symbol] -> ([AlgStruct mg u n] -> Either SubstitutionError (AlgStruct mg u n))
+substituteFnArgs :: AlgebraicStructure mg u n 
+    => AlgStruct mg u n 
+    -> [Symbol] 
+    -> ([AlgStruct mg u n] -> Either SubstitutionError (AlgStruct mg u n))
 substituteFnArgs impl args = 
     let 
         foldFunc = flip $ uncurry substitute
@@ -94,11 +102,11 @@ traverseTowards s struct =
 traverseTowardsPlural :: AlgebraicStructure mg u n => Symbol -> AlgStruct mg u n -> [AlgStruct mg u n]-> Substitute mg u n [AlgStruct mg u n]
 traverseTowardsPlural s k terms = 
     let 
-        f = map (flip elemIndices terms)
+        getArgPositionMap = map (flip elemIndices terms)
     in do
         let (has, doesnt) = partition (s ~?) terms
-        let hasIndices = concat $ f has
-        pushCrumb $ Plural    k doesnt hasIndices
+        let hasIndices = concat $ getArgPositionMap has
+        pushCrumb $ Plural k doesnt hasIndices
         return has
 
 traverseTowardsMagmaOp :: Symbol -> mg -> AlgStruct mg u n -> AlgStruct mg u n -> Substitute mg u n [AlgStruct mg u n]
@@ -120,13 +128,13 @@ rebuildOnto structures = do
         (Nothing, [x]) -> return x
         (Just crumbKind, x:_) -> do
             newBase <- case crumbKind of
-                Plural    k terms idxs    -> rebuildPlural structures k terms idxs
+                Plural k terms idxs       -> rebuildPlural structures k terms idxs
                 MagmaOp k possTerm isLeft -> rebuildMagmaOp structures k possTerm isLeft
                 UnaryOp k                 -> rebuildUnaryOp structures k x
                 Negate                    -> return $ Negated x
                 Invert                    -> return $ Inverse x
             rebuildOnto $ pure newBase
-        _ -> throwErr IncorrectNumOfTermsToRebuild 
+        _ -> error $ show MalformedStructure
 
 rebuildPlural :: [AlgStruct mg u n] -> AlgStruct mg u n -> [AlgStruct mg u n] -> [Int] -> Substitute mg u n (AlgStruct mg u n)
 rebuildPlural baseTerms structKind structTerms idxs = 
@@ -136,7 +144,7 @@ rebuildPlural baseTerms structKind structTerms idxs =
         numIdxs = length idxs
         numTerms = length baseTerms
     in if numIdxs /= numTerms then
-            throwErr IncorrectNumOfTermsToRebuild
+            throwErr $ IncorrectNumOfTermsToRebuild numIdxs numTerms
         else do
             f <- constructOnePlural structKind
             return $ f terms
@@ -149,7 +157,7 @@ rebuildMagmaOp baseArgs structKind possTerm isLeft = do
         (Just term, [x])
             | isLeft    -> return $ f term x
             | otherwise -> return $ f x term
-        _ -> throwErr IncorrectNumOfTermsToRebuild
+        _ -> throwErr $ IncorrectNumOfTermsToRebuild 2 0 -- expected <= 2, found 0
 
 rebuildUnaryOp :: [AlgStruct mg u n] -> u -> AlgStruct mg u n -> Substitute mg u n (AlgStruct mg u n)
 rebuildUnaryOp _ structKind term = do

@@ -3,6 +3,8 @@
 module Data.Cassie.CLI 
     ( cassieConfigDir
     , cassieMain
+    , startsWith
+    , splitStrAt
     , ParsedCtx
     , ParsedCtxItem
     , ParsedElement
