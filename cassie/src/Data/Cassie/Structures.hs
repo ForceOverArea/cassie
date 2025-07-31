@@ -49,6 +49,9 @@ class ( MagmaMock mg n
       , Eq mg
       , Eq u
       , Eq n
+      , Ord mg
+      , Ord u
+      , Ord n
       ) => AlgebraicStructure mg u n 
 
 data Equation mg u n = Equation { lhs :: AlgStruct mg u n
@@ -70,4 +73,5 @@ instance ( Num n
          , Fractional n
          , Show n
          , Eq n
+         , Ord n
          ) => AlgebraicStructure ComplexMagma ComplexUnary n

@@ -22,22 +22,25 @@ module Data.Cassie.Rules.Isolate
     ) where
 
 import safe Control.Arrow
+import safe Control.Monad
 import safe Control.Monad.RWS (asks, execRWST, get, gets, put, tell, RWST)
-import safe Control.Monad.Except (runExcept, Except)
+import safe Control.Monad.Except (catchError, runExcept, Except)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Map as Map
 import safe Data.Cassie.Rules.Evaluate
+import safe Data.Cassie.Rules.Isolate.PolySolve (factorize, FactorizationError(..))
 import safe Data.Cassie.Rules.Substitute
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Utils
 
-type Isolate mg u n = RWST (Symbol, Context mg u n) Steps (Equation mg u n) (Except IsolateError)
+type Isolate mg u n = RWST (Symbol, Context mg u n) Steps (Equation mg u n) (Except (IsolateError mg u n))
 
 -- | A type alias for the log of steps taken while solving a given equation. 
 type Steps = [String]
 
-data IsolateError
-    = FunctionCallErr SubstitutionError
+data IsolateError mg u n
+    = FactorizeError (FactorizationError mg u n)
+    | FunctionCallErr SubstitutionError
     | FunctionNotDefined
     | InvalidArguments
     | IsolatedConstantSomehow
@@ -49,7 +52,7 @@ data IsolateError
     | WrongSymbolSomehow
     deriving (Show, Eq, Ord)
 
-isolate :: AlgebraicStructure mg u n => Context mg u n -> Equation mg u n -> Symbol -> Either IsolateError (Equation mg u n, Steps)
+isolate :: AlgebraicStructure mg u n => Context mg u n -> Equation mg u n -> Symbol -> Either (IsolateError mg u n) (Equation mg u n, Steps)
 isolate ctx eqn target = runExcept $ execRWST isolateMain (target, ctx) eqn
 
 isolateMain :: AlgebraicStructure mg u n => Isolate mg u n ()
@@ -76,11 +79,29 @@ isolateMain = do
             else
                 throwErr WrongSymbolSomehow
 
-isolateAdditive :: AlgebraicStructure mg u n => NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n ()
-isolateAdditive terms = do
-    wrapperTerms <- Additive <$> isolatePolyTerms terms
-    modifyRhs $ \rhs' -> rhs' - wrapperTerms
-    isolateMain
+isolateAdditive :: AlgebraicStructure mg u n 
+    => NE.NonEmpty (AlgStruct mg u n) 
+    -> Isolate mg u n ()
+isolateAdditive terms = 
+    let 
+        factorizeIfPossible :: AlgebraicStructure mg u n
+            => NE.NonEmpty (AlgStruct mg u n)
+            -> Isolate mg u n (AlgStruct mg u n)
+        factorizeIfPossible ts = do
+            target <- asks fst
+            either 
+                (throwErr . FactorizeError)
+                pure
+                (factorize target $ Additive ts)
+    in do 
+        wrapperTerms <- Additive <$> isolatePolyTerms terms 
+        modifyRhs $ \rhs' -> rhs' - wrapperTerms
+        isolateMain
+    `catchError` \err -> do
+        when (err /= NeedsPolySolve) $ throwErr err
+        factored <- factorizeIfPossible terms
+        setLhs factored
+        isolateMain
 
 isolateMultiplicative :: AlgebraicStructure mg u n => NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n ()
 isolateMultiplicative factors = do

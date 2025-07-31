@@ -35,7 +35,7 @@ library
                         Data.Cassie.CLI.Utils,
                         Data.Cassie.Rules.Evaluate,
                         Data.Cassie.Rules.Isolate,
-                        -- Data.Cassie.Rules.Isolate.PolySolve,
+                        Data.Cassie.Rules.Isolate.PolySolve,
                         Data.Cassie.Rules.Substitute,
                         Data.Cassie.Solver.Internal,
                         Data.Cassie.Structures.Instances.Complex,

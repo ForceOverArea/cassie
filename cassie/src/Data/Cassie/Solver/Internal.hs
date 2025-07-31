@@ -60,7 +60,7 @@ data CassieError mg u n
     | FailedToFullySolve
     | ImportsNotAllowed
     | ImportNotFound (String, [Symbols])
-    | IsolationError IsolateError
+    | IsolationError (IsolateError mg u n)
     {-  Errors on or below this line are thrown by the module system only.
         This is confusing, but allows @solveConstrainedMain@ to be called 
         directly within the module-importing code since both actions use

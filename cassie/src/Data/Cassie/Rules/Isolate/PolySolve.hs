@@ -1,4 +1,5 @@
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE OverloadedLists #-}
 module Data.Cassie.Rules.Isolate.PolySolve 
     ( commonFactors
     , factorOut
@@ -9,68 +10,79 @@ module Data.Cassie.Rules.Isolate.PolySolve
 
 import safe Control.Monad
 import safe qualified Data.Set as Set
+import safe qualified Data.List.NonEmpty as NE
+import safe Data.Cassie.Structures (AlgebraicStructure)
 import safe Data.Cassie.Structures.Internal ((~?), AlgStruct(..), Symbol)
 
 data FactorizationError mg u n
     = FactorNotFound (AlgStruct mg u n) (AlgStruct mg u n)
     | NoCommonFactors
     | TargetNotAFactor
-    deriving Show
+    deriving (Show, Eq, Ord)
 
-factorize :: Symbol -> AlgStruct mg u n -> Either FactorizationError (AlgStruct mg u n)
+-- | Attempts to remove arcs from a given algebraic structure by
+--   reversing distributive multiplication of substructures 
+--   containing @sym@ from @src@. This will always return a
+--   @Multiplicative@ constructor value containing the product of
+--   the substructure and any common factor of interest (i.e. containing 
+--   @target@) found within.
+factorize :: AlgebraicStructure mg u n
+    => Symbol 
+    -> AlgStruct mg u n 
+    -> Either (FactorizationError mg u n) (AlgStruct mg u n)
 factorize sym src =
     let 
         cfs = commonFactors src
-        cfs' = Set.filter (~? sym) cfs
+        cfs' = Set.filter (sym ~?) cfs
     in if Set.size cfs == 0 then
         Left $ NoCommonFactors
     else if Set.size cfs' == 0 then
         Left $ TargetNotAFactor
     else do
         let commonFactorsOfInterest = Set.toList cfs'
-        factored <- foldM (flip factorOut) src $ commonFactorsOfInterest
-        return . Product $ commonFactorsOfInterest ++ [Group factored]
+        factored <- foldM factorOut src $ commonFactorsOfInterest
+        return . Multiplicative . NE.fromList $ factored:commonFactorsOfInterest
 
-factorOut :: AlgStruct mg u n -> AlgStruct mg u n -> Either FactorizationError (AlgStruct mg u n)
-factorOut target src = 
+-- | Given a @target@ structure to try and factor out of another @src@
+--   structure, this function returns the modified @src@ as if the given 
+--   @target@ were not present. (i.e. factored out)
+factorOut :: AlgebraicStructure mg u n 
+    => AlgStruct mg u n 
+    -> AlgStruct mg u n 
+    -> Either (FactorizationError mg u n) (AlgStruct mg u n)
+factorOut src target = 
     let 
         reportError = Left $ FactorNotFound target src
-        factorOutM = mapM (factorOut target)
+        factorOutM = mapM (flip factorOut target)
     in case src of 
-        Additive ts          -> Additive <$> factorOutM ts
-        Multiplicative fs
-            | null fs   -> reportError
-            | otherwise 
-                -> let 
-                    newProd = case filter (/= target) fs of
-                        [single] -> single
-                        multiple -> Product multiple
-                in return newProd
-        Quotient d s
-            | d == target 
-                        -> return $ Quotient (Value 1.0) s
-            | s == reciprocal target 
-                        -> return $ d
-            | otherwise -> reportError
-        _               -> reportError
+        Additive ts
+            -> Additive <$> factorOutM ts
+        Multiplicative fs   
+            -> let 
+                newProd = case NE.filter (/= target) fs of
+                    [single] -> single
+                    multiple -> Multiplicative $ NE.fromList multiple
+            in return newProd
+        _ -> reportError
 
-commonFactors :: AlgStruct mg u n -> Set.Set AlgStruct mg u n
+commonFactors :: (AlgebraicStructure mg u n, Ord mg, Ord u, Ord n)
+    => AlgStruct mg u n 
+    -> Set.Set (AlgStruct mg u n)
 commonFactors src = 
     case src of
-        (Sum ts)         -> intersections $ map commonFactors ts
-        (Difference shs) -> intersections $ map commonFactors shs
-        (Group g)        -> commonFactors g
+        (Additive ts)    -> intersections . NE.map commonFactors $ ts
         other            -> factors other
 
-factors :: AlgStruct mg u n -> Set.Set AlgStruct mg u n
+factors :: (AlgebraicStructure mg u n, Ord mg, Ord u, Ord n)
+    => AlgStruct mg u n 
+    -> Set.Set (AlgStruct mg u n)
 factors src = 
     case src of
-        (Product fs)   -> Set.unions $ map factors fs
-        (Quotient d s) -> factors d `Set.union` (Set.map reciprocal $ factors s) 
-        (Group g)      -> factors g
-        other          -> Set.singleton other
+        (Multiplicative fs) -> Set.unions $ NE.map factors fs
+        (Negated n)         -> Set.map negate $ factors n
+        (Inverse n)         -> Set.map recip $ factors n
+        other               -> Set.singleton other
 
-intersections :: Ord a => [Set.Set a] -> Set.Set a
-intersections [] = Set.empty
+intersections :: Ord a => NE.NonEmpty (Set.Set a) -> Set.Set a
 intersections [s] = s
-intersections (s:ss) = foldl Set.intersection s ss
+intersections sets = foldl Set.intersection (NE.head sets) (NE.tail sets)
