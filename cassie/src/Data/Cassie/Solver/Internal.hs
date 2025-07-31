@@ -88,15 +88,16 @@ solveSingleUnknowns =
         createSolnItem ctx soln = uncurry SolutionItem soln (evaluate ctx . rhs . fst $ soln)
         getSolnData ctx = map $ getSymbol . lhs . fst &&& createSolnItem ctx
     in do
-        ctx <- getCtx
         (cnstrnd, remaining) <- getConstrained
         if cnstrnd == [] then
             return False
         else do
+            allKnownValues <- getKnowns
             isoSolutions <- throwErr . IsolationError ||| pure 
-                $ mapM (isolate' ctx) cnstrnd
+                $ mapM (isolate' allKnownValues) cnstrnd
             -- TODO: is a check for collisions necessary?
-            modifySoln . Map.union . Map.fromList . getSolnData ctx $ isoSolutions
+            totalCtx <- Map.union allKnownValues . fromSolution <$> getSolved
+            modifySoln . Map.union . Map.fromList . getSolnData totalCtx $ isoSolutions
             modifyEqns $ const remaining
             return True
 
@@ -105,7 +106,7 @@ getConstrained = (partition $ (== 1) . Set.size . snd) <$> getEqns
 
 updateUnknowns :: Monad m => CassieT mg u n m ()
 updateUnknowns = do
-    knowns <- getKnowns
+    knowns <- Set.fromList . Map.keys <$> getKnowns
     modifyEqns . map $ second (`Set.difference` knowns)
 
 getCtx :: Monad m => CassieT mg u n m (Context mg u n)
@@ -118,11 +119,8 @@ getEqns :: Monad m => CassieT mg u n m (EquationPool mg u n)
 getEqns = snd <$> get
 
 -- | Returns the known VALUES in the solver's numeric context map.
-getKnowns :: Monad m => CassieT mg u n m Symbols
-getKnowns = do
-    solvedKnowns <- Map.keys <$> getSolved 
-    givenKnowns <- Map.keys <$> getCtx
-    return . Set.fromList $ solvedKnowns ++ givenKnowns
+getKnowns :: Monad m => CassieT mg u n m (Context mg u n)
+getKnowns = Map.union . fromSolution <$> getSolved <*> getCtx
 
 modifySoln :: Monad m =>  (Solution mg u n -> Solution mg u n) -> CassieT mg u n m ()
 modifySoln f = do
@@ -136,3 +134,7 @@ modifyEqns f = modify $ second f
 getSymbol :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> Symbol
 getSymbol (Symbol x) = x
 getSymbol x = error $ "given structure '" ++ showAlgStruct x ++ "' was not a symbol"
+
+-- | Converts a given @Solution mg u n@ to a @Context mg u n@ 
+fromSolution :: Solution mg u n -> Context mg u n
+fromSolution = Map.map $ flip Known Set.empty . rhs . constrained

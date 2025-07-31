@@ -40,7 +40,7 @@ cassieCliMain = do
 renderSymbolicSolns :: ParsedSoln -> CassieCLI String
 renderSymbolicSolns soln = 
     let 
-        error404 k = error "solution for symbol '" ++ k ++ "' could not be found."
+        error404 k = error $ "solution for symbol '" ++ k ++ "' could not be found."
 
         renderConstrained k = 
             case k `Map.lookup` soln of
