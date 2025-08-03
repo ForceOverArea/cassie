@@ -59,7 +59,8 @@ solveModularSystem :: ( Monoid (m FilePath)
     -> CassieModuleT m (ParsedCtx, ParsedSoln)
 solveModularSystem dependentModules accumCtx accumSoln (localModule, localExports) = 
     let 
-        exports = Map.filterWithKey $ \x _ -> x `Set.member` localExports
+        exportWildcard = (Set.size localExports == 1 && Set.findMin localExports == "*")
+        exports = Map.filterWithKey $ \x _ -> x `Set.member` localExports || exportWildcard
         exportUnion x = exports . (x `Map.union`) 
         foldChildImports = uncurry 
             $ solveModularSystem 

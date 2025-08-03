@@ -15,7 +15,7 @@ main = let
         ensureConfigDirectoryExists consoleLogger
         args <- getArgs
         case head' args of
-            "init":name:_ -> cassieInitMain name $ tail' args
-            "solve":_ -> cassieSolveMain $ tail' args
+            "init":name:_flags -> cassieInitMain name $ tail' args
+            "solve":_flags -> cassieSolveMain $ tail' args
             _ -> error "Invalid command. Valid commands include 'init <projectName>' or 'solve'"
     

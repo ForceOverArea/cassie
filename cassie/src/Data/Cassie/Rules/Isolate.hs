@@ -28,7 +28,7 @@ import safe Control.Monad.Except (catchError, runExcept, Except)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Map as Map
 import safe Data.Cassie.Rules.Evaluate
-import safe Data.Cassie.Rules.Isolate.PolySolve (factorize, FactorizationError(..))
+import safe Data.Cassie.Rules.Isolate.PolySolve (factorize, FactorizationError)
 import safe Data.Cassie.Rules.Substitute
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Utils
