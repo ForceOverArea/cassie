@@ -1,4 +1,5 @@
 {-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Solve.Settings 
     ( CassieJSON(..)
@@ -12,7 +13,7 @@ module Solve.Settings
 
 import Data.Aeson (eitherDecodeStrictText)
 import Data.Aeson.Types ((.:), (.:?), withObject, FromJSON(..))
-import qualified Data.Text as Text
+import safe qualified Data.Text as Text
 
 data CassieJSON = CassieJSON 
     { entryPoint :: FilePath
@@ -28,9 +29,9 @@ data CassieReportOpts = CassieReportOpts
     deriving Show
 
 data CassieSolnOpts = CassieSolnOpts 
-    { numeric     :: [String] 
-    , constrained :: [String] 
-    , symbolic    :: [String] 
+    { numeric     :: Maybe [String] 
+    , constrained :: Maybe [String] 
+    , symbolic    :: Maybe [String] 
     }
     deriving Show
 
@@ -47,18 +48,23 @@ instance FromJSON CassieReportOpts where
 
 instance FromJSON CassieSolnOpts where
     parseJSON = withObject "solution options" $ \v -> CassieSolnOpts
-        <$> v .: "numeric"
-        <*> v .: "constrained"
-        <*> v .: "symbolic"
+        <$> v .:? "numeric"
+        <*> v .:? "constrained"
+        <*> v .:? "symbolic"
+
+getSolnOptOrDefault :: (CassieSolnOpts -> Maybe [String]) -> Maybe CassieSolnOpts -> [String]
+getSolnOptOrDefault g = \case 
+    Just soln -> maybe [] id $ g soln
+    Nothing -> ["*"]
 
 constrained' :: Maybe CassieSolnOpts -> [String]
-constrained' = maybe ["*"] $ constrained
+constrained' = getSolnOptOrDefault constrained
 
 numeric' :: Maybe CassieSolnOpts -> [String]
-numeric' = maybe ["*"] $ numeric
+numeric' = getSolnOptOrDefault numeric
 
 symbolic' :: Maybe CassieSolnOpts -> [String]
-symbolic' = maybe ["*"] $ symbolic
+symbolic' = getSolnOptOrDefault symbolic
 
 parseCassieJSON :: String -> CassieJSON
 parseCassieJSON = either error id . eitherDecodeStrictText . Text.pack
