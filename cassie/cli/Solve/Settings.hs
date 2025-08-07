@@ -15,7 +15,7 @@ import Data.Aeson.Types ((.:), (.:?), withObject, FromJSON(..))
 import qualified Data.Text as Text
 
 data CassieJSON = CassieJSON 
-    { entryPoint :: String
+    { entryPoint :: FilePath
     , report     :: CassieReportOpts 
     , solution   :: Maybe CassieSolnOpts
     }

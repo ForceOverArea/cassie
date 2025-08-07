@@ -6,6 +6,8 @@ module Data.Cassie.CLI.Module
     ( cassieBaseLibrary
     , cassieConfigDir
     , cassieFileExt
+    , relPathDir
+    , relPathFile
     , solveModular
     , splitStrAt
     , startsWith
@@ -148,6 +150,6 @@ checkForRecursion parentPaths childImports =
     in when (Set.empty /= recursiveImports)
         $ throwError . ImportError $ FoundRecursiveImport
 
--- | Throws a @FailedToContstrain@ error when the given equation pool is not empty.
+-- | Throws a @FailedToConstrain@ error when the given equation pool is not empty.
 assertConstrained :: Monad m => ParsedEqPool -> CassieModuleT m ()
 assertConstrained x = when ([] /= x) . throwError . FailedToConstrain $ x
