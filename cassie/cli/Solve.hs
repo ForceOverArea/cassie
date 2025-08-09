@@ -4,6 +4,7 @@ module Solve
     ) where
 
 import safe Control.Arrow
+import safe Control.Monad
 import safe Control.Monad.RWS (asks, runRWST)
 import safe Control.Monad.Trans (liftIO)
 import safe Data.Cassie.CLI (cassieMain, relPathDir, relPathFile)
@@ -26,7 +27,7 @@ cassieSolveMain _argv = do
 cassieCliMain :: CassieCLI ()
 cassieCliMain = do 
     (rootDir, entryModule) <- (relPathDir &&& relPathFile) <$> asks entryPoint
-    pwd <- liftIO $ getCurrentDirectory 
+    pwd <- liftIO $ getCurrentDirectory
     liftIO . setCurrentDirectory $ pwd ++ "/" ++ rootDir
     keySolutions <- asks 
         $ solution

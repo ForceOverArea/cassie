@@ -36,7 +36,7 @@ relPathPart f x =
     let 
         segments = splitStrAt '/' x
         numSegs = length segments
-    in if numSegs > 1 then
+    in if numSegs >= 1 then
         intercalate "/" $ f (numSegs - 1) segments
     else 
-        ""
+        "."

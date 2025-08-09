@@ -11,11 +11,13 @@ import safe qualified Data.Text as Text
 cassieInitMain :: String -> [String] -> IO () 
 cassieInitMain projectName _argv = 
     let 
-        replaceName = Text.pack
+        replaceName schemaPath = Text.pack
             >>> Text.replace "<projectName>" (Text.pack projectName) 
+            >>> Text.replace "<schemaPath>" (Text.pack schemaPath)
             >>> Text.unpack
     in do
         jsonTemplatePath <- cassieJSONTemplate
         projectJSONFile <- readFile jsonTemplatePath
-        writeFile "Cassie.json" $ replaceName projectJSONFile
+        schemaPath <- cassieJSONSchema
+        writeFile "Cassie.json" $ replaceName schemaPath projectJSONFile
 
