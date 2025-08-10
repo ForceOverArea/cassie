@@ -6,6 +6,7 @@ module Data.Cassie.CLI.Parser.Lang
     , parseEquation
     , parseEquation'
     , parseFunction 
+    , parsePhrase
     , Import
     , ParsedEqn
     , Phrase(..)
@@ -99,6 +100,9 @@ parseFunction ctx funcDef =
 
 cassieFile :: CassieLang [Phrase]
 cassieFile = manyTill phrase eof
+
+parsePhrase :: String -> Either ParseError Phrase
+parsePhrase =  runParser phrase Set.empty "repl" 
 
 phrase :: CassieLang Phrase
 phrase = 

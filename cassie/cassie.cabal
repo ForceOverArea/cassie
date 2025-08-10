@@ -61,6 +61,7 @@ executable cassie
     main-is:            Main.hs
     other-modules:      Init,
                         Internal,
+                        Repl,
                         Solve,
                         Solve.Formatting,
                         Solve.Internal,

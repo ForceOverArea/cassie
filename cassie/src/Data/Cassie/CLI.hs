@@ -3,6 +3,7 @@
 module Data.Cassie.CLI 
     ( cassieConfigDir
     , cassieMain
+    , parsePhrase
     , relPathDir
     , relPathFile
     , startsWith
@@ -15,8 +16,10 @@ module Data.Cassie.CLI
     , ParsedMagma
     , ParsedSoln
     , ParsedUnary
+    , Phrase(..)
     ) where
 
+import safe Data.Cassie.CLI.Parser.Lang
 import safe Data.Cassie.CLI.Parser.ParsedTypes 
 import safe Data.Cassie.CLI.Module
 import safe Data.Cassie.CLI.MonadLookup

@@ -4,7 +4,6 @@ module Solve
     ) where
 
 import safe Control.Arrow
-import safe Control.Monad
 import safe Control.Monad.RWS (asks, runRWST)
 import safe Control.Monad.Trans (liftIO)
 import safe Data.Cassie.CLI (cassieMain, relPathDir, relPathFile)

@@ -5,7 +5,7 @@ module Data.Cassie.CLI.Parser
     , parseEquation
     , parseEquation'
     , parseExpression
-    , parseFunction 
+    , parseFunction
     , CassieParserError
     , Import
     , ParsedCtx
