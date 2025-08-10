@@ -4,7 +4,7 @@ module Repl
     ( cassieReplMain
     ) where
 
-import safe Control.Monad.State (execStateT, modify, StateT)
+import safe Control.Monad.State (evalStateT, modify, StateT)
 import safe Control.Monad.Trans (liftIO)
 import safe Data.Cassie.CLI 
 import safe Data.Cassie.Solver
@@ -35,24 +35,24 @@ cursor = ">>> "
 
 cassieReplMain :: [String] -> IO ()
 cassieReplMain _argv = do
-    result <- execStateT cassieRepl mempty
+    evalStateT cassieRepl mempty
     return ()
-
-cassieReplLoopCycle :: 
 
 cassieRepl :: CassieRepl ()
 cassieRepl = do
-    result <- liftIO 
+    command <- liftIO 
         $ putStr cursor 
-        >> parsePhrase <$> getLine
-    case result of 
-        Right (ParsedImport (path, syms)) 
-            -> importSource path syms
-        Right parsedItem 
-            -> processReplState parsedItem
-        Left err 
-            -> liftIO $ print err
-    return ()
+        >> getLine
+    case command of 
+        "quit" -> return ()
+        other -> case parsePhrase other of 
+            Right (ParsedImport (path, syms)) 
+                -> importSource path syms
+            Right parsedItem 
+                -> processReplState parsedItem
+            Left err 
+                -> liftIO $ print err
+    cassieRepl -- Loop again until user quits
 
 importSource :: FilePath -> Symbols -> CassieRepl ()
 importSource fp imports = do
