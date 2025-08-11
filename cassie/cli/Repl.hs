@@ -11,6 +11,7 @@ import safe Control.Monad.Trans (liftIO)
 import safe Data.Cassie.CLI 
 import safe Data.Cassie.Solver
 import safe qualified Data.Map as Map
+import safe Data.Maybe
 import safe System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
 
 type CassieRepl = StateT CassieReplState IO
@@ -42,31 +43,38 @@ cassieReplMain _argv = do
     return ()
 
 cassieRepl :: CassieRepl ()
-cassieRepl = do
+cassieRepl = 
+    let
+        -- | Adds a semicolon to the lexeme, reparses it, and 
+        --   prints the given error if the reparse fails.
+        addSemicolonAndReparse lexeme err = 
+            case parsePhrase $ lexeme ++ ";" of
+                Right parsedItem -> processReplState parsedItem
+                Left _err -> liftIO $ print err
+        
+        -- | Adds a semicolon and reparses the given lexeme for convenience
+        catchMissingSemicolonError = 
+            maybe (pure ()) . addSemicolonAndReparse
+    in do
     _ <- liftIO $ putStr cursor 
     command <- liftIO getLine
     case command of 
         "quit" -> return ()
-        "show" -> solved <$> get 
-            >>= showSolution
-            >> cassieRepl
+        "show" -> do
+            solved <$> get >>= showSolution
+            cassieRepl
         lexeme -> do
-            missingSemi <- case parsePhrase lexeme of 
+            parseError <- case parsePhrase lexeme of 
                 Right (ParsedImport (path, syms)) 
                     -> importSource path syms
-                    >> return False
+                    >> return Nothing
                 Right parsedItem
                     -> processReplState parsedItem
-                    >> return False
-                Left _err -- If we failed to parse a phrase, then try again after concatenating a semicolon
-                    -> return True 
-            when missingSemi 
-                $ case parsePhrase $ lexeme ++ ";" of
-                    Right parsedItem 
-                        -> processReplState parsedItem
-                    Left err 
-                        -> liftIO $ print err
-            cassieRepl -- Loop again until user quits
+                    >> return Nothing
+                Left err 
+                    -> return $ Just err
+            catchMissingSemicolonError lexeme parseError
+            cassieRepl
 
 importSource :: FilePath -> Symbols -> CassieRepl ()
 importSource fp imports = do
