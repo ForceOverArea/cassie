@@ -1,6 +1,7 @@
 # Cabal/Haskell Build 
 dist-newstyle
 build_log.txt
+.VSCodeCounter
 
 # Logs
 logs
