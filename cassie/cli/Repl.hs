@@ -1,15 +1,17 @@
-{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE LambdaCase #-}
 module Repl 
     ( cassieReplMain
     ) where
 
-import safe Control.Monad.State (evalStateT, modify, StateT)
+import safe Control.Arrow
+import safe Control.Monad
+import safe Control.Monad.State (evalStateT, get, modify, put, StateT)
 import safe Control.Monad.Trans (liftIO)
 import safe Data.Cassie.CLI 
 import safe Data.Cassie.Solver
 import safe qualified Data.Map as Map
-import System.Directory (getCurrentDirectory)
+import safe System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
 
 type CassieRepl = StateT CassieReplState IO
 
@@ -35,29 +37,40 @@ cursor = ">>> "
 
 cassieReplMain :: [String] -> IO ()
 cassieReplMain _argv = do
+    hSetBuffering stdout NoBuffering
     evalStateT cassieRepl mempty
     return ()
 
 cassieRepl :: CassieRepl ()
 cassieRepl = do
-    command <- liftIO 
-        $ putStr cursor 
-        >> getLine
+    _ <- liftIO $ putStr cursor 
+    command <- liftIO getLine
     case command of 
         "quit" -> return ()
-        other -> case parsePhrase other of 
-            Right (ParsedImport (path, syms)) 
-                -> importSource path syms
-            Right parsedItem 
-                -> processReplState parsedItem
-            Left err 
-                -> liftIO $ print err
-    cassieRepl -- Loop again until user quits
+        "show" -> solved <$> get 
+            >>= showSolution
+            >> cassieRepl
+        lexeme -> do
+            missingSemi <- case parsePhrase lexeme of 
+                Right (ParsedImport (path, syms)) 
+                    -> importSource path syms
+                    >> return False
+                Right parsedItem
+                    -> processReplState parsedItem
+                    >> return False
+                Left _err -- If we failed to parse a phrase, then try again after concatenating a semicolon
+                    -> return True 
+            when missingSemi 
+                $ case parsePhrase $ lexeme ++ ";" of
+                    Right parsedItem 
+                        -> processReplState parsedItem
+                    Left err 
+                        -> liftIO $ print err
+            cassieRepl -- Loop again until user quits
 
 importSource :: FilePath -> Symbols -> CassieRepl ()
 importSource fp imports = do
-    pwd <- liftIO getCurrentDirectory
-    result <- liftIO $ fst <$> cassieMain (pwd ++ "/" ++ fp) imports 
+    result <- liftIO $ fst <$> cassieMain fp imports 
     case result of  
         Left err -> liftIO $ print err
         Right (ctx, soln) -> do
@@ -67,11 +80,39 @@ importSource fp imports = do
 processReplState :: Phrase -> CassieRepl ()
 processReplState phrs = do
     case phrs of
-        ParsedConst (sym, item) -> modify . context'  $ Map.insert sym item
-        ParsedFn (fnName, item) -> modify . context'  $ Map.insert fnName item
-        ParsedEqn eqPoolEntry   -> modify . unsolved' $ (eqPoolEntry :)
+        ParsedConst (sym, item) -> modify . context' $ Map.insert sym item
+        ParsedFn (fnName, item) -> modify . context' $ Map.insert fnName item
+        ParsedEqn eqPoolEntry   -> do 
+            modify . unsolved' $ (eqPoolEntry :)
+            showSolnWhenSolvingEquation
         -- Do not handle import statements as they should be handled by a separate branch of control flow
         _                       -> return ()
+    return ()
+
+showSolnWhenSolvingEquation :: CassieRepl ()
+showSolnWhenSolvingEquation = 
+    do
+        CassieReplState ctx soln eqPool <- get
+        updatedSolution <- liftIO $ solveCassieSystemT ctx soln eqPool
+        case updatedSolution of
+            Left err -> liftIO $ print err
+            Right (soln', eqPool') -> do
+                let newSoln = soln' `Map.difference` soln
+                if newSoln /= Map.empty then do
+                    showSolution newSoln
+                    put (CassieReplState ctx soln' eqPool')
+                else 
+                    liftIO $ putStrLn "equation not solvable... yet"
+                return ()
+
+showSolution :: ParsedSoln -> CassieRepl ()
+showSolution solutionMap = 
+    let 
+        renderNumericSolnForRepl = either (const "") show . possVal
+        renderUsefulParts = 
+            constrained &&& renderNumericSolnForRepl
+            >>> \(x, y) -> show x ++ "    (" ++ y ++ ")"
+    in liftIO $ mapM_ (putStrLn . renderUsefulParts) solutionMap
 
 context' :: (ParsedCtx -> ParsedCtx) -> CassieReplState -> CassieReplState
 context' f (CassieReplState a b c) = CassieReplState (f a) b c
