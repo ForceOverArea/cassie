@@ -1,5 +1,5 @@
 {-# LANGUAGE Safe #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 module Main where
 
 import safe CassieCLI.Init (cassieInitMain)
@@ -8,13 +8,9 @@ import safe CassieCLI.Repl (cassieReplMain)
 import safe CassieCLI.Solve (cassieSolveMain)
 import safe System.Environment (getArgs)
 
-main :: IO () -- TODO: fix argv processing
-main = do
-    ensureConfigDirectoryExists consoleLogger
-    args <- getArgs
-    case args of
-        "init"  : name : argv   -> cassieInitMain name argv
-        "repl"  : argv          -> cassieReplMain argv
-        "solve" : argv          -> cassieSolveMain argv
-        _ -> error "Invalid command. Valid commands include 'init <projectName>' or 'solve'"
-    
+main :: IO ()
+main = getArgs >>= \case
+    "init"  : name : argv   -> ensureConfigDirectoryExists consoleLogger >> cassieInitMain name argv
+    "repl"  : argv          -> cassieReplMain argv
+    "solve" : argv          -> cassieSolveMain argv
+    _ -> error "Invalid command. Valid commands include 'init <projectName>' or 'solve'"

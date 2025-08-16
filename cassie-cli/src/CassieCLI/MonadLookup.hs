@@ -3,6 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module CassieCLI.MonadLookup 
     ( MonadLookup(..)
+    , MonadVirtFS(..)
     ) where
 
 import safe Control.Monad.Reader (ReaderT)
@@ -68,3 +69,22 @@ instance MonadLookup FilePath String IO where
     pathRoot = getCurrentDirectory
 
     pathHome = getHomeDirectory
+
+class Monad m => MonadVirtFS m where 
+    vReadFile :: FilePath -> m String
+
+    vWriteFile :: FilePath -> String -> m ()
+
+    vGetCurrentDirectory :: m Filepath
+
+    vGetHomeDirectory :: m FilePath
+
+    vDoesFileExist :: FilePath -> m Bool
+
+    vTryReadFile :: FilePath -> m (Maybe String)
+    vTryReadFile fp = do
+        fileExists <- vDoesFileExist fp
+        if fileExists then
+            Just <$> vReadFile fp
+        else 
+            return Nothing
