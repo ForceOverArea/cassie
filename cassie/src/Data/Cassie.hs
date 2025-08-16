@@ -1,7 +1,6 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie 
-    ( cassieMain
-    , evaluate
+    ( evaluate
     , isolate
     , solveCassieSystem
     , solveCassieSystemT
@@ -17,7 +16,6 @@ module Data.Cassie
     , SolutionItem(..)
     ) where
 
-import safe Data.Cassie.CLI (cassieMain)
 import safe Data.Cassie.Solver (solveCassieSystem, solveCassieSystemT, CassieError(..), Solution, SolutionItem(..))
 import safe Data.Cassie.Rules.Evaluate (evaluate, EvalError(..))
 import safe Data.Cassie.Rules.Isolate (isolate, IsolateError(..))

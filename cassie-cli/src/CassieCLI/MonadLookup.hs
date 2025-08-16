@@ -1,7 +1,7 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Data.Cassie.CLI.MonadLookup 
+module CassieCLI.MonadLookup 
     ( MonadLookup(..)
     ) where
 

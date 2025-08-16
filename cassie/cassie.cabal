@@ -4,7 +4,7 @@ version:                0.1.0.0
 synopsis:               A simple, homebrewed CAS library
 -- description:
 license:                MIT
-license-file:           LICENSE
+license-file:           ../LICENSE
 author:                 Grant
 maintainer:             christiansengrant18@gmail.com
 -- copyright:
@@ -17,23 +17,11 @@ common warnings
 
 library
     import:             warnings
-    
     exposed-modules:    Data.Cassie,
-                        Data.Cassie.CLI,
                         Data.Cassie.Rules,
                         Data.Cassie.Solver,
                         Data.Cassie.Structures,
-                        
-    other-modules:      Data.Cassie.CLI.Module,
-                        Data.Cassie.CLI.Module.Internal,
-                        Data.Cassie.CLI.MonadLookup,
-                        Data.Cassie.CLI.Parser,
-                        Data.Cassie.CLI.Parser.Internal,
-                        Data.Cassie.CLI.Parser.Lang,
-                        Data.Cassie.CLI.Parser.Lexemes,
-                        Data.Cassie.CLI.Parser.ParsedTypes,
-                        Data.Cassie.CLI.Utils,
-                        Data.Cassie.Rules.Evaluate,
+    other-modules:      Data.Cassie.Rules.Evaluate,
                         Data.Cassie.Rules.Isolate,
                         Data.Cassie.Rules.Isolate.PolySolve,
                         Data.Cassie.Rules.Substitute,
@@ -45,51 +33,9 @@ library
                         Data.Cassie.Structures.ShowStructure,
                         Data.Cassie.Structures.UnarySystems,
                         Data.Cassie.Utils
-
     build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 
                         containers  >= 0.6.5.1,
-                        directory   >= 1.3.9.0,
                         mtl         >= 2.2.2,
-                        parsec      >= 3.1.18.0,
                         text        >= 2.1.2,
-    
     hs-source-dirs:     src
     default-language:   Haskell2010
-
-executable cassie
-    import:             warnings
-    main-is:            Main.hs
-    other-modules:      Init,
-                        Internal,
-                        Repl,
-                        Solve,
-                        Solve.Formatting,
-                        Solve.Internal,
-                        Solve.Settings,
-    
-    build-depends:      aeson       >= 2.2.3.0,
-                        base        >= 4.16.4.0 && <= 4.21.0.0, 
-                        cassie      >= 0.1.0.0,
-                        containers  >= 0.6.5.1,
-                        directory   >= 1.3.9.0,
-                        mtl         >= 2.2.2,
-                        parsec      >= 3.1.18.0,
-                        text        >= 2.1.2,
-
-    hs-source-dirs:     cli
-    default-language:   Haskell2010
-    
--- executable cassie-web-api
---     import:             warnings
---     ghc-options:        -no-hs-main -optl-Wl,--export=solveSystemHs -optl-mexec-model=reactor
---     main-is:            Main.hs
---     other-modules:      Glue,
-
---     build-depends:      base               ^>= 4.21.0.0,
---                         aeson               >= 2.2.3.0,
---                         cassie              >= 0.1.0.0,
---                         containers          >= 0.6.5.1,
---                         ghc-experimental    >= 9.1202.0,
---                         text                >= 1.2.5.0,
---     hs-source-dirs:     reactor
---     default-language:   Haskell2010

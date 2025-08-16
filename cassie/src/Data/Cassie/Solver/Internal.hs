@@ -16,8 +16,6 @@ import safe Control.Arrow
 import safe Control.Monad.Identity (Identity)
 import safe Control.Monad.Except (ExceptT)
 import safe Control.Monad.RWS (ask, get, modify, tell, RWST)
-import safe Data.Cassie.CLI.Module.Internal (CassieModuleError)
-import safe Data.Cassie.CLI.Parser.Internal (CassieParserError)
 import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Rules.Isolate
 import safe Data.Cassie.Structures
@@ -65,8 +63,8 @@ data CassieError mg u n
         This is confusing, but allows @solveConstrainedMain@ to be called 
         directly within the module-importing code since both actions use
         the same @ExceptT e@ monad. -}
-    | ParserError CassieParserError
-    | ImportError CassieModuleError
+    | ParserError String
+    | ImportError String
     deriving (Show, Eq)
 
 solveConstrainedMain :: (Monad m, AlgebraicStructure mg u n) => CassieT mg u n m ()

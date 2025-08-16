@@ -1,11 +1,11 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Init 
+module CassieCLI.Init 
     ( cassieInitMain
     ) where
 
+import safe CassieCLI.Internal
 import safe Control.Arrow
-import safe Internal
 import safe qualified Data.Text as Text
 
 cassieInitMain :: String -> [String] -> IO () 

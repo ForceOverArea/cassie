@@ -1,6 +1,6 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Data.Cassie.CLI.Utils
+module CassieCLI.Utils
     ( isNonEmptyLine
     , splitStrAt
     , splitStrAt'

@@ -1,5 +1,5 @@
 {-# LANGUAGE Trustworthy #-}
-module Internal 
+module CassieCLI.Internal 
     ( cassieJSONSchema
     , cassieJSONTemplate
     , consoleLogger
@@ -9,7 +9,7 @@ module Internal
     ) where
 
 import Control.Monad
-import Data.Cassie.CLI (cassieConfigDir)
+import CassieCLI.Module.Internal (cassieConfigDir)
 import System.Directory (createDirectoryIfMissing, doesFileExist, getHomeDirectory)
 
 type Logger = String -> IO ()

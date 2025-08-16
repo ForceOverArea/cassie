@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Data.Cassie.CLI.Module
+module CassieCLI.Module
     ( cassieBaseLibrary
     , cassieConfigDir
     , cassieFileExt
@@ -14,18 +14,18 @@ module Data.Cassie.CLI.Module
     , ParsedCassieError
     ) where
 
+import safe CassieCLI.Module.Internal
+import safe CassieCLI.MonadLookup
+import safe CassieCLI.Parser.Lang (parseCassiePhrases, Import)
+import safe CassieCLI.Parser.ParsedTypes
+import safe CassieCLI.Utils (splitStrAt, startsWith)
 import safe Control.Arrow
 import safe Control.Monad
 import safe Control.Monad.Except (runExceptT, throwError, ExceptT)
 import safe Control.Monad.RWS (execRWST)
 import safe Control.Monad.Writer (runWriterT, tell, WriterT)
 import safe Control.Monad.Trans
-import safe Data.Cassie.CLI.Module.Internal
-import safe Data.Cassie.CLI.MonadLookup
-import safe Data.Cassie.CLI.Parser.Lang (parseCassiePhrases, Import)
-import safe Data.Cassie.CLI.Parser.ParsedTypes
-import safe Data.Cassie.CLI.Utils (splitStrAt, startsWith)
-import safe Data.Cassie.Solver.Internal
+import safe Data.Cassie.Solver
 import safe Data.List as List
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
@@ -125,7 +125,7 @@ tryGetModuleSource :: (Monad m, MonadLookup FilePath String m)
 tryGetModuleSource fp 
     = (lift .lift $ lookupM fp) 
     >>= maybe 
-        (throwError . ImportError $ FileDoesNotExist fp) 
+        (throwError . ImportError . show $ FileDoesNotExist fp) 
         return
 
 -- | Builds the global context of a system prior to solving it. This 
@@ -135,7 +135,7 @@ tryGetModuleSource fp
 --   2. A @Context@ map structure of symbols to functions or constant values
 --   3. A pool of equations parsed out in the system. 
 buildGlobalCtx :: FilePath -> String -> Either (CassieError mg u n) ([Import], ParsedCtx, ParsedEqPool)
-buildGlobalCtx = curry (left ParserError . uncurry parseCassiePhrases)
+buildGlobalCtx = curry (left (ParserError . show) . uncurry parseCassiePhrases)
 
 -- | Checks a given import for recursive dependencies, 
 --   throwing @FoundRecursiveImport@ when a recursive
@@ -148,7 +148,7 @@ checkForRecursion parentPaths childImports =
     let 
         recursiveImports = parentPaths `Set.intersection` (Set.fromList $ map fst childImports)
     in when (Set.empty /= recursiveImports)
-        $ throwError . ImportError $ FoundRecursiveImport
+        $ throwError . ImportError . show $ FoundRecursiveImport
 
 -- | Throws a @FailedToConstrain@ error when the given equation pool is not empty.
 assertConstrained :: Monad m => ParsedEqPool -> CassieModuleT m ()

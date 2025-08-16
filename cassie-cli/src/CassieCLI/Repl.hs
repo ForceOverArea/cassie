@@ -1,17 +1,17 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE LambdaCase #-}
-module Repl 
+module CassieCLI.Repl 
     ( cassieReplMain
     ) where
 
+import safe CassieCLI.Module (solveModular)
+import safe CassieCLI.Parser.ParsedTypes 
+import safe CassieCLI.Parser.Lang (parsePhrase, Phrase(..))
 import safe Control.Arrow
-import safe Control.Monad
 import safe Control.Monad.State (evalStateT, get, modify, put, StateT)
 import safe Control.Monad.Trans (liftIO)
-import safe Data.Cassie.CLI 
-import safe Data.Cassie.Solver
+import safe Data.Cassie.Solver 
 import safe qualified Data.Map as Map
-import safe Data.Maybe
 import safe System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
 
 type CassieRepl = StateT CassieReplState IO
@@ -78,7 +78,7 @@ cassieRepl =
 
 importSource :: FilePath -> Symbols -> CassieRepl ()
 importSource fp imports = do
-    result <- liftIO $ fst <$> cassieMain fp imports 
+    result <- liftIO $ fst <$> solveModular fp imports 
     case result of  
         Left err -> liftIO $ print err
         Right (ctx, soln) -> do

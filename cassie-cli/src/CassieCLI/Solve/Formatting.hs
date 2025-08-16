@@ -1,16 +1,16 @@
 {-# LANGUAGE Safe #-}
-module Solve.Formatting
+module CassieCLI.Solve.Formatting
     ( renderSymbolicSolns
     ) where
 
+import safe CassieCLI.Solve.Internal (CassieCLI)
+import safe CassieCLI.Parser.ParsedTypes (ParsedSoln)
+import safe CassieCLI.Solve.Settings (constrained', numeric', symbolic', CassieJSON(..))
 import safe Control.Monad
 import safe Control.Monad.RWS (asks, tell)
-import safe Data.Cassie.CLI (ParsedSoln)
-import safe Data.Cassie.Structures (Symbol)
 import safe qualified Data.Cassie.Solver as CSlv (SolutionItem(..))
+import safe Data.Cassie.Structures (Symbol)
 import safe qualified Data.Map as Map
-import safe Solve.Internal (CassieCLI)
-import safe Solve.Settings (constrained', numeric', symbolic', CassieJSON(..))
 
 newLine :: String
 newLine = ""

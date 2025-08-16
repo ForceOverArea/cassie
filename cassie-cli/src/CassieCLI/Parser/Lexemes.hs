@@ -1,6 +1,6 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedLists #-}
-module Data.Cassie.CLI.Parser.Lexemes 
+module CassieCLI.Parser.Lexemes 
     ( difference
     , expression
     , function
@@ -22,10 +22,8 @@ module Data.Cassie.CLI.Parser.Lexemes
 import safe Prelude hiding (exponent, logBase, product, sum)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
-import safe Data.Cassie.Solver.Internal (Symbols) 
-import safe Data.Cassie.Structures.Instances.Real (RealMagma(..), RealAlgStruct)
-import safe Data.Cassie.Structures.Internal (AlgStruct(..))
-import safe Data.Cassie.Structures.Magmas (ExpnMagma(..))
+import safe Data.Cassie.Solver (Symbols) 
+import safe Data.Cassie.Structures (AlgStruct(..), ExpnMagma(..), RealMagma(..), RealAlgStruct)
 import safe Text.Parsec
 import safe Text.Parsec.Language (haskell)
 import safe Text.Parsec.Token (GenTokenParser(..)) 

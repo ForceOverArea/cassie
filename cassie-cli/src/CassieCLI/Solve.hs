@@ -1,17 +1,17 @@
 {-# LANGUAGE Trustworthy #-}
-module Solve 
+module CassieCLI.Solve 
     ( cassieSolveMain
     ) where
 
 import safe Control.Arrow
 import safe Control.Monad.RWS (asks, runRWST)
 import safe Control.Monad.Trans (liftIO)
-import safe Data.Cassie.CLI (cassieMain, relPathDir, relPathFile)
+import safe CassieCLI.Module (solveModular, relPathDir, relPathFile)
 import safe Data.List as List
 import safe qualified Data.Set as Set
-import safe Solve.Internal (CassieCLI)
-import safe Solve.Formatting (renderSymbolicSolns)
-import safe Solve.Settings (constrained', numeric', parseCassieJSON, CassieJSON(..))
+import safe CassieCLI.Solve.Internal (CassieCLI)
+import safe CassieCLI.Solve.Formatting (renderSymbolicSolns)
+import safe CassieCLI.Solve.Settings (constrained', numeric', parseCassieJSON, CassieJSON(..))
 import System.Directory (getCurrentDirectory, setCurrentDirectory)
 
 cassieSolveMain :: [String] -> IO ()
@@ -33,7 +33,7 @@ cassieCliMain = do
         >>> constrained' &&& numeric'
         >>> uncurry (++)
         >>> Set.fromList
-    result <- liftIO $ cassieMain entryModule keySolutions
+    result <- liftIO $ solveModular entryModule keySolutions
     let (maybeSoln, _showSteps) = (second $ mapM_ putStrLn) result
     let (_ctx, soln) = unwrapEither maybeSoln
     renderSymbolicSolns soln 

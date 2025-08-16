@@ -2,10 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import safe Init (cassieInitMain)
-import safe Internal (ensureConfigDirectoryExists, consoleLogger)
-import safe Repl (cassieReplMain)
-import safe Solve (cassieSolveMain)
+import safe CassieCLI.Init (cassieInitMain)
+import safe CassieCLI.Internal (ensureConfigDirectoryExists, consoleLogger)
+import safe CassieCLI.Repl (cassieReplMain)
+import safe CassieCLI.Solve (cassieSolveMain)
 import safe System.Environment (getArgs)
 
 main :: IO () -- TODO: fix argv processing

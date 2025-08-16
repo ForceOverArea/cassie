@@ -1,5 +1,5 @@
 {-# LANGUAGE Safe #-}
-module Data.Cassie.CLI.Parser.ParsedTypes 
+module CassieCLI.Parser.ParsedTypes 
     ( ParsedCtx
     , ParsedCtxItem
     , ParsedElement
@@ -10,8 +10,8 @@ module Data.Cassie.CLI.Parser.ParsedTypes
     , ParsedUnary
     ) where
 
-import safe Data.Cassie.Rules.Evaluate (Context, CtxItem)
-import safe Data.Cassie.Solver.Internal
+import safe Data.Cassie.Rules (Context, CtxItem)
+import safe Data.Cassie.Solver
 import safe Data.Cassie.Structures
 
 -- | The concrete type of @Context mg u n@ that parsing Cassie syntax will yield.
