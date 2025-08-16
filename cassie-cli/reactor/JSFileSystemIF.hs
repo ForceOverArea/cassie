@@ -1,0 +1,4 @@
+module JSFileSystemIF 
+    ( JSFileSystemT
+    ) where
+
