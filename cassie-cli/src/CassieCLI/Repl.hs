@@ -5,16 +5,16 @@ module CassieCLI.Repl
     ) where
 
 import safe CassieCLI.Module (solveModular)
+import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
 import safe CassieCLI.Parser.ParsedTypes 
 import safe CassieCLI.Parser.Lang (parsePhrase, Phrase(..))
-import safe Control.Arrow
 import safe Control.Monad.State (evalStateT, get, modify, put, StateT)
-import safe Control.Monad.Trans (liftIO)
+import safe Control.Monad.Trans (MonadTrans(..))
 import safe Data.Cassie.Solver 
 import safe qualified Data.Map as Map
 import safe System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
 
-type CassieRepl = StateT CassieReplState IO
+type CassieRepl t = StateT CassieReplState (t IO)
 
 data CassieReplState = CassieReplState
     { context  :: ParsedCtx 
@@ -36,13 +36,13 @@ instance Monoid CassieReplState where
 cursor :: String
 cursor = ">>> "
 
-cassieReplMain :: [String] -> IO ()
+cassieReplMain :: MonadTrans t => [String] -> CassieRepl m ()
 cassieReplMain _argv = do
-    hSetBuffering stdout NoBuffering
+    lift $ hSetBuffering stdout NoBuffering
     evalStateT cassieRepl mempty
     return ()
 
-cassieRepl :: CassieRepl ()
+cassieRepl :: MonadVirtFS m => CassieRepl m ()
 cassieRepl = 
     let
         -- | Adds a semicolon to the lexeme, reparses it, and 
@@ -50,14 +50,14 @@ cassieRepl =
         addSemicolonAndReparse lexeme err = 
             case parsePhrase $ lexeme ++ ";" of
                 Right parsedItem -> processReplState parsedItem
-                Left _err -> liftIO $ print err
+                Left _err -> lift $ print err
         
         -- | Adds a semicolon and reparses the given lexeme for convenience
         catchMissingSemicolonError = 
             maybe (pure ()) . addSemicolonAndReparse
     in do
-    _ <- liftIO $ putStr cursor 
-    command <- liftIO getLine
+    _ <- lift $ putStr cursor 
+    command <- lift getLine
     case command of 
         "quit" -> return ()
         "show" -> do
@@ -76,16 +76,16 @@ cassieRepl =
             catchMissingSemicolonError lexeme parseError
             cassieRepl
 
-importSource :: FilePath -> Symbols -> CassieRepl ()
+importSource :: MonadVirtFS m => FilePath -> Symbols -> CassieRepl m ()
 importSource fp imports = do
-    result <- liftIO $ fst <$> solveModular fp imports 
-    case result of  
+    result <- lift $ fst <$> solveModular fp imports 
+    case result of
         Left err -> liftIO $ print err
         Right (ctx, soln) -> do
             modify . context' $ Map.union ctx
             modify . solved' $ Map.union soln
 
-processReplState :: Phrase -> CassieRepl ()
+processReplState :: MonadVirtFS m => Phrase -> CassieRepl m ()
 processReplState phrs = do
     case phrs of
         ParsedConst (sym, item) -> modify . context' $ Map.insert sym item
@@ -97,11 +97,11 @@ processReplState phrs = do
         _                       -> return ()
     return ()
 
-showSolnWhenSolvingEquation :: CassieRepl ()
+showSolnWhenSolvingEquation :: MonadVirtFS m => CassieRepl m ()
 showSolnWhenSolvingEquation = 
     do
         CassieReplState ctx soln eqPool <- get
-        updatedSolution <- liftIO $ solveCassieSystemT ctx soln eqPool
+        updatedSolution <- lift $ solveCassieSystemT ctx soln eqPool
         case updatedSolution of
             Left err -> liftIO $ print err
             Right (soln', eqPool') -> do
@@ -113,7 +113,7 @@ showSolnWhenSolvingEquation =
                     liftIO $ putStrLn "equation not solvable... yet"
                 return ()
 
-showSolution :: ParsedSoln -> CassieRepl ()
+showSolution :: MonadVirtFS m => ParsedSoln -> CassieRepl m ()
 showSolution solutionMap = 
     let 
         renderNumericSolnForRepl = either (const "") show . possVal

@@ -15,7 +15,7 @@ module CassieCLI.Module
     ) where
 
 import safe CassieCLI.Module.Internal
-import safe CassieCLI.MonadLookup
+import safe CassieCLI.MonadVirtFS
 import safe CassieCLI.Parser.Lang (parseCassiePhrases, Import)
 import safe CassieCLI.Parser.ParsedTypes
 import safe CassieCLI.Utils (splitStrAt, startsWith)
@@ -36,11 +36,9 @@ type ParsedCassieError = CassieError ParsedMagma ParsedUnary ParsedElement
 
 -- | Given an initial context and a module path (either in the 
 --   filesystem provided by @IO@ or a virtual one implementing
---   @MonadLookup@), this function recursively solves a chain of 
+--   @MonadVirtFS@), this function recursively solves a chain of 
 --   dependent systems of equations.
-solveModular :: ( Monoid (m FilePath)
-                , MonadLookup FilePath String m
-                ) 
+solveModular :: MonadVirtFS m 
     => FilePath
     -> Symbols
     -> m (Either ParsedCassieError ((ParsedCtx, ParsedSoln)), [String])
@@ -51,9 +49,7 @@ solveModular thisModule keySolutions = runWriterT . runExceptT
 --   
 --   
 --   This is effectively @main@ for the CASsie CLI.
-solveModularSystem :: ( Monoid (m FilePath)
-                      , MonadLookup FilePath String m
-                      ) 
+solveModularSystem :: MonadVirtFS m
     => Set.Set String 
     -> ParsedCtx
     -> ParsedSoln
@@ -96,7 +92,7 @@ solveModularSystem dependentModules accumCtx accumSoln (localModule, localExport
                    , accumSoln `Map.union` (importedSoln' `exportUnion` localSoln)
                    ) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
 
-getModuleOrBaseLibrary :: (MonadLookup FilePath String m, Monoid (m FilePath)) 
+getModuleOrBaseLibrary :: MonadVirtFS m 
     => String 
     -> CassieModuleT m String
 getModuleOrBaseLibrary localModule = 
@@ -104,11 +100,11 @@ getModuleOrBaseLibrary localModule =
         baseModuleRelPath = intercalate "/" . drop 1 $ splitStrAt '/' localModule
     in lift . lift 
         $ if localModule `startsWith` "Cassie" then
-            (++ cassieConfigDir ++ "/" ++ baseModuleRelPath ++ cassieFileExt) <$> pathHome 
+            (++ cassieConfigDir ++ "/" ++ baseModuleRelPath ++ cassieFileExt) <$> vGetHomeDirectory 
         else
-            (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
+            (++ "/" ++ localModule ++ cassieFileExt) <$> vGetCurrentDirectory
 
-tryBuildModuleCtx :: MonadLookup FilePath String m 
+tryBuildModuleCtx :: MonadVirtFS m 
     => FilePath 
     -> CassieModuleT m ([Import], ParsedCtx, ParsedEqPool)
 tryBuildModuleCtx fp 
@@ -119,11 +115,11 @@ tryBuildModuleCtx fp
 -- | Tries to read a source file (or map entry), returning its source
 --   if the file exists or throwing a @FileDoesNotExist@ error if it
 --   does not.
-tryGetModuleSource :: (Monad m, MonadLookup FilePath String m) 
+tryGetModuleSource :: MonadVirtFS m
     => FilePath 
     -> CassieModuleT m String
 tryGetModuleSource fp 
-    = (lift .lift $ lookupM fp) 
+    = (lift .lift $ vTryReadFile fp) 
     >>= maybe 
         (throwError . ImportError . show $ FileDoesNotExist fp) 
         return

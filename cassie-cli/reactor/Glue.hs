@@ -1,17 +1,18 @@
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Glue 
     ( cassieWrapper
     ) where
 
-import Data.List
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as AK
-import qualified Data.Aeson.KeyMap as AKM
-import qualified Data.Map as Map
-import qualified Data.Text as Text
-import Data.Cassie.Solver (CassieError, Solution, SolutionItem(..))
-import Data.Cassie.Parser (ParsedEqn, ParsedCtxItem, ParsedCtx)
-import Data.Cassie.Structures (Symbol)
+import safe Data.List
+import safe qualified Data.Aeson as A
+import safe qualified Data.Aeson.Key as AK
+import safe qualified Data.Aeson.KeyMap as AKM
+import safe qualified Data.Map as Map
+import safe qualified Data.Text as Text
+import safe Data.Cassie.Solver (CassieError, Solution, SolutionItem(..))
+import safe Data.Cassie.Parser (ParsedEqn, ParsedCtxItem, ParsedCtx)
+import safe Data.Cassie.Structures (Symbol)
 
 newtype Solution' = Solution' (String, ParsedEqn, [String], Either CassieError Double)
 

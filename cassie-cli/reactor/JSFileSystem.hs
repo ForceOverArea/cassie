@@ -1,9 +1,12 @@
-{-# LANGUAGE Safe #-}
+{-# LANGUAGE Trustworthy #-}
 module JSFileSystem
-    ( JSFileSystemT
+    ( JSFileSystemT(runJSFileSystemT)
     ) where
 
-import safe 
+import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
+import safe Control.Monad (MonadFail(..))
+import safe Control.Monad.Trans (MonadTrans(..))
+import GHC.Wasm.Prim
 
 newtype JSFileSystemT m a = JSFileSystemT { runJSFileSystemT :: m a }
 
@@ -25,4 +28,32 @@ instance Monad m => Monad (JSFileSystemT m) where
 instance MonadTrans JSFileSystemT where
     lift = JSFileSystemT
 
-instance 
+instance MonadFail m => MonadFail (JSFileSystemT m) where
+    fail s = lift $ fail s
+
+instance MonadFail m => MonadVirtFS (JSFileSystemT m) where
+    vReadFile = return . fromJSString . fs_readFileSync . toJSString
+
+    vWriteFile path contents = 
+        let 
+            pathJS     = toJSString path
+            contentsJS = toJSString contents 
+        in return $ fs_writeFileSync pathJS contentsJS
+
+    vGetCurrentDirectory = return $ fromJSString process_cwd
+
+    vSetCurrentDirectory path = 
+        let 
+            pathJS = toJSString path
+        in return $ process_chdir pathJS
+
+    vGetHomeDirectory = return $ fromJSString os_homedir
+
+    vDoesFileExist = return . fs_lstat_isFile . toJSString
+
+foreign import javascript fs_readFileSync :: JSString -> JSString
+foreign import javascript fs_writeFileSync :: JSString -> JSString -> ()
+foreign import javascript fs_lstat_isFile :: JSString -> Bool
+foreign import javascript os_homedir :: JSString
+foreign import javascript process_cwd :: JSString
+foreign import javascript process_chdir :: JSString -> ()
