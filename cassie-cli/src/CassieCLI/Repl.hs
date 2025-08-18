@@ -8,13 +8,14 @@ import safe CassieCLI.Module (solveModular)
 import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
 import safe CassieCLI.Parser.ParsedTypes 
 import safe CassieCLI.Parser.Lang (parsePhrase, Phrase(..))
+import safe Control.Arrow
+import safe Control.Monad.IO.Class (MonadIO(..))
 import safe Control.Monad.State (evalStateT, get, modify, put, StateT)
-import safe Control.Monad.Trans (MonadTrans(..))
 import safe Data.Cassie.Solver 
 import safe qualified Data.Map as Map
 import safe System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
 
-type CassieRepl t = StateT CassieReplState (t IO)
+type CassieRepl m = StateT CassieReplState m 
 
 data CassieReplState = CassieReplState
     { context  :: ParsedCtx 
@@ -36,13 +37,13 @@ instance Monoid CassieReplState where
 cursor :: String
 cursor = ">>> "
 
-cassieReplMain :: MonadTrans t => [String] -> CassieRepl m ()
+cassieReplMain :: (MonadVirtFS m, MonadIO m) => [String] -> m ()
 cassieReplMain _argv = do
-    lift $ hSetBuffering stdout NoBuffering
+    liftIO $ hSetBuffering stdout NoBuffering
     evalStateT cassieRepl mempty
     return ()
 
-cassieRepl :: MonadVirtFS m => CassieRepl m ()
+cassieRepl :: (MonadVirtFS m, MonadIO m) => CassieRepl m ()
 cassieRepl = 
     let
         -- | Adds a semicolon to the lexeme, reparses it, and 
@@ -50,14 +51,14 @@ cassieRepl =
         addSemicolonAndReparse lexeme err = 
             case parsePhrase $ lexeme ++ ";" of
                 Right parsedItem -> processReplState parsedItem
-                Left _err -> lift $ print err
+                Left _err -> liftIO $ print err
         
         -- | Adds a semicolon and reparses the given lexeme for convenience
         catchMissingSemicolonError = 
             maybe (pure ()) . addSemicolonAndReparse
     in do
-    _ <- lift $ putStr cursor 
-    command <- lift getLine
+    _ <- liftIO $ putStr cursor 
+    command <- liftIO getLine
     case command of 
         "quit" -> return ()
         "show" -> do
@@ -76,16 +77,16 @@ cassieRepl =
             catchMissingSemicolonError lexeme parseError
             cassieRepl
 
-importSource :: MonadVirtFS m => FilePath -> Symbols -> CassieRepl m ()
+importSource :: (MonadVirtFS m, MonadIO m) => FilePath -> Symbols -> CassieRepl m ()
 importSource fp imports = do
-    result <- lift $ fst <$> solveModular fp imports 
+    result <- liftIO $ fst <$> solveModular fp imports 
     case result of
         Left err -> liftIO $ print err
         Right (ctx, soln) -> do
             modify . context' $ Map.union ctx
             modify . solved' $ Map.union soln
 
-processReplState :: MonadVirtFS m => Phrase -> CassieRepl m ()
+processReplState :: (MonadVirtFS m, MonadIO m) => Phrase -> CassieRepl m ()
 processReplState phrs = do
     case phrs of
         ParsedConst (sym, item) -> modify . context' $ Map.insert sym item
@@ -97,11 +98,11 @@ processReplState phrs = do
         _                       -> return ()
     return ()
 
-showSolnWhenSolvingEquation :: MonadVirtFS m => CassieRepl m ()
+showSolnWhenSolvingEquation :: (MonadVirtFS m, MonadIO m) => CassieRepl m ()
 showSolnWhenSolvingEquation = 
     do
         CassieReplState ctx soln eqPool <- get
-        updatedSolution <- lift $ solveCassieSystemT ctx soln eqPool
+        updatedSolution <- solveCassieSystemT ctx soln eqPool
         case updatedSolution of
             Left err -> liftIO $ print err
             Right (soln', eqPool') -> do
@@ -113,7 +114,7 @@ showSolnWhenSolvingEquation =
                     liftIO $ putStrLn "equation not solvable... yet"
                 return ()
 
-showSolution :: MonadVirtFS m => ParsedSoln -> CassieRepl m ()
+showSolution :: (MonadVirtFS m, MonadIO m) => ParsedSoln -> CassieRepl m ()
 showSolution solutionMap = 
     let 
         renderNumericSolnForRepl = either (const "") show . possVal

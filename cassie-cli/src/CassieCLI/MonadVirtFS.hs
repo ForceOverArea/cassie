@@ -5,7 +5,7 @@ module CassieCLI.MonadVirtFS
     ( MonadVirtFS(..)
     ) where
 
-import System.Directory (doesFileExist, getCurrentDirectory, getHomeDirectory, setCurrentDirectory)
+import System.Directory (createDirectoryIfMissing, doesFileExist, getCurrentDirectory, getHomeDirectory, setCurrentDirectory)
 
 class (Monad m, MonadFail m) => MonadVirtFS m where 
     vReadFile :: FilePath -> m String
@@ -19,6 +19,8 @@ class (Monad m, MonadFail m) => MonadVirtFS m where
     vGetHomeDirectory :: m FilePath
 
     vDoesFileExist :: FilePath -> m Bool
+
+    vCreateDirectoryIfMissing :: Bool -> FilePath -> m ()
 
     vTryReadFile :: FilePath -> m (Maybe String)
     vTryReadFile fp = do
@@ -40,3 +42,5 @@ instance MonadVirtFS IO where
     vGetHomeDirectory = getHomeDirectory
 
     vDoesFileExist = doesFileExist
+
+    vCreateDirectoryIfMissing = createDirectoryIfMissing

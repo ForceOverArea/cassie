@@ -55,7 +55,7 @@ executable cassie
 -- NOTE: this target is not intended to be built without the experimental WASI backend
 executable reactor
     import:             warnings
-    ghc-options:        -no-hs-main -optl-Wl,--export=solveSystemHs -optl-mexec-model=reactor
+    ghc-options:        -no-hs-main -optl-Wl,--export=main -optl-mexec-model=reactor
     main-is:            Main.hs
     other-modules:      JSFileSystem,
     build-depends:      aeson       >= 2.2.3.0,

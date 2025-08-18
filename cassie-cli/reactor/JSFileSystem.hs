@@ -4,7 +4,7 @@ module JSFileSystem
     ) where
 
 import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
-import safe Control.Monad (MonadFail(..))
+import safe Control.Monad.IO.Class (MonadIO(..))
 import safe Control.Monad.Trans (MonadTrans(..))
 import GHC.Wasm.Prim
 
@@ -31,6 +31,9 @@ instance MonadTrans JSFileSystemT where
 instance MonadFail m => MonadFail (JSFileSystemT m) where
     fail s = lift $ fail s
 
+instance MonadIO m => MonadIO (JSFileSystemT m) where
+    liftIO = JSFileSystemT . liftIO
+
 instance MonadFail m => MonadVirtFS (JSFileSystemT m) where
     vReadFile = return . fromJSString . fs_readFileSync . toJSString
 
@@ -51,9 +54,15 @@ instance MonadFail m => MonadVirtFS (JSFileSystemT m) where
 
     vDoesFileExist = return . fs_lstat_isFile . toJSString
 
+    vCreateDirectoryIfMissing p path = 
+        let 
+            pathJS = toJSString path
+        in return $ fs_mkdir p pathJS
+
 foreign import javascript fs_readFileSync :: JSString -> JSString
 foreign import javascript fs_writeFileSync :: JSString -> JSString -> ()
 foreign import javascript fs_lstat_isFile :: JSString -> Bool
+foreign import javascript fs_mkdir :: Bool -> JSString -> ()
 foreign import javascript os_homedir :: JSString
 foreign import javascript process_cwd :: JSString
 foreign import javascript process_chdir :: JSString -> ()

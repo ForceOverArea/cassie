@@ -12,12 +12,14 @@ import safe System.Environment (getArgs)
 import safe JSFileSystem (JSFileSystemT(runJSFileSystemT))
 
 main :: IO ()
-main = runJSFileSystemT $ do
+main = mainJS
+
+mainJS :: IO ()
+mainJS = runJSFileSystemT $ do
     lift getArgs >>= \case
         "init"  : name : argv   -> ensureConfigDirectoryExists consoleLogger >> cassieInitMain name argv
         "repl"  : argv          -> cassieReplMain argv
         "solve" : argv          -> cassieSolveMain argv
         _ -> error "Invalid command. Valid commands include 'init <projectName>' or 'solve'" 
 
-
--- foreign export javascript solveSystemHs :: JSString -> JSString
+foreign export javascript mainJS :: IO ()

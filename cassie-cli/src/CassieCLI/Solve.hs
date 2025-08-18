@@ -1,4 +1,4 @@
-{-# LANGUAGE Trustworthy #-}
+{-# LANGUAGE Safe #-}
 module CassieCLI.Solve 
     ( cassieSolveMain
     ) where
@@ -13,18 +13,18 @@ import safe CassieCLI.Solve.Formatting (renderSymbolicSolns)
 import safe CassieCLI.Solve.Internal (CassieCLI)
 import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
 import safe CassieCLI.Solve.Settings (constrained', numeric', parseCassieJSON, CassieJSON(..))
-import System.Directory (getCurrentDirectory, setCurrentDirectory)
+import safe Control.Monad.IO.Class (MonadIO(..))
 
-cassieSolveMain :: [String] -> IO ()
+cassieSolveMain :: (MonadVirtFS m, MonadIO m) => [String] -> m ()
 cassieSolveMain _argv = do
-    cassieJSON <- parseCassieJSON <$> readFile "./Cassie.json"
+    cassieJSON <- liftIO $ parseCassieJSON <$> readFile "./Cassie.json"
     let ep = relPathFile $ entryPoint cassieJSON
-    putStrLn $ "solving from entry point: " ++ ep
+    liftIO . putStrLn $ "solving from entry point: " ++ ep
     (_, _, solutionLog) <- runRWST cassieCliMain cassieJSON ()
-    writeFile (ep ++ ".soln.md") $ intercalate "\n" solutionLog
+    vWriteFile (ep ++ ".soln.md") $ intercalate "\n" solutionLog
     return ()
 
-cassieCliMain :: MonadVirtFS m => CassieCLI m ()
+cassieCliMain :: (MonadVirtFS m, MonadIO m) => MonadVirtFS m => CassieCLI m ()
 cassieCliMain = do 
     (rootDir, entryModule) <- (relPathDir &&& relPathFile) <$> asks entryPoint
     pwd <- lift $ vGetCurrentDirectory
