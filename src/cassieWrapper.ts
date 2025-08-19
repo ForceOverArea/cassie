@@ -15,7 +15,7 @@ export const process_cwd        = cwd;
 export const process_chdir      = chdir;
 
 const WASM_MODULE_PATH = './reactor.wasm';
-const wasi = new WASI();
+const wasi = new WASI({ version: "preview1" });
 const jsffiExports = {};
 
 interface Wasm32WasiCassieModule {
@@ -24,7 +24,7 @@ interface Wasm32WasiCassieModule {
 
 export async function wasiInit(): Promise<void> {
   const wasm = await WebAssembly.instantiateStreaming(
-    fetch(WASM_MODULE_PATH),
+    fetch(new URL(WASM_MODULE_PATH)),
     Object.assign(
       { ghc_wasm_jsffi: ghc_wasm_jsffi(jsffiExports) },
       wasi.getImportObject()

@@ -2,20 +2,13 @@
 dist-newstyle
 build_log.txt
 
-# VSCodeCounter output
-.VSCodeCounter
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
 
 # NodeJS/TypeScript
 node_modules
 dist
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# VSCodeCounter output
+.VSCodeCounter
