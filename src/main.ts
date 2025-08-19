@@ -1,8 +1,8 @@
-import { WASI } from "@runno/wasi";
-import * as nodeJSStubs from "./nodeJsStubs";
+import { cassieMain, wasiInit } from "./cassieWrapper.js";
 
-function main() {
-
+async function main() {
+    await wasiInit();
+    await cassieMain();
 }
 
 main();

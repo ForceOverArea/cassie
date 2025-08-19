@@ -1,21 +1,13 @@
-# Cabal/Haskell Build 
+# Cabal/Haskell build 
 dist-newstyle
 build_log.txt
+
+# VSCodeCounter output
 .VSCodeCounter
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
+# NodeJS/TypeScript
 node_modules
 dist
-dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
