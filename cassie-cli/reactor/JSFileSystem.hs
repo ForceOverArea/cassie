@@ -34,35 +34,35 @@ instance MonadFail m => MonadFail (JSFileSystemT m) where
 instance MonadIO m => MonadIO (JSFileSystemT m) where
     liftIO = JSFileSystemT . liftIO
 
-instance MonadFail m => MonadVirtFS (JSFileSystemT m) where
-    vReadFile = return . fromJSString . fs_readFileSync . toJSString
+instance (MonadFail m, MonadIO m) => MonadVirtFS (JSFileSystemT m) where
+    vReadFile path = liftIO $ fromJSString <$> (fs_readFileSync $ toJSString path)
 
     vWriteFile path contents = 
         let 
             pathJS     = toJSString path
             contentsJS = toJSString contents 
-        in return $ fs_writeFileSync pathJS contentsJS
+        in liftIO $ fs_writeFileSync pathJS contentsJS
 
-    vGetCurrentDirectory = return $ fromJSString process_cwd
+    vGetCurrentDirectory = liftIO $ fromJSString <$> process_cwd
 
     vSetCurrentDirectory path = 
         let 
             pathJS = toJSString path
-        in return $ process_chdir pathJS
+        in liftIO $ process_chdir pathJS
 
-    vGetHomeDirectory = return $ fromJSString os_homedir
+    vGetHomeDirectory = liftIO $ fromJSString <$> os_homedir
 
-    vDoesFileExist = return . fs_lstat_isFile . toJSString
+    vDoesFileExist = liftIO . fs_lstat_isFile . toJSString
 
     vCreateDirectoryIfMissing p path = 
         let 
             pathJS = toJSString path
-        in return $ fs_mkdir p pathJS
+        in liftIO $ fs_mkdir p pathJS
 
-foreign import javascript fs_readFileSync :: JSString -> JSString
-foreign import javascript fs_writeFileSync :: JSString -> JSString -> ()
-foreign import javascript fs_lstat_isFile :: JSString -> Bool
-foreign import javascript fs_mkdir :: Bool -> JSString -> ()
-foreign import javascript os_homedir :: JSString
-foreign import javascript process_cwd :: JSString
-foreign import javascript process_chdir :: JSString -> ()
+foreign import javascript fs_readFileSync :: JSString -> IO JSString
+foreign import javascript fs_writeFileSync :: JSString -> JSString -> IO ()
+foreign import javascript fs_lstat_isFile :: JSString -> IO Bool
+foreign import javascript fs_mkdir :: Bool -> JSString -> IO ()
+foreign import javascript os_homedir :: IO JSString
+foreign import javascript process_cwd :: IO JSString
+foreign import javascript process_chdir :: JSString -> IO ()
