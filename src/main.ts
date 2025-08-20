@@ -1,8 +1,14 @@
-import { cassieMain, wasiInit } from "./cassieWrapper.js";
+import { wasiInit } from './cassieWrapper.js';
 
+/**
+ * Entry point for the NodeJS distribution of Cassie
+ */
 async function main() {
-    await wasiInit();
-    await cassieMain();
+  const wasi = await wasiInit();
+  await wasi
+    .instance
+    .exports
+    .mainJS();
 }
 
 main();

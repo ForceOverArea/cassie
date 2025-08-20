@@ -1,9 +1,11 @@
 {
-    "include": [ "src/**/*" ],
-    "compilerOptions": {
-        "allowJs": true,
-        "declaration": true,
-        "module": "nodenext",
-        "outDir": "dist"
-    },
+  "include": [ "src/**/*" ],
+  "compilerOptions": {
+    "allowJs": true,
+    "declaration": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "target": "esnext"
+  },
 }

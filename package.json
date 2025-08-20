@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "A simple, homebrewed CAS",
   "main": "main.js",
-  "type": "module",
   "author": "Grant Christiansen",
   "license": "ISC",
+  "type": "module",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "postinstall": "./build.sh"
+    "cli": "node --experimental-wasi-unstable-preview1 ./dist/main.js"
   },
   "repository": {
     "type": "git",

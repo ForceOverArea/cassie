@@ -13,4 +13,4 @@ npx tsc $SRC_REACTOR_DIR/ghc_wasm_jsffi.js --allowJS --declaration --emitDeclara
 
 # Compile Typescript to JS module (creates 'dist' directory)
 npx tsc
-cp $WASI_REACTOR_DIR $DIST_REACTOR_DIR
+cp $CABAL_REACTOR_PATH $DIST_REACTOR_DIR
