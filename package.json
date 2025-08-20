@@ -10,7 +10,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "cli": "node --experimental-wasi-unstable-preview1 ./dist/main.js"
+    "cli": "node --trace-uncaught --trace-warnings --experimental-wasi-unstable-preview1 ./dist/main.js"
   },
   "repository": {
     "type": "git",

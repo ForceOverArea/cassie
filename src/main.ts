@@ -5,10 +5,6 @@ import { wasiInit } from './cassieWrapper.js';
  */
 async function main() {
   const wasi = await wasiInit();
-  await wasi
-    .instance
-    .exports
-    .mainJS();
 }
 
-main();
+main().catch(reason => console.error(`ligma balls: ${reason}`));

@@ -39,7 +39,7 @@ class JSValManager {
 // To benchmark different setImmediate() implementations in the
 // browser, use https://github.com/jphpsf/setImmediate-shim-demo as a
 // starting point.
-const ligma = (async () => {
+const setImmediate = await (async () => {
   // node, bun, or other scripts might have set this up in the browser
   if (globalThis.setImmediate) {
     return globalThis.setImmediate;
@@ -88,9 +88,7 @@ const ligma = (async () => {
   }
 
   return (cb, ...args) => setTimeout(cb, 0, ...args);
-});
-
-const setImmediate = await ligma;
+})();
 
 export default (__exports) => {
 const __ghc_wasm_jsffi_jsval_manager = new JSValManager();
