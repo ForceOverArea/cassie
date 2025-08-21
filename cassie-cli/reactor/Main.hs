@@ -16,7 +16,7 @@ main = mainJS
 
 mainJS :: IO ()
 mainJS = runJSFileSystemT $ do
-    lift getArgs >>= \case
+    lift (drop 1 <$> getArgs) >>= \case
         "init"  : name : argv   -> ensureConfigDirectoryExists consoleLogger >> cassieInitMain name argv
         "repl"  : argv          -> cassieReplMain argv
         "solve" : argv          -> cassieSolveMain argv

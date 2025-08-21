@@ -59,10 +59,23 @@ instance (MonadFail m, MonadIO m) => MonadVirtFS (JSFileSystemT m) where
             pathJS = toJSString path
         in liftIO $ fs_mkdir p pathJS
 
-foreign import javascript fs_readFileSync :: JSString -> IO JSString
-foreign import javascript fs_writeFileSync :: JSString -> JSString -> IO ()
-foreign import javascript fs_lstat_isFile :: JSString -> IO Bool
-foreign import javascript fs_mkdir :: Bool -> JSString -> IO ()
-foreign import javascript os_homedir :: IO JSString
-foreign import javascript process_cwd :: IO JSString
-foreign import javascript process_chdir :: JSString -> IO ()
+foreign import javascript unsafe "globalThis.fs_readFileSync($1)" 
+    fs_readFileSync :: JSString -> IO JSString
+
+foreign import javascript unsafe "globalThis.fs_writeFileSync($1, $2)" 
+    fs_writeFileSync :: JSString -> JSString -> IO ()
+
+foreign import javascript unsafe "globalThis.fs_lstat_isFile($1)" 
+    fs_lstat_isFile :: JSString -> IO Bool
+
+foreign import javascript unsafe "globalThis.fs_mkdir($1, $2)" 
+    fs_mkdir :: Bool -> JSString -> IO ()
+
+foreign import javascript unsafe "globalThis.os_homedir" 
+    os_homedir :: IO JSString
+
+foreign import javascript unsafe "globalThis.process_cwd" 
+    process_cwd :: IO JSString
+
+foreign import javascript unsafe "globalThis.process_chdir($1)" 
+    process_chdir :: JSString -> IO ()
