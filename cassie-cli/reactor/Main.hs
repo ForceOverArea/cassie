@@ -11,11 +11,15 @@ import safe Control.Monad.Trans (lift)
 import safe System.Environment (getArgs)
 import safe JSFileSystem (JSFileSystemT(runJSFileSystemT))
 
+import safe Control.Monad.IO.Class(liftIO)
+
 main :: IO ()
 main = mainJS
 
 mainJS :: IO ()
 mainJS = runJSFileSystemT $ do
+    liftIO . putStrLn $ "main is running!"
+    liftIO $ print =<< getArgs
     lift (drop 1 <$> getArgs) >>= \case
         "init"  : name : argv   -> ensureConfigDirectoryExists consoleLogger >> cassieInitMain name argv
         "repl"  : argv          -> cassieReplMain argv

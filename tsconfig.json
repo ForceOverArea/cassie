@@ -3,8 +3,8 @@
   "compilerOptions": {
     "allowJs": true,
     "declaration": true,
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "outDir": "dist",
     "target": "esnext"
   },

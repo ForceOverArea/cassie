@@ -17,7 +17,7 @@ import safe Control.Monad.IO.Class (MonadIO(..))
 
 cassieSolveMain :: (MonadVirtFS m, MonadIO m) => [String] -> m ()
 cassieSolveMain _argv = do
-    cassieJSON <- liftIO $ parseCassieJSON <$> readFile "./Cassie.json"
+    cassieJSON <- parseCassieJSON <$> vReadFile "./Cassie.json"
     let ep = relPathFile $ entryPoint cassieJSON
     liftIO . putStrLn $ "solving from entry point: " ++ ep
     (_, _, solutionLog) <- runRWST cassieCliMain cassieJSON ()

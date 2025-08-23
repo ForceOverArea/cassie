@@ -18,8 +18,8 @@ cassieInitMain projectName _argv =
             >>> Text.replace "<schemaPath>" (Text.pack schemaPath)
             >>> Text.unpack
     in do
+        _ <- liftIO . putStrLn $ "running cassieInitMain!"
         jsonTemplatePath <- cassieJSONTemplate
-        projectJSONFile <- liftIO $ readFile jsonTemplatePath
+        projectJSONFile <- vReadFile jsonTemplatePath
         schemaPath <- cassieJSONSchema
         vWriteFile "Cassie.json" $ replaceName schemaPath projectJSONFile
-

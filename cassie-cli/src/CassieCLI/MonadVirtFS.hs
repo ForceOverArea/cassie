@@ -33,7 +33,7 @@ class (Monad m, MonadFail m) => MonadVirtFS m where
 instance MonadVirtFS IO where
     vReadFile = readFile
 
-    vWriteFile = vWriteFile
+    vWriteFile = writeFile
 
     vGetCurrentDirectory = getCurrentDirectory
 
