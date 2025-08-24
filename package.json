@@ -6,8 +6,8 @@
   "author": "Grant Christiansen",
   "license": "ISC",
   "type": "module",
-  "directories": {
-    "doc": "docs"
+  "bin": {
+    "cassiejs": "./dist/main.js"
   },
   "scripts": {
     "repl": "node ./dist/main.js repl"
@@ -27,9 +27,6 @@
     "url": "https://github.com/ForceOverArea/cassie/issues"
   },
   "homepage": "https://github.com/ForceOverArea/cassie#readme",
-  "dependencies": {
-    "@runno/wasi": "^0.10.0"
-  },
   "devDependencies": {
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2"

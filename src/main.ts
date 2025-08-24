@@ -2,17 +2,20 @@ import { readFileSync, writeFileSync, lstatSync, mkdirSync, PathLike } from 'nod
 import { homedir } from 'node:os';
 import { argv, chdir, cwd, stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline/promises';
-import { WASI, WASIContextOptions } from '@runno/wasi'; // use runno since Node's WASI implementation gets indigestion from Haskell's WASM
+import { WASI } from 'node:wasi'; // use runno since Node's WASI implementation gets indigestion from Haskell's WASM
 import ghc_wasm_jsffi from './wasi/ghc_wasm_jsffi.js';
 
 // Constants 
 const CASSIE_STDIN_IF = createInterface({ input: stdin, output: stdout });
-const CASSIE_WASM_STDIO_CONFIG: Partial<WASIContextOptions> = { args: argv, stdout: console.log };
+// const CASSIE_WASM_STDIO_CONFIG: Partial<WASIContextOptions> = { args: argv, stdout: console.log };
 const WASM_REACTOR_PATH = `${import.meta.dirname}/wasi/reactor.wasm`;
 
 // Singletons/mutable data
 const jsffiExports = {};
-const wasi = new WASI(CASSIE_WASM_STDIO_CONFIG);
+const wasi = new WASI({ 
+  version: 'preview1', 
+  args: argv,
+});
 
 // Make interface functions available for Haskell
 globalThis.fs_readFileSync = (path: PathLike) => readFileSync(path, { encoding: 'utf-8' }).toString();
@@ -40,7 +43,7 @@ async function main() {
     Object.assign(jsffiExports, wasm.instance.exports);
     wasi.initialize(wasm);
 
-    await (wasi.instance.exports.mainJS as any as () => Promise<void>)();
+    await (wasm.instance.exports.mainJS as any as () => Promise<void>)();
   } catch (err) {
     caughtErr = err;
   } finally {
