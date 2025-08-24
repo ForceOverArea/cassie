@@ -10,7 +10,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "cli": "node --trace-uncaught --trace-warnings --experimental-wasi-unstable-preview1 ./dist/main.js init ligma"
+    "repl": "node ./dist/main.js repl"
   },
   "repository": {
     "type": "git",

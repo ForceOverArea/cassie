@@ -6,11 +6,12 @@ module CassieCLI.Repl
 
 import safe CassieCLI.Module (solveModular)
 import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
+import safe CassieCLI.MonadVirtGetLine (MonadVirtGetLine(..))
 import safe CassieCLI.Parser.ParsedTypes 
 import safe CassieCLI.Parser.Lang (parsePhrase, Phrase(..))
 import safe Control.Arrow
 import safe Control.Monad.IO.Class (MonadIO(..))
-import safe Control.Monad.State (evalStateT, get, modify, put, StateT)
+import safe Control.Monad.State (evalStateT, get, lift, modify, put, StateT)
 import safe Data.Cassie.Solver 
 import safe qualified Data.Map as Map
 import safe System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
@@ -37,13 +38,13 @@ instance Monoid CassieReplState where
 cursor :: String
 cursor = ">>> "
 
-cassieReplMain :: (MonadVirtFS m, MonadIO m) => [String] -> m ()
+cassieReplMain :: (MonadVirtFS m, MonadVirtGetLine m, MonadIO m) => [String] -> m ()
 cassieReplMain _argv = do
     liftIO $ hSetBuffering stdout NoBuffering
     evalStateT cassieRepl mempty
     return ()
 
-cassieRepl :: (MonadVirtFS m, MonadIO m) => CassieRepl m ()
+cassieRepl :: (MonadVirtFS m, MonadVirtGetLine m, MonadIO m) => CassieRepl m ()
 cassieRepl = 
     let
         -- | Adds a semicolon to the lexeme, reparses it, and 
@@ -58,7 +59,7 @@ cassieRepl =
             maybe (pure ()) . addSemicolonAndReparse
     in do
     _ <- liftIO $ putStr cursor 
-    command <- liftIO getLine
+    command <- lift $ vGetLine
     case command of 
         "quit" -> return ()
         "show" -> do

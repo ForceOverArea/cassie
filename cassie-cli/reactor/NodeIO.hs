@@ -1,40 +1,41 @@
 {-# LANGUAGE Trustworthy #-}
-module JSFileSystem
-    ( JSFileSystemT(runJSFileSystemT)
+module NodeIO
+    ( NodeIOT(runNodeIOT)
     ) where
 
 import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
+import safe CassieCLI.MonadVirtGetLine (MonadVirtGetLine(..))
 import safe Control.Monad.IO.Class (MonadIO(..))
 import safe Control.Monad.Trans (MonadTrans(..))
 import GHC.Wasm.Prim
 
-newtype JSFileSystemT m a = JSFileSystemT { runJSFileSystemT :: m a }
+newtype NodeIOT m a = NodeIOT { runNodeIOT :: m a }
 
-instance Functor m => Functor (JSFileSystemT m) where
-    fmap f (JSFileSystemT x) = JSFileSystemT $ fmap f x
+instance Functor m => Functor (NodeIOT m) where
+    fmap f (NodeIOT x) = NodeIOT $ fmap f x
 
-instance Applicative m => Applicative (JSFileSystemT m) where
-    pure x = JSFileSystemT $ pure x
+instance Applicative m => Applicative (NodeIOT m) where
+    pure x = NodeIOT $ pure x
 
-    JSFileSystemT x <*> JSFileSystemT y = JSFileSystemT $ x <*> y
+    NodeIOT x <*> NodeIOT y = NodeIOT $ x <*> y
 
-instance Monad m => Monad (JSFileSystemT m) where
+instance Monad m => Monad (NodeIOT m) where
     return = pure
 
-    JSFileSystemT action >>= f = JSFileSystemT $ do
+    NodeIOT action >>= f = NodeIOT $ do
         result <- action
-        runJSFileSystemT $ f result
+        runNodeIOT $ f result
 
-instance MonadTrans JSFileSystemT where
-    lift = JSFileSystemT
+instance MonadTrans NodeIOT where
+    lift = NodeIOT
 
-instance MonadFail m => MonadFail (JSFileSystemT m) where
+instance MonadFail m => MonadFail (NodeIOT m) where
     fail s = lift $ fail s
 
-instance MonadIO m => MonadIO (JSFileSystemT m) where
-    liftIO = JSFileSystemT . liftIO
+instance MonadIO m => MonadIO (NodeIOT m) where
+    liftIO = NodeIOT . liftIO
 
-instance (MonadFail m, MonadIO m) => MonadVirtFS (JSFileSystemT m) where
+instance (MonadFail m, MonadIO m) => MonadVirtFS (NodeIOT m) where
     vReadFile path = liftIO $ fromJSString <$> (fs_readFileSync $ toJSString path)
 
     vWriteFile path contents = 
@@ -58,6 +59,12 @@ instance (MonadFail m, MonadIO m) => MonadVirtFS (JSFileSystemT m) where
         let 
             pathJS = toJSString path
         in liftIO $ fs_mkdir p pathJS
+
+instance (Monad m, MonadIO m) => MonadVirtGetLine (NodeIOT m) where
+    vGetLine = liftIO $ fromJSString <$> readLineIF_question
+
+foreign import javascript safe "globalThis.readlineIF_question()"
+    readLineIF_question :: IO JSString
 
 foreign import javascript unsafe "globalThis.fs_readFileSync($1)" 
     fs_readFileSync :: JSString -> IO JSString

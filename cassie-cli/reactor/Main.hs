@@ -9,13 +9,13 @@ import safe CassieCLI.Repl (cassieReplMain)
 import safe CassieCLI.Solve (cassieSolveMain)
 import safe Control.Monad.Trans (lift)
 import safe System.Environment (getArgs)
-import safe JSFileSystem (JSFileSystemT(runJSFileSystemT))
+import safe NodeIO (NodeIOT(runNodeIOT))
 
 main :: IO ()
 main = error "no main can be provided in a WASI reactor build"
 
 mainJS :: IO ()
-mainJS = runJSFileSystemT $ 
+mainJS = runNodeIOT $ 
     lift (drop 1 <$> getArgs) >>= \case
         "init"  : name : argv   -> ensureConfigDirectoryExists consoleLogger >> cassieInitMain name argv
         "repl"  : argv          -> cassieReplMain argv

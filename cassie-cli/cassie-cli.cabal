@@ -27,6 +27,7 @@ library
                         CassieCLI.Module,
                         CassieCLI.Module.Internal,
                         CassieCLI.MonadVirtFS,
+                        CassieCLI.MonadVirtGetLine,
                         CassieCLI.Parser,
                         CassieCLI.Parser.Internal,
                         CassieCLI.Parser.Lang,
@@ -57,7 +58,7 @@ executable reactor
     import:             warnings
     ghc-options:        -no-hs-main -optl-Wl,--export=mainJS -optl-mexec-model=reactor
     main-is:            Main.hs
-    other-modules:      JSFileSystem,
+    other-modules:      NodeIO,
     build-depends:      aeson       >= 2.2.3.0,
                         base        >= 4.16.4.0 && <= 4.21.0.0, 
                         cassie      >= 0.1.0.0,

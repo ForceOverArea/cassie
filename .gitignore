@@ -6,9 +6,10 @@ build_log.txt
 .vscode/*
 !.vscode/extensions.json
 
-# NodeJS/TypeScript
-node_modules
+# NodeJS/TypeScript modules and build
 dist
+node_modules
+src/wasi
 
 # VSCodeCounter output
 .VSCodeCounter
