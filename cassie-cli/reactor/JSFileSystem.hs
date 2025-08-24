@@ -71,10 +71,10 @@ foreign import javascript unsafe "globalThis.fs_lstat_isFile($1)"
 foreign import javascript unsafe "globalThis.fs_mkdir($1, $2)" 
     fs_mkdir :: Bool -> JSString -> IO ()
 
-foreign import javascript unsafe "globalThis.os_homedir" 
+foreign import javascript unsafe "globalThis.os_homedir()" 
     os_homedir :: IO JSString
 
-foreign import javascript unsafe "globalThis.process_cwd" 
+foreign import javascript unsafe "globalThis.process_cwd()" 
     process_cwd :: IO JSString
 
 foreign import javascript unsafe "globalThis.process_chdir($1)" 

@@ -11,15 +11,11 @@ import safe Control.Monad.Trans (lift)
 import safe System.Environment (getArgs)
 import safe JSFileSystem (JSFileSystemT(runJSFileSystemT))
 
-import safe Control.Monad.IO.Class(liftIO)
-
 main :: IO ()
-main = mainJS
+main = error "no main can be provided in a WASI reactor build"
 
 mainJS :: IO ()
-mainJS = runJSFileSystemT $ do
-    liftIO . putStrLn $ "main is running!"
-    liftIO $ print =<< getArgs
+mainJS = runJSFileSystemT $ 
     lift (drop 1 <$> getArgs) >>= \case
         "init"  : name : argv   -> ensureConfigDirectoryExists consoleLogger >> cassieInitMain name argv
         "repl"  : argv          -> cassieReplMain argv
