@@ -38,12 +38,12 @@ async function main() {
       { ghc_wasm_jsffi: ghc_wasm_jsffi(jsffiExports) },
       wasi.getImportObject()
     );
-    const wasm = await WebAssembly.instantiate(wasmBuffer, importObject);
+    const { instance } = await WebAssembly.instantiate(wasmBuffer, importObject);
 
-    Object.assign(jsffiExports, wasm.instance.exports);
-    wasi.initialize(wasm);
+    Object.assign(jsffiExports, instance.exports);
+    wasi.initialize(instance);
 
-    await (wasm.instance.exports.mainJS as any as () => Promise<void>)();
+    await (instance.exports.mainJS as any as () => Promise<void>)();
   } catch (err) {
     caughtErr = err;
   } finally {
