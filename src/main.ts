@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { readFileSync, writeFileSync, lstatSync, mkdirSync, PathLike } from 'node:fs';
 import { homedir } from 'node:os';
 import { argv, chdir, cwd, stdin, stdout } from 'node:process';
@@ -25,6 +26,7 @@ globalThis.os_homedir = homedir;
 globalThis.process_cwd = cwd;
 globalThis.process_chdir = chdir;
 globalThis.readline_Interface_question = () => CASSIE_STDIN_IF.question('>>> ');
+globalThis.console_log = console.log;
 
 /**
  * Entry point for main script
