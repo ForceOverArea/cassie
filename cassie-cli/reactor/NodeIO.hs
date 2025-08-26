@@ -3,8 +3,7 @@ module NodeIO
     ( NodeIOT(runNodeIOT)
     ) where
 
-import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
-import safe CassieCLI.MonadVirtGetLine (MonadVirtGetLine(..))
+import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
 import safe Control.Monad.IO.Class (MonadIO(..))
 import safe Control.Monad.Trans (MonadTrans(..))
 import GHC.Wasm.Prim
@@ -35,7 +34,7 @@ instance MonadFail m => MonadFail (NodeIOT m) where
 instance MonadIO m => MonadIO (NodeIOT m) where
     liftIO = NodeIOT . liftIO
 
-instance (MonadFail m, MonadIO m) => MonadVirtFS (NodeIOT m) where
+instance (MonadFail m, MonadIO m) => MonadVirtIO (NodeIOT m) where
     vReadFile path = liftIO $ fromJSString <$> (fs_readFileSync $ toJSString path)
 
     vWriteFile path contents = 
@@ -53,18 +52,22 @@ instance (MonadFail m, MonadIO m) => MonadVirtFS (NodeIOT m) where
 
     vGetHomeDirectory = liftIO $ fromJSString <$> os_homedir
 
-    vDoesFileExist = liftIO . fs_lstat_isFile . toJSString
+    vDoesFileExist = liftIO . fs_lstatSync_isFile . toJSString
 
     vCreateDirectoryIfMissing p path = 
         let 
             pathJS = toJSString path
-        in liftIO $ fs_mkdir p pathJS
+        in liftIO $ fs_mkdirSync p pathJS
 
-instance (Monad m, MonadIO m) => MonadVirtGetLine (NodeIOT m) where
-    vGetLine = liftIO $ fromJSString <$> readLineIF_question
+    vGetLine = liftIO $ fromJSString <$> readline_Interface_question
 
-foreign import javascript safe "globalThis.readlineIF_question()"
-    readLineIF_question :: IO JSString
+    vPutStrLn = liftIO . console_log . toJSString
+
+foreign import javascript unsafe "console.log($1)"
+    console_log :: JSString -> IO ()
+
+foreign import javascript safe "globalThis.readline_Interface_question()"
+    readline_Interface_question :: IO JSString
 
 foreign import javascript unsafe "globalThis.fs_readFileSync($1)" 
     fs_readFileSync :: JSString -> IO JSString
@@ -72,11 +75,11 @@ foreign import javascript unsafe "globalThis.fs_readFileSync($1)"
 foreign import javascript unsafe "globalThis.fs_writeFileSync($1, $2)" 
     fs_writeFileSync :: JSString -> JSString -> IO ()
 
-foreign import javascript unsafe "globalThis.fs_lstat_isFile($1)" 
-    fs_lstat_isFile :: JSString -> IO Bool
+foreign import javascript unsafe "globalThis.fs_lstatSync_isFile($1)" 
+    fs_lstatSync_isFile :: JSString -> IO Bool
 
-foreign import javascript unsafe "globalThis.fs_mkdir($1, $2)" 
-    fs_mkdir :: Bool -> JSString -> IO ()
+foreign import javascript unsafe "globalThis.fs_mkdirSync($1, $2)" 
+    fs_mkdirSync :: Bool -> JSString -> IO ()
 
 foreign import javascript unsafe "globalThis.os_homedir()" 
     os_homedir :: IO JSString

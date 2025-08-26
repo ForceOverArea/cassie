@@ -1,13 +1,13 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module CassieCLI.MonadVirtFS 
-    ( MonadVirtFS(..)
+module CassieCLI.MonadVirtIO 
+    ( MonadVirtIO(..)
     ) where
 
 import System.Directory (createDirectoryIfMissing, doesFileExist, getCurrentDirectory, getHomeDirectory, setCurrentDirectory)
 
-class (Monad m, MonadFail m) => MonadVirtFS m where 
+class (Monad m) => MonadVirtIO m where 
     vReadFile :: FilePath -> m String
 
     vWriteFile :: FilePath -> String -> m ()
@@ -30,7 +30,14 @@ class (Monad m, MonadFail m) => MonadVirtFS m where
         else 
             return Nothing
 
-instance MonadVirtFS IO where
+    vGetLine :: m String
+
+    vPutStrLn :: String -> m ()
+
+    vPrint :: (Show a) => a -> m ()
+    vPrint = vPutStrLn . show
+
+instance MonadVirtIO IO where
     vReadFile = readFile
 
     vWriteFile = writeFile
@@ -44,3 +51,7 @@ instance MonadVirtFS IO where
     vDoesFileExist = doesFileExist
 
     vCreateDirectoryIfMissing = createDirectoryIfMissing
+
+    vGetLine = getLine
+
+    vPutStrLn = putStrLn

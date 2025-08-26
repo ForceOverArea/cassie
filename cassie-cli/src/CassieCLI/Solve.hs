@@ -11,20 +11,20 @@ import safe Data.List as List
 import safe qualified Data.Set as Set
 import safe CassieCLI.Solve.Formatting (renderSymbolicSolns)
 import safe CassieCLI.Solve.Internal (CassieCLI)
-import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
+import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
 import safe CassieCLI.Solve.Settings (constrained', numeric', parseCassieJSON, CassieJSON(..))
 import safe Control.Monad.IO.Class (MonadIO(..))
 
-cassieSolveMain :: (MonadVirtFS m, MonadIO m) => [String] -> m ()
+cassieSolveMain :: (MonadFail m, MonadIO m, MonadVirtIO m) => [String] -> m ()
 cassieSolveMain _argv = do
     cassieJSON <- parseCassieJSON <$> vReadFile "./Cassie.json"
     let ep = relPathFile $ entryPoint cassieJSON
-    liftIO . putStrLn $ "solving from entry point: " ++ ep
+    vPutStrLn $ "solving from entry point: " ++ ep
     (_, _, solutionLog) <- runRWST cassieCliMain cassieJSON ()
     vWriteFile (ep ++ ".soln.md") $ intercalate "\n" solutionLog
     return ()
 
-cassieCliMain :: (MonadVirtFS m, MonadIO m) => MonadVirtFS m => CassieCLI m ()
+cassieCliMain :: (MonadFail m, MonadVirtIO m) => CassieCLI m ()
 cassieCliMain = do 
     (rootDir, entryModule) <- (relPathDir &&& relPathFile) <$> asks entryPoint
     pwd <- lift $ vGetCurrentDirectory
@@ -34,8 +34,10 @@ cassieCliMain = do
         >>> constrained' &&& numeric'
         >>> uncurry (++)
         >>> Set.fromList
-    result <- lift $ solveModular entryModule keySolutions
-    let (maybeSoln, _showSteps) = (second $ mapM_ putStrLn) result
+    maybeSoln <- lift $ do
+        (maybeSoln, showSteps) <- solveModular entryModule keySolutions
+        mapM_ vPutStrLn showSteps
+        return maybeSoln
     let (_ctx, soln) = unwrapEither maybeSoln
     renderSymbolicSolns soln 
     lift $ vSetCurrentDirectory pwd

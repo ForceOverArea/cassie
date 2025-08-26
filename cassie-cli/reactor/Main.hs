@@ -12,7 +12,7 @@ import safe System.Environment (getArgs)
 import safe NodeIO (NodeIOT(runNodeIOT))
 
 main :: IO ()
-main = error "no main can be provided in a WASI reactor build"
+main = error "no main can provided in a WASI reactor build due to GHC linker behavior"
 
 mainJS :: IO ()
 mainJS = runNodeIOT $ 

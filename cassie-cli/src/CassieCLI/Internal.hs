@@ -11,20 +11,20 @@ module CassieCLI.Internal
 import safe Control.Monad
 import safe Control.Monad.IO.Class (MonadIO(..))
 import safe CassieCLI.Module.Internal (cassieConfigDir)
-import safe CassieCLI.MonadVirtFS(MonadVirtFS(..))
+import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
 
 type Logger m = String -> m ()
 
-cassieConfigPath :: MonadVirtFS m => m FilePath
+cassieConfigPath :: MonadVirtIO m => m FilePath
 cassieConfigPath =  (++ cassieConfigDir) <$> vGetHomeDirectory 
 
-cassieBaseLibrary :: MonadVirtFS m => m FilePath
+cassieBaseLibrary :: MonadVirtIO m => m FilePath
 cassieBaseLibrary = (++ "/Base.cas") <$> cassieConfigPath
 
-cassieJSONTemplate :: MonadVirtFS m => m FilePath
+cassieJSONTemplate :: MonadVirtIO m => m FilePath
 cassieJSONTemplate = (++ "/Template.json") <$> cassieConfigPath 
 
-cassieJSONSchema :: MonadVirtFS m => m FilePath
+cassieJSONSchema :: MonadVirtIO m => m FilePath
 cassieJSONSchema = (++ "/CassieSchema.json") <$> cassieConfigPath
 
 cassieJSONTemplateSource :: String
@@ -106,10 +106,10 @@ cassieJSONSchemaSource = "{\n\
 noLogger :: MonadIO m => Logger m
 noLogger _ = return ()
 
-consoleLogger :: MonadIO m => Logger m
-consoleLogger = liftIO . putStrLn
+consoleLogger :: MonadVirtIO m => Logger m
+consoleLogger = vPutStrLn
 
-ensureConfigDirectoryExists :: (MonadVirtFS m, MonadIO m) => Logger m -> m ()
+ensureConfigDirectoryExists :: (MonadVirtIO m, MonadIO m) => Logger m -> m ()
 ensureConfigDirectoryExists logger = do
     jsonTemplatePath <- cassieJSONTemplate
     baseLibPath <- cassieBaseLibrary

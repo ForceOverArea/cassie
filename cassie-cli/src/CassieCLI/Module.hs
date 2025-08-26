@@ -15,7 +15,7 @@ module CassieCLI.Module
     ) where
 
 import safe CassieCLI.Module.Internal
-import safe CassieCLI.MonadVirtFS
+import safe CassieCLI.MonadVirtIO
 import safe CassieCLI.Parser.Lang (parseCassiePhrases, Import)
 import safe CassieCLI.Parser.ParsedTypes
 import safe CassieCLI.Utils (splitStrAt, startsWith)
@@ -36,9 +36,9 @@ type ParsedCassieError = CassieError ParsedMagma ParsedUnary ParsedElement
 
 -- | Given an initial context and a module path (either in the 
 --   filesystem provided by @IO@ or a virtual one implementing
---   @MonadVirtFS@), this function recursively solves a chain of 
+--   @MonadVirtIO@), this function recursively solves a chain of 
 --   dependent systems of equations.
-solveModular :: MonadVirtFS m 
+solveModular :: MonadVirtIO m 
     => FilePath
     -> Symbols
     -> m (Either ParsedCassieError ((ParsedCtx, ParsedSoln)), [String])
@@ -49,7 +49,7 @@ solveModular thisModule keySolutions = runWriterT . runExceptT
 --   
 --   
 --   This is effectively @main@ for the CASsie CLI.
-solveModularSystem :: MonadVirtFS m
+solveModularSystem :: MonadVirtIO m
     => Set.Set String 
     -> ParsedCtx
     -> ParsedSoln
@@ -92,7 +92,7 @@ solveModularSystem dependentModules accumCtx accumSoln (localModule, localExport
                    , accumSoln `Map.union` (importedSoln' `exportUnion` localSoln)
                    ) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
 
-getModuleOrBaseLibrary :: MonadVirtFS m 
+getModuleOrBaseLibrary :: MonadVirtIO m 
     => String 
     -> CassieModuleT m String
 getModuleOrBaseLibrary localModule = 
@@ -104,7 +104,7 @@ getModuleOrBaseLibrary localModule =
         else
             (++ "/" ++ localModule ++ cassieFileExt) <$> vGetCurrentDirectory
 
-tryBuildModuleCtx :: MonadVirtFS m 
+tryBuildModuleCtx :: MonadVirtIO m 
     => FilePath 
     -> CassieModuleT m ([Import], ParsedCtx, ParsedEqPool)
 tryBuildModuleCtx fp 
@@ -115,7 +115,7 @@ tryBuildModuleCtx fp
 -- | Tries to read a source file (or map entry), returning its source
 --   if the file exists or throwing a @FileDoesNotExist@ error if it
 --   does not.
-tryGetModuleSource :: MonadVirtFS m
+tryGetModuleSource :: MonadVirtIO m
     => FilePath 
     -> CassieModuleT m String
 tryGetModuleSource fp 

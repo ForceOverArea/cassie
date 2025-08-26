@@ -2,12 +2,11 @@ import { readFileSync, writeFileSync, lstatSync, mkdirSync, PathLike } from 'nod
 import { homedir } from 'node:os';
 import { argv, chdir, cwd, stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline/promises';
-import { WASI } from 'node:wasi'; // use runno since Node's WASI implementation gets indigestion from Haskell's WASM
+import { WASI } from 'node:wasi';
 import ghc_wasm_jsffi from './wasi/ghc_wasm_jsffi.js';
 
 // Constants 
 const CASSIE_STDIN_IF = createInterface({ input: stdin, output: stdout });
-// const CASSIE_WASM_STDIO_CONFIG: Partial<WASIContextOptions> = { args: argv, stdout: console.log };
 const WASM_REACTOR_PATH = `${import.meta.dirname}/wasi/reactor.wasm`;
 
 // Singletons/mutable data
@@ -20,12 +19,12 @@ const wasi = new WASI({
 // Make interface functions available for Haskell
 globalThis.fs_readFileSync = (path: PathLike) => readFileSync(path, { encoding: 'utf-8' }).toString();
 globalThis.fs_writeFileSync = (path: PathLike, contents: string) => writeFileSync(path, contents, { encoding: 'utf-8' });
-globalThis.fs_lstat_isFile = (path: PathLike) => lstatSync(path).isFile();
-globalThis.fs_mkdir = (rcsv: boolean, path: PathLike) => mkdirSync(path, { recursive: Boolean(rcsv) });
+globalThis.fs_lstatSync_isFile = (path: PathLike) => lstatSync(path).isFile();
+globalThis.fs_mkdirSync = (rcsv: boolean, path: PathLike) => mkdirSync(path, { recursive: Boolean(rcsv) });
 globalThis.os_homedir = homedir;
 globalThis.process_cwd = cwd;
 globalThis.process_chdir = chdir;
-globalThis.readlineIF_question = () => CASSIE_STDIN_IF.question('>>> ');
+globalThis.readline_Interface_question = () => CASSIE_STDIN_IF.question('>>> ');
 
 /**
  * Entry point for main script
@@ -37,9 +36,8 @@ async function main() {
     const importObject = Object.assign(
       { ghc_wasm_jsffi: ghc_wasm_jsffi(jsffiExports) },
       wasi.getImportObject()
-    );
+    );    
     const { instance } = await WebAssembly.instantiate(wasmBuffer, importObject);
-
     Object.assign(jsffiExports, instance.exports);
     wasi.initialize(instance);
 

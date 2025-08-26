@@ -4,7 +4,7 @@ module CassieCLI.Solve.Formatting
     ) where
 
 import safe CassieCLI.Solve.Internal (CassieCLI)
-import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
+import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
 import safe CassieCLI.Parser.ParsedTypes (ParsedSoln)
 import safe CassieCLI.Solve.Settings (constrained', numeric', symbolic', CassieJSON(..))
 import safe Control.Monad
@@ -19,7 +19,7 @@ newLine = ""
 wildCardOnly :: [Symbol]
 wildCardOnly = ["*"]
 
-renderSymbolicSolns :: MonadVirtFS m => ParsedSoln -> CassieCLI m ()
+renderSymbolicSolns :: (MonadVirtIO m, MonadFail m) => ParsedSoln -> CassieCLI m ()
 renderSymbolicSolns soln = 
     let
         getSolnWhitelist f = keySolutions soln =<< (asks $ f . solution)
@@ -35,7 +35,7 @@ renderSymbolicSolns soln =
             logLn "## Symbolic Solutions: "
             mapM_ (renderSymbolic soln) showSymbolic
 
-renderSymbolic :: MonadVirtFS m => ParsedSoln -> Symbol -> CassieCLI m ()
+renderSymbolic :: MonadVirtIO m => ParsedSoln -> Symbol -> CassieCLI m ()
 renderSymbolic soln k = do
     case k `Map.lookup` soln of
         Nothing -> error404 k
@@ -46,7 +46,7 @@ renderSymbolic soln k = do
             tell $ map (tabOut 2 ++) steps
             logLn newLine
 
-renderNumeric :: MonadVirtFS m => ParsedSoln -> Symbol -> CassieCLI m ()
+renderNumeric :: MonadVirtIO m => ParsedSoln -> Symbol -> CassieCLI m ()
 renderNumeric soln k = do
     case k `Map.lookup` soln of
         Nothing -> error404 k
@@ -55,7 +55,7 @@ renderNumeric soln k = do
             logLn $ "### " ++ k ++ " = " ++ show numSoln 
             logLn newLine
 
-renderConstrained :: MonadVirtFS m => ParsedSoln -> Symbol -> CassieCLI m ()
+renderConstrained :: MonadVirtIO m => ParsedSoln -> Symbol -> CassieCLI m ()
 renderConstrained soln k = do
     logLn "TODO: make this section different from numeric solutions"
     case k `Map.lookup` soln of
@@ -65,14 +65,14 @@ renderConstrained soln k = do
             logLn $ "### " ++ k ++ " = " ++ show numSoln 
             logLn newLine
 
-keySolutions :: MonadVirtFS m => ParsedSoln -> [Symbol] -> CassieCLI m [Symbol]
+keySolutions :: MonadVirtIO m => ParsedSoln -> [Symbol] -> CassieCLI m [Symbol]
 keySolutions soln importList = do
     if wildCardOnly == importList then 
         return $ Map.keys soln
     else 
         return importList
 
-logLn :: MonadVirtFS m => String -> CassieCLI m ()
+logLn :: MonadVirtIO m => String -> CassieCLI m ()
 logLn = tell . pure
 
 error404 :: [Char] -> b

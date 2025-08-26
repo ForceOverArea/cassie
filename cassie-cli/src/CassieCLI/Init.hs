@@ -5,12 +5,12 @@ module CassieCLI.Init
     ) where
 
 import safe CassieCLI.Internal
-import safe CassieCLI.MonadVirtFS (MonadVirtFS(..))
+import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
 import safe Control.Arrow
 import safe Control.Monad.IO.Class (MonadIO(..))
 import safe qualified Data.Text as Text
 
-cassieInitMain :: (MonadVirtFS m, MonadIO m) => String -> [String] -> m () 
+cassieInitMain :: (MonadVirtIO m, MonadIO m) => String -> [String] -> m () 
 cassieInitMain projectName _argv = 
     let 
         replaceName schemaPath = Text.pack
