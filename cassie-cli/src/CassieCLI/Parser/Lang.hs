@@ -1,6 +1,6 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Data.Cassie.CLI.Parser.Lang 
+module CassieCLI.Parser.Lang 
     ( functionDef
     , parseCassiePhrases
     , parseEquation
@@ -13,12 +13,12 @@ module Data.Cassie.CLI.Parser.Lang
     ) where
 
 import safe Control.Arrow
-import safe Data.Cassie.CLI.Parser.Internal 
-import safe Data.Cassie.CLI.Parser.Lexemes
-import safe Data.Cassie.CLI.Parser.ParsedTypes
-import safe Data.Cassie.Rules.Evaluate (isConst, CtxItem(..))
+import safe CassieCLI.Parser.Internal 
+import safe CassieCLI.Parser.Lexemes
+import safe CassieCLI.Parser.ParsedTypes
+import safe CassieCLI.Utils (splitStrAt)
+import safe Data.Cassie.Rules (isConst, CtxItem(..))
 import safe Data.Cassie.Structures
-import safe Data.Cassie.CLI.Utils (splitStrAt)
 import safe qualified Data.Map as Map
 import safe Data.List as List
 import safe qualified Data.Set as Set

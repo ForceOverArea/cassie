@@ -1,4 +1,5 @@
-module Data.Cassie.CLI.Parser.Internal
+{-# LANGUAGE Safe #-}
+module CassieCLI.Parser.Internal
     ( CassieParserError(..)
     ) where
 

@@ -1,5 +1,5 @@
-{-# LANGUAGE Trustworthy #-}
-module Internal 
+{-# LANGUAGE Safe #-}
+module CassieCLI.Internal 
     ( cassieJSONSchema
     , cassieJSONTemplate
     , consoleLogger
@@ -8,22 +8,23 @@ module Internal
     , Logger
     ) where
 
-import Control.Monad
-import Data.Cassie.CLI (cassieConfigDir)
-import System.Directory (createDirectoryIfMissing, doesFileExist, getHomeDirectory)
+import safe Control.Monad
+import safe Control.Monad.IO.Class (MonadIO(..))
+import safe CassieCLI.Module.Internal (cassieConfigDir)
+import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
 
-type Logger = String -> IO ()
+type Logger m = String -> m ()
 
-cassieConfigPath :: IO FilePath
-cassieConfigPath =  (++ cassieConfigDir) <$> getHomeDirectory 
+cassieConfigPath :: MonadVirtIO m => m FilePath
+cassieConfigPath =  (++ cassieConfigDir) <$> vGetHomeDirectory 
 
-cassieBaseLibrary :: IO FilePath
+cassieBaseLibrary :: MonadVirtIO m => m FilePath
 cassieBaseLibrary = (++ "/Base.cas") <$> cassieConfigPath
 
-cassieJSONTemplate :: IO FilePath
+cassieJSONTemplate :: MonadVirtIO m => m FilePath
 cassieJSONTemplate = (++ "/Template.json") <$> cassieConfigPath 
 
-cassieJSONSchema :: IO FilePath
+cassieJSONSchema :: MonadVirtIO m => m FilePath
 cassieJSONSchema = (++ "/CassieSchema.json") <$> cassieConfigPath
 
 cassieJSONTemplateSource :: String
@@ -102,27 +103,27 @@ cassieJSONSchemaSource = "{\n\
 \    }\n\
 \}"
 
-noLogger :: Logger
+noLogger :: MonadIO m => Logger m
 noLogger _ = return ()
 
-consoleLogger :: Logger
-consoleLogger = putStrLn
+consoleLogger :: MonadVirtIO m => Logger m
+consoleLogger = vPutStrLn
 
-ensureConfigDirectoryExists :: Logger -> IO ()
+ensureConfigDirectoryExists :: (MonadVirtIO m, MonadIO m) => Logger m -> m ()
 ensureConfigDirectoryExists logger = do
     jsonTemplatePath <- cassieJSONTemplate
     baseLibPath <- cassieBaseLibrary
     schemaPath <- cassieJSONSchema
-    createDirectoryIfMissing True =<< cassieConfigPath
-    needJSONTemplate <- not <$> doesFileExist jsonTemplatePath
+    vCreateDirectoryIfMissing True =<< cassieConfigPath
+    needJSONTemplate <- not <$> vDoesFileExist jsonTemplatePath
     when needJSONTemplate $ do
-        writeFile jsonTemplatePath cassieJSONTemplateSource
+        vWriteFile jsonTemplatePath cassieJSONTemplateSource
         logger $ "INFO: cassie project template has been reset to default at " ++ jsonTemplatePath
-    needBaseLibTemplate <- not <$> doesFileExist baseLibPath
+    needBaseLibTemplate <- not <$> vDoesFileExist baseLibPath
     when needBaseLibTemplate $ do
-        writeFile baseLibPath cassieBaseLibrarySource
+        vWriteFile baseLibPath cassieBaseLibrarySource
         logger $ "INFO: cassie base library has been reset to default at " ++ baseLibPath
-    needSchema <- not <$> doesFileExist schemaPath
+    needSchema <- not <$> vDoesFileExist schemaPath
     when needSchema $ do
-        writeFile schemaPath cassieJSONSchemaSource
+        vWriteFile schemaPath cassieJSONSchemaSource
         logger $ "INFO: cassie project template schema has been reset to default at " ++ schemaPath

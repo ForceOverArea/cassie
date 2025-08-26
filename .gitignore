@@ -1,29 +1,15 @@
-# Cabal/Haskell Build 
+# Cabal/Haskell build 
 dist-newstyle
 build_log.txt
-.VSCodeCounter
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# NodeJS/TypeScript modules and build
+dist
+node_modules
+src/wasi
+
+# VSCodeCounter output
+.VSCodeCounter

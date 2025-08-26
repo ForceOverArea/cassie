@@ -1,4 +1,5 @@
-module Data.Cassie.CLI.Module.Internal
+{-# LANGUAGE Safe #-}
+module CassieCLI.Module.Internal
     ( cassieBaseLibrary
     , cassieConfigDir
     , cassieFileExt
@@ -7,7 +8,7 @@ module Data.Cassie.CLI.Module.Internal
     , CassieModuleError(..)
     ) where
 
-import Data.Cassie.CLI.Utils
+import CassieCLI.Utils
 import Data.List as List
 
 data CassieModuleError

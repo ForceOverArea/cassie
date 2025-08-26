@@ -2,6 +2,7 @@
 module Data.Cassie.Solver 
     ( solveCassieSystem
     , solveCassieSystemT
+    , solveConstrainedMain
     , CassieError(..)
     , EquationPool
     , Solution

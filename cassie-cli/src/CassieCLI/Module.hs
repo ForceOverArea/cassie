@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Data.Cassie.CLI.Module
+module CassieCLI.Module
     ( cassieBaseLibrary
     , cassieConfigDir
     , cassieFileExt
@@ -14,18 +14,18 @@ module Data.Cassie.CLI.Module
     , ParsedCassieError
     ) where
 
+import safe CassieCLI.Module.Internal
+import safe CassieCLI.MonadVirtIO
+import safe CassieCLI.Parser.Lang (parseCassiePhrases, Import)
+import safe CassieCLI.Parser.ParsedTypes
+import safe CassieCLI.Utils (splitStrAt, startsWith)
 import safe Control.Arrow
 import safe Control.Monad
 import safe Control.Monad.Except (runExceptT, throwError, ExceptT)
 import safe Control.Monad.RWS (execRWST)
 import safe Control.Monad.Writer (runWriterT, tell, WriterT)
 import safe Control.Monad.Trans
-import safe Data.Cassie.CLI.Module.Internal
-import safe Data.Cassie.CLI.MonadLookup
-import safe Data.Cassie.CLI.Parser.Lang (parseCassiePhrases, Import)
-import safe Data.Cassie.CLI.Parser.ParsedTypes
-import safe Data.Cassie.CLI.Utils (splitStrAt, startsWith)
-import safe Data.Cassie.Solver.Internal
+import safe Data.Cassie.Solver
 import safe Data.List as List
 import safe qualified Data.Map as Map
 import safe qualified Data.Set as Set
@@ -36,11 +36,9 @@ type ParsedCassieError = CassieError ParsedMagma ParsedUnary ParsedElement
 
 -- | Given an initial context and a module path (either in the 
 --   filesystem provided by @IO@ or a virtual one implementing
---   @MonadLookup@), this function recursively solves a chain of 
+--   @MonadVirtIO@), this function recursively solves a chain of 
 --   dependent systems of equations.
-solveModular :: ( Monoid (m FilePath)
-                , MonadLookup FilePath String m
-                ) 
+solveModular :: MonadVirtIO m 
     => FilePath
     -> Symbols
     -> m (Either ParsedCassieError ((ParsedCtx, ParsedSoln)), [String])
@@ -51,9 +49,7 @@ solveModular thisModule keySolutions = runWriterT . runExceptT
 --   
 --   
 --   This is effectively @main@ for the CASsie CLI.
-solveModularSystem :: ( Monoid (m FilePath)
-                      , MonadLookup FilePath String m
-                      ) 
+solveModularSystem :: MonadVirtIO m
     => Set.Set String 
     -> ParsedCtx
     -> ParsedSoln
@@ -96,7 +92,7 @@ solveModularSystem dependentModules accumCtx accumSoln (localModule, localExport
                    , accumSoln `Map.union` (importedSoln' `exportUnion` localSoln)
                    ) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
 
-getModuleOrBaseLibrary :: (MonadLookup FilePath String m, Monoid (m FilePath)) 
+getModuleOrBaseLibrary :: MonadVirtIO m 
     => String 
     -> CassieModuleT m String
 getModuleOrBaseLibrary localModule = 
@@ -104,11 +100,11 @@ getModuleOrBaseLibrary localModule =
         baseModuleRelPath = intercalate "/" . drop 1 $ splitStrAt '/' localModule
     in lift . lift 
         $ if localModule `startsWith` "Cassie" then
-            (++ cassieConfigDir ++ "/" ++ baseModuleRelPath ++ cassieFileExt) <$> pathHome 
+            (++ cassieConfigDir ++ "/" ++ baseModuleRelPath ++ cassieFileExt) <$> vGetHomeDirectory 
         else
-            (++ "/" ++ localModule ++ cassieFileExt) <$> pathRoot
+            (++ "/" ++ localModule ++ cassieFileExt) <$> vGetCurrentDirectory
 
-tryBuildModuleCtx :: MonadLookup FilePath String m 
+tryBuildModuleCtx :: MonadVirtIO m 
     => FilePath 
     -> CassieModuleT m ([Import], ParsedCtx, ParsedEqPool)
 tryBuildModuleCtx fp 
@@ -119,13 +115,13 @@ tryBuildModuleCtx fp
 -- | Tries to read a source file (or map entry), returning its source
 --   if the file exists or throwing a @FileDoesNotExist@ error if it
 --   does not.
-tryGetModuleSource :: (Monad m, MonadLookup FilePath String m) 
+tryGetModuleSource :: MonadVirtIO m
     => FilePath 
     -> CassieModuleT m String
 tryGetModuleSource fp 
-    = (lift .lift $ lookupM fp) 
+    = (lift .lift $ vTryReadFile fp) 
     >>= maybe 
-        (throwError . ImportError $ FileDoesNotExist fp) 
+        (throwError . ImportError . show $ FileDoesNotExist fp) 
         return
 
 -- | Builds the global context of a system prior to solving it. This 
@@ -135,7 +131,7 @@ tryGetModuleSource fp
 --   2. A @Context@ map structure of symbols to functions or constant values
 --   3. A pool of equations parsed out in the system. 
 buildGlobalCtx :: FilePath -> String -> Either (CassieError mg u n) ([Import], ParsedCtx, ParsedEqPool)
-buildGlobalCtx = curry (left ParserError . uncurry parseCassiePhrases)
+buildGlobalCtx = curry (left (ParserError . show) . uncurry parseCassiePhrases)
 
 -- | Checks a given import for recursive dependencies, 
 --   throwing @FoundRecursiveImport@ when a recursive
@@ -148,7 +144,7 @@ checkForRecursion parentPaths childImports =
     let 
         recursiveImports = parentPaths `Set.intersection` (Set.fromList $ map fst childImports)
     in when (Set.empty /= recursiveImports)
-        $ throwError . ImportError $ FoundRecursiveImport
+        $ throwError . ImportError . show $ FoundRecursiveImport
 
 -- | Throws a @FailedToConstrain@ error when the given equation pool is not empty.
 assertConstrained :: Monad m => ParsedEqPool -> CassieModuleT m ()

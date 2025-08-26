@@ -1,7 +1,7 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Solve.Settings 
+module CassieCLI.Solve.Settings 
     ( CassieJSON(..)
     , CassieReportOpts(..)
     , CassieSolnOpts(..)

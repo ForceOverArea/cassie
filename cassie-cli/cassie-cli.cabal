@@ -1,0 +1,70 @@
+cabal-version:          3.0
+name:                   cassie-cli
+version:                0.1.0.0
+synopsis:               A simple, homebrewed CAS
+-- description:
+license:                MIT
+license-file:           ../LICENSE
+author:                 Grant
+maintainer:             christiansengrant18@gmail.com
+-- copyright:
+category:               Math
+build-type:             Simple
+extra-doc-files:        CHANGELOG.md
+
+common warnings
+    ghc-options:        -Wall
+
+library
+    import:             warnings
+    exposed-modules:    CassieCLI.Init,
+                        CassieCLI.Internal,
+                        CassieCLI.Repl,
+                        CassieCLI.Solve,
+                        CassieCLI.Solve.Formatting,
+                        CassieCLI.Solve.Internal,
+                        CassieCLI.Solve.Settings,
+                        CassieCLI.Module,
+                        CassieCLI.Module.Internal,
+                        CassieCLI.MonadVirtIO,
+                        CassieCLI.Parser,
+                        CassieCLI.Parser.Internal,
+                        CassieCLI.Parser.Lang,
+                        CassieCLI.Parser.Lexemes,
+                        CassieCLI.Parser.ParsedTypes,
+                        CassieCLI.Utils,
+    build-depends:      aeson       >= 2.2.3.0,
+                        base        >= 4.16.4.0 && <= 4.21.0.0, 
+                        cassie      >= 0.1.0.0,
+                        containers  >= 0.6.5.1,
+                        directory   >= 1.3.9.0,
+                        mtl         >= 2.2.2,
+                        parsec      >= 3.1.18.0,
+                        text        >= 2.1.2,
+    hs-source-dirs:     src
+    default-language:   Haskell2010
+
+executable cassie
+    import:             warnings
+    main-is:            Main.hs    
+    build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 
+                        cassie-cli  >= 0.1.0.0,
+    hs-source-dirs:     cli
+    default-language:   Haskell2010
+
+-- NOTE: this target is not intended to be built without the experimental WASI backend
+executable reactor
+    import:             warnings
+    ghc-options:        -no-hs-main -optl-Wl,--export=mainJS -optl-mexec-model=reactor
+    main-is:            Main.hs
+    other-modules:      NodeIO,
+    build-depends:      aeson       >= 2.2.3.0,
+                        base        >= 4.16.4.0 && <= 4.21.0.0, 
+                        cassie      >= 0.1.0.0,
+                        cassie-cli  >= 0.1.0.0,
+                        containers  >= 0.6.5.1,
+                        ghc-experimental >= 9.1202.0,
+                        mtl         >= 2.2.2,
+                        text        >= 2.1.2,
+    hs-source-dirs:     reactor
+    default-language:   Haskell2010
