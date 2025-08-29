@@ -6,4 +6,4 @@ module CassieCLI.Solve.Internal
 import Control.Monad.RWS (RWST)
 import CassieCLI.Solve.Settings (CassieJSON)
 
-type CassieCLI = RWST CassieJSON [String] () IO
+type CassieCLI m = RWST CassieJSON [String] () m

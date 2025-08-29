@@ -1,20 +1,29 @@
 #!/bin/bash
 set -e
-WASM_REACTOR_PATH=./dist-newstyle/build/wasm32-wasi/ghc-9.12.2.20250327/cassie-wasm-0.1.0.0/x/cassie-wasm/opt/build/cassie-wasm/cassie-wasm.wasm
-PUBLIC_ASSET_DIR=./docs/public/wasm
+CABAL_REACTOR_PATH=dist-newstyle/build/wasm32-wasi/ghc-9.12.2.20250327/cassie-cli-0.1.0.0/x/reactor/opt/build/reactor/reactor.wasm
+DIST_REACTOR_DIR=dist/wasi
+SRC_REACTOR_DIR=src/wasi
 
-# build WASM module and move to page assets dir
-echo 1/4 cleaning up...
-cabal clean
+# Get JS + WASM needed for NPM package
+echo "[1/6] Building Haskell project..."
+wasm32-wasi-cabal build reactor
 
-echo 2/4 building WASM reactor...
-wasm32-wasi-cabal build cassie-wasm >build_log.txt 2>build_log.txt
+echo "[2/6] 'npm install'-ing..."
+npm install
 
-echo 3/4 copying WASM reactor to static page directory...
-cp $WASM_REACTOR_PATH $PUBLIC_ASSET_DIR
+# Generate JSFFI source from reactor and create declaration .ts file
+echo "[3/6] Generating FFI bindings..."
+mkdir -p src/wasi
+$(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i $CABAL_REACTOR_PATH -o $SRC_REACTOR_DIR/ghc_wasm_jsffi.js
 
-# generate jsffi module
-echo 4/4 generating jsffi module...
-$(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i $PUBLIC_ASSET_DIR/cassie-wasm.wasm -o $PUBLIC_ASSET_DIR/ghc_wasm_jsffi.js
+echo "[4/6] Generating FFI TypeScript declaration..."
+npx tsc $SRC_REACTOR_DIR/ghc_wasm_jsffi.js --allowJS --declaration --emitDeclarationOnly
 
-echo done!
+# Create  JavaScript build in 'dist' directory
+echo "[5/6] Compiling TypeScript..."
+npx tsc
+
+echo "[6/6] Copying Haskell reactor module to 'dist' directory..."
+cp $CABAL_REACTOR_PATH $DIST_REACTOR_DIR
+
+echo "Done!"

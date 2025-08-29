@@ -1,24 +1,25 @@
+{-# LANGUAGE Safe #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import CassieCLI
--- import qualified Data.Map as Map
--- import Glue (cassieWrapper)
-import GHC.Wasm.Prim
+import safe CassieCLI.Init (cassieInitMain)
+import safe CassieCLI.Internal (ensureConfigDirectoryExists, consoleLogger)
+import safe CassieCLI.Repl (cassieReplMain)
+import safe CassieCLI.Solve (cassieSolveMain)
+import safe Control.Monad.Trans (lift)
+import safe System.Environment (getArgs)
+import safe NodeIO (NodeIOT(runNodeIOT))
 
 main :: IO ()
-main = error "not necessary"
+main = error "no main can provided in a WASI reactor build due to GHC linker behavior"
 
--- | Exports the Cassie solver as a function.
--- solveSystemHs :: JSString -> JSString
--- solveSystemHs = toJSString . cassieWrapper . solveSystem "system" . fromJSString
+mainJS :: IO ()
+mainJS = runNodeIOT $ 
+    lift (drop 1 <$> getArgs) >>= \case
+        "init"  : name : argv   -> ensureConfigDirectoryExists consoleLogger >> cassieInitMain name argv
+        "repl"  : argv          -> cassieReplMain argv
+        "solve" : argv          -> cassieSolveMain argv
+        _ -> error "Invalid command. Valid commands include 'init <projectName>' or 'solve'" 
 
--- | Exports Cassie's symbolic isolation algorithm.
--- solveEqnForHs :: JSString -> JSString -> JSString
--- solveEqnForHs eqn tgt = 
---     let
---         result = solvedFor (fromJSString eqn) (fromJSString tgt) Map.empty 
---     in case result of
---         Right (eqn, steps) -> show eqn
-
--- foreign export javascript solveSystemHs :: JSString -> JSString
+foreign export javascript mainJS :: IO ()

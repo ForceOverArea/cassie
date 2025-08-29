@@ -5,10 +5,12 @@ module CassieCLI.Init
     ) where
 
 import safe CassieCLI.Internal
+import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
 import safe Control.Arrow
+import safe Control.Monad.IO.Class (MonadIO(..))
 import safe qualified Data.Text as Text
 
-cassieInitMain :: String -> [String] -> IO () 
+cassieInitMain :: (MonadVirtIO m, MonadIO m) => String -> [String] -> m () 
 cassieInitMain projectName _argv = 
     let 
         replaceName schemaPath = Text.pack
@@ -17,7 +19,6 @@ cassieInitMain projectName _argv =
             >>> Text.unpack
     in do
         jsonTemplatePath <- cassieJSONTemplate
-        projectJSONFile <- readFile jsonTemplatePath
+        projectJSONFile <- vReadFile jsonTemplatePath
         schemaPath <- cassieJSONSchema
-        writeFile "Cassie.json" $ replaceName schemaPath projectJSONFile
-
+        vWriteFile "Cassie.json" $ replaceName schemaPath projectJSONFile
