@@ -1,34 +1,4 @@
 {
-  "name": "cassie",
-  "version": "1.0.0",
-  "description": "A simple, homebrewed CAS",
-  "main": "main.js",
-  "author": "Grant Christiansen",
-  "license": "ISC",
-  "type": "module",
-  "bin": {
-    "cassiejs": "./dist/main.js"
-  },
-  "scripts": {
-    "repl": "node ./dist/main.js repl"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ForceOverArea/cassie.git"
-  },
-  "keywords": [
-    "algebra",
-    "CAS",
-    "equation-solver",
-    "WebAssembly",
-    "Haskell"
-  ],
-  "bugs": {
-    "url": "https://github.com/ForceOverArea/cassie/issues"
-  },
-  "homepage": "https://github.com/ForceOverArea/cassie#readme",
-  "devDependencies": {
-    "@types/node": "^24.3.0",
-    "typescript": "^5.9.2"
-  }
+  "name": "cassie-ws",
+  "workspaces": ["cassie-js"]
 }
