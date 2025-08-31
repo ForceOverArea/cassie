@@ -14,7 +14,6 @@ npm install
 
 # Generate JSFFI source from reactor and create declaration .ts file
 echo "[3/6] Generating FFI bindings..."
-mkdir -p src/wasi
 $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i $CABAL_REACTOR_PATH -o $SRC_REACTOR_DIR/ghc_wasm_jsffi.js
 
 echo "[4/6] Generating FFI TypeScript declaration..."

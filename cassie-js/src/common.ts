@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { argv } from 'node:process';
 import { WASI } from 'node:wasi'; 
 
+export const CASSIE_ISSUES_URL: string = 'https://github.com/ForceOverArea/cassie/issues';
+
 // Singletons/mutable data
 const jsffiExports = {};
 const wasi = new WASI({ 

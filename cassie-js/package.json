@@ -6,15 +6,13 @@
   "author": "Grant Christiansen",
   "license": "ISC",
   "type": "module",
-  "bin": {
-    "cassiejs": "./dist/main.js"
-  },
-  "scripts": {
-    "repl": "node ./dist/main.js repl"
-  },
+  "homepage": "https://github.com/ForceOverArea/cassie#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ForceOverArea/cassie.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ForceOverArea/cassie/issues"
   },
   "keywords": [
     "algebra",
@@ -23,10 +21,15 @@
     "WebAssembly",
     "Haskell"
   ],
-  "bugs": {
-    "url": "https://github.com/ForceOverArea/cassie/issues"
+  "bin": {
+    "cassiejs": "./dist/main.js"
   },
-  "homepage": "https://github.com/ForceOverArea/cassie#readme",
+  "scripts": {
+    "repl": "node ./dist/main.js repl"
+  },
+  "paths": [
+    "dist"
+  ],
   "devDependencies": {
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2"
