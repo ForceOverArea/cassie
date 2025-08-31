@@ -1,12 +1,14 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Rules 
     ( evaluate
+    , factorize
     , isConst
     , isolate
     , substitute
     , Context
     , CtxItem(..)
     , EvalError
+    , FactorizationError
     , IsolateError
     , Steps
     , SubstitutionError

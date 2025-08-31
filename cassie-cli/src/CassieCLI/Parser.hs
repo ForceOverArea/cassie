@@ -8,8 +8,10 @@ module CassieCLI.Parser
     , parseFunction
     , CassieParserError
     , Import
+    , ParsedAlgStruct
     , ParsedCtx
     , ParsedCtxItem
+    , ParsedElement
     , ParsedEqn
     , Phrase(..)
     , Symbols

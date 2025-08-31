@@ -1,4 +1,4 @@
 {
-  "name": "cassie-ws",
+  "name": "cassie-dev",
   "workspaces": ["cassie-js"]
 }

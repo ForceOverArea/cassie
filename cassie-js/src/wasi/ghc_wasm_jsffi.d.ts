@@ -13,6 +13,7 @@ declare function _default(__exports: any): {
     ZC7ZCcassiezmclizm0zi1zi0zi0zminplacezmreactorZCNodeIOZC: () => Promise<any>;
     ZC8ZCcassiezmclizm0zi1zi0zi0zminplacezmreactorZCNodeIOZC: ($1: any) => void;
     ZC0ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1: any, $2: any) => any;
+    ZC18ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1: any, $2: any) => any;
     ZC19ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1: any) => any;
     ZC20ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1: any) => void;
     ZC21ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1: any, $2: any) => void;

@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e
 CABAL_REACTOR_PATH=dist-newstyle/build/wasm32-wasi/ghc-9.12.2.20250327/cassie-cli-0.1.0.0/x/reactor/opt/build/reactor/reactor.wasm
-DIST_REACTOR_DIR=dist/wasi
-SRC_REACTOR_DIR=src/wasi
+NODE_PROJECT_DIR=cassie-js
+DIST_REACTOR_DIR=$NODE_PROJECT_DIR/dist/wasi
+SRC_REACTOR_DIR=$NODE_PROJECT_DIR/src/wasi
 
 # Get JS + WASM needed for NPM package
 echo "[1/6] Building Haskell project..."
@@ -21,7 +22,7 @@ npx tsc $SRC_REACTOR_DIR/ghc_wasm_jsffi.js --allowJS --declaration --emitDeclara
 
 # Create  JavaScript build in 'dist' directory
 echo "[5/6] Compiling TypeScript..."
-npx tsc
+npx tsc -p $NODE_PROJECT_DIR
 
 echo "[6/6] Copying Haskell reactor module to 'dist' directory..."
 cp $CABAL_REACTOR_PATH $DIST_REACTOR_DIR

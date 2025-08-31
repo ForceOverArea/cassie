@@ -108,6 +108,7 @@ ZC6ZCcassiezmclizm0zi1zi0zi0zminplacezmreactorZCNodeIOZC: ($1) => (globalThis.fs
 ZC7ZCcassiezmclizm0zi1zi0zi0zminplacezmreactorZCNodeIOZC: async () => (globalThis.readline_Interface_question()),
 ZC8ZCcassiezmclizm0zi1zi0zi0zminplacezmreactorZCNodeIOZC: ($1) => (console.log($1)),
 ZC0ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1,$2) => ($1.reject(new WebAssembly.RuntimeError($2))),
+ZC18ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1,$2) => ($1.resolve($2)),
 ZC19ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1) => ($1.resolve()),
 ZC20ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1) => {$1.throwTo = () => {};},
 ZC21ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1,$2) => {$1.throwTo = (err) => __exports.rts_promiseThrowTo($2, err);},

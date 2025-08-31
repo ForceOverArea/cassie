@@ -15,8 +15,10 @@ solve equations given as an @AlgebraicStruct@.
 
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Rules.Isolate 
-    ( isolate
+    ( factorize
+    , isolate
     , isolateMagma
+    , FactorizationError
     , IsolateError(..)
     , Steps
     ) where

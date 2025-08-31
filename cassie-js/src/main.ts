@@ -4,18 +4,10 @@ import { homedir } from 'node:os';
 import { argv, chdir, cwd, stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline/promises';
 import { WASI } from 'node:wasi';
-import ghc_wasm_jsffi from './wasi/ghc_wasm_jsffi.js';
+import { initCassieWasiReactor } from './common.js';
 
 // Constants 
 const CASSIE_STDIN_IF = createInterface({ input: stdin, output: stdout });
-const WASM_REACTOR_PATH = `${import.meta.dirname}/wasi/reactor.wasm`;
-
-// Singletons/mutable data
-const jsffiExports = {};
-const wasi = new WASI({ 
-  version: 'preview1', 
-  args: argv,
-});
 
 // Make interface functions available for Haskell
 globalThis.fs_readFileSync = (path: PathLike) => readFileSync(path, { encoding: 'utf-8' }).toString();
@@ -34,16 +26,12 @@ globalThis.console_log = console.log;
 async function main() {
   let caughtErr = undefined;
   try {
-    const wasmBuffer = readFileSync(WASM_REACTOR_PATH);
-    const importObject = Object.assign(
-      { ghc_wasm_jsffi: ghc_wasm_jsffi(jsffiExports) },
-      wasi.getImportObject()
-    );    
-    const { instance } = await WebAssembly.instantiate(wasmBuffer, importObject);
-    Object.assign(jsffiExports, instance.exports);
-    wasi.initialize(instance);
-
-    await (instance.exports.mainJS as any as () => Promise<void>)();
+    const exports = await initCassieWasiReactor();
+    if (exports.mainJS instanceof Function) {
+      await exports.mainJS();
+    } else {
+      throw new TypeError('webassembly export "mainJS" must be of type "Function"');
+    }
   } catch (err) {
     caughtErr = err;
   } finally {

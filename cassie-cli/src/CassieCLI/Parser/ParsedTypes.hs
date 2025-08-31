@@ -1,6 +1,7 @@
 {-# LANGUAGE Safe #-}
 module CassieCLI.Parser.ParsedTypes 
-    ( ParsedCtx
+    ( ParsedAlgStruct
+    , ParsedCtx
     , ParsedCtxItem
     , ParsedElement
     , ParsedEqn
@@ -28,6 +29,9 @@ type ParsedEqPool = EquationPool ParsedMagma ParsedUnary ParsedElement
 
 -- | A concrete instance of @Solution mg u n@ used by higher-level Cassie code.
 type ParsedSoln = Solution ParsedMagma ParsedUnary ParsedElement
+
+-- | A concrete instance of @AlgStruct mg u n@ used by higher-level Cassie code.
+type ParsedAlgStruct = AlgStruct ParsedMagma ParsedUnary ParsedElement
 
 {-
     Below types can be changed to alter what data is parsed from Cassie syntax 
