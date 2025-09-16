@@ -17,7 +17,7 @@ import safe CassieCLI.Parser.Internal
 import safe CassieCLI.Parser.Lexemes
 import safe CassieCLI.Parser.ParsedTypes
 import safe CassieCLI.Utils (splitStrAt)
-import safe Data.Cassie.Rules (isConst, CtxItem(..))
+import safe Data.Cassie.Rules (isKnown, CtxItem(..))
 import safe Data.Cassie.Structures
 import safe qualified Data.Map as Map
 import safe Data.List as List
@@ -87,7 +87,7 @@ parseFunction :: ParsedCtx -> String -> Either CassieParserError ParsedCtx
 parseFunction ctx funcDef = 
     let 
         parseResult = runParser functionDef Set.empty funcDef funcDef
-        knowns = Set.fromList (Map.keys $ Map.filter isConst ctx)
+        knowns = Set.fromList (Map.keys $ Map.filter isKnown ctx)
     in do
         (name, funcObj) <- left FailedToParse parseResult
         let deps = case funcObj of

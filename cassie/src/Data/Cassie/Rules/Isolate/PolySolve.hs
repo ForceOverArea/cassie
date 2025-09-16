@@ -43,6 +43,8 @@ factorize sym src =
         factored <- foldM factorOut src $ commonFactorsOfInterest
         return . Multiplicative . NE.fromList $ factored:commonFactorsOfInterest
 
+-- TODO: add simplification algorithm
+
 -- | Given a @target@ structure to try and factor out of another @src@
 --   structure, this function returns the modified @src@ as if the given 
 --   @target@ were not present. (i.e. factored out)

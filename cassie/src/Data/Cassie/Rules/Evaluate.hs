@@ -16,7 +16,7 @@ an @AlgebraicStruct@ to a numerical value given enough context.
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Rules.Evaluate
     ( evaluate
-    , isConst
+    , isKnown
     , Context
     , CtxItem(..)
     , EvalError(..)
@@ -132,6 +132,6 @@ getFunc s = do
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Indicates whether a given @CtxItem@ is a @Known@-constructor value.
-isConst :: CtxItem mg u n -> Bool
-isConst (Known _ _)  = True
-isConst (Func _ _ _) = False
+isKnown :: CtxItem mg u n -> Bool
+isKnown (Known _ _)  = True
+isKnown (Func _ _ _) = False

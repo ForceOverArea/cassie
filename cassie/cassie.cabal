@@ -26,6 +26,7 @@ library
                         Data.Cassie.Rules.Isolate.PolySolve,
                         Data.Cassie.Rules.Substitute,
                         Data.Cassie.Solver.Internal,
+                        Data.Cassie.Solver.System,
                         Data.Cassie.Structures.Instances.Complex,
                         Data.Cassie.Structures.Instances.Real,
                         Data.Cassie.Structures.Internal,

@@ -2,7 +2,7 @@
 module Data.Cassie.Rules 
     ( evaluate
     , factorize
-    , isConst
+    , isKnown
     , isolate
     , substitute
     , Context

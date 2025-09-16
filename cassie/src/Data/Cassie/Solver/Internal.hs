@@ -2,7 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Solver.Internal
-    ( solveConstrainedMain
+    ( getEqns
+    , solveConstrainedMain
     , Cassie
     , CassieT
     , CassieError(..)
@@ -18,6 +19,7 @@ import safe Control.Monad.Except (ExceptT)
 import safe Control.Monad.RWS (ask, get, modify, tell, RWST)
 import safe Data.Cassie.Rules.Evaluate
 import safe Data.Cassie.Rules.Isolate
+import safe Data.Cassie.Rules.Substitute (SubstitutionError)
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Utils
 import safe Data.List as List 
@@ -59,6 +61,9 @@ data CassieError mg u n
     | ImportsNotAllowed
     | ImportNotFound (String, [Symbols])
     | IsolationError (IsolateError mg u n)
+    | SubstituteError SubstitutionError
+    {- Errors for subsystem solver -}
+    | SubsystemNoEquationFound Symbol
     {-  Errors on or below this line are thrown by the module system only.
         This is confusing, but allows @solveConstrainedMain@ to be called 
         directly within the module-importing code since both actions use
@@ -120,13 +125,10 @@ getEqns = snd <$> get
 getKnowns :: Monad m => CassieT mg u n m (Context mg u n)
 getKnowns = Map.union . fromSolution <$> getSolved <*> getCtx
 
-modifySoln :: Monad m =>  (Solution mg u n -> Solution mg u n) -> CassieT mg u n m ()
-modifySoln f = do
-    -- initial <- getSolved
-    modify $ first f
-    -- (initial ==) <$> getSolved
+modifySoln :: Monad m => (Solution mg u n -> Solution mg u n) -> CassieT mg u n m ()
+modifySoln f = modify $ first f
 
-modifyEqns :: Monad m =>  (EquationPool mg u n -> EquationPool mg u n) -> CassieT mg u n m ()
+modifyEqns :: Monad m => (EquationPool mg u n -> EquationPool mg u n) -> CassieT mg u n m ()
 modifyEqns f = modify $ second f
 
 getSymbol :: (ShowMagma mg, ShowUnary u, Show n, Num n) => AlgStruct mg u n -> Symbol
