@@ -1,11 +1,11 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE OverloadedLists #-}
 module Data.Cassie.Rules.Isolate.PolySolve 
-    ( commonFactors
+    ( {- consolidate -} commonFactors
     , factorOut
     , factorize
     , factors
-    , FactorizationError
+    , PolySolveError
     ) where
 
 import safe Control.Monad
@@ -14,11 +14,33 @@ import safe qualified Data.List.NonEmpty as NE
 import safe Data.Cassie.Structures (AlgebraicStructure)
 import safe Data.Cassie.Structures.Internal ((~?), AlgStruct(..), Symbol)
 
-data FactorizationError mg u n
+data PolySolveError mg u n
     = FactorNotFound (AlgStruct mg u n) (AlgStruct mg u n)
     | NoCommonFactors
     | TargetNotAFactor
     deriving (Show, Eq, Ord)
+
+-- consolidate :: AlgebraicStructure mg u n
+--     => AlgStruct mg u n
+--     -> Either (PolySolveError mg u n) (AlgStruct mg u n)
+-- consolidate structure = 
+--     let
+        
+--     in 
+
+
+-- likeFactors :: AlgebraicStructure mg u n 
+--     => AlgStruct mg u n
+--     -> Set.Set AlgStruct mg u n
+-- likeFactors structure =
+--     case structure of  
+--         Additive terms -> 
+
+{-
+    x +     x - 3  -> 2x - 3
+2 * x + 3 * x - 5  -> 5x - 5
+x ^ 2 + x - 3      -> x^2 + x - 3 
+-}
 
 -- | Attempts to remove arcs from a given algebraic structure by
 --   reversing distributive multiplication of substructures 
@@ -29,7 +51,7 @@ data FactorizationError mg u n
 factorize :: AlgebraicStructure mg u n
     => Symbol 
     -> AlgStruct mg u n 
-    -> Either (FactorizationError mg u n) (AlgStruct mg u n)
+    -> Either (PolySolveError mg u n) (AlgStruct mg u n)
 factorize sym src =
     let 
         cfs = commonFactors src
@@ -49,7 +71,7 @@ factorize sym src =
 factorOut :: AlgebraicStructure mg u n 
     => AlgStruct mg u n 
     -> AlgStruct mg u n 
-    -> Either (FactorizationError mg u n) (AlgStruct mg u n)
+    -> Either (PolySolveError mg u n) (AlgStruct mg u n)
 factorOut src target = 
     let 
         reportError = Left $ FactorNotFound target src

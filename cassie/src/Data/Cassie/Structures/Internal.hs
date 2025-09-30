@@ -24,7 +24,7 @@ data AlgStruct mg u n
     -- | Additive binary operation of elements
     = Additive       (NE.NonEmpty (AlgStruct mg u n))
 
-    -- | Multiplicative binary operation of elements
+    -- | Multiplicative binary operation of elements (this is also currently assumed to commute over @n@)
     | Multiplicative (NE.NonEmpty (AlgStruct mg u n))
     
     -- | Unary negation of elements - essentially a mock of Haskell's 

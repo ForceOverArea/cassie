@@ -26,7 +26,10 @@ library
                         Data.Cassie.Rules.Isolate.PolySolve,
                         Data.Cassie.Rules.Substitute,
                         Data.Cassie.Solver.Internal,
+                        Data.Cassie.Structures.Polynomial,
+                        Data.Cassie.Structures.Instances.Boolean,
                         Data.Cassie.Structures.Instances.Complex,
+                        Data.Cassie.Structures.Instances.Linalg,
                         Data.Cassie.Structures.Instances.Real,
                         Data.Cassie.Structures.Internal,
                         Data.Cassie.Structures.Magmas,
@@ -35,6 +38,7 @@ library
                         Data.Cassie.Utils
     build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 
                         containers  >= 0.6.5.1,
+                        hmatrix     >= 0.20.2,
                         mtl         >= 2.2.2,
                         text        >= 2.1.2,
     hs-source-dirs:     src

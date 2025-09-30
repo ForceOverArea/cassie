@@ -28,7 +28,7 @@ import safe Control.Monad.Except (catchError, runExcept, Except)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Map as Map
 import safe Data.Cassie.Rules.Evaluate
-import safe Data.Cassie.Rules.Isolate.PolySolve (factorize, FactorizationError)
+import safe Data.Cassie.Rules.Isolate.PolySolve (factorize, PolySolveError)
 import safe Data.Cassie.Rules.Substitute
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Utils
@@ -39,7 +39,7 @@ type Isolate mg u n = RWST (Symbol, Context mg u n) Steps (Equation mg u n) (Exc
 type Steps = [String]
 
 data IsolateError mg u n
-    = FactorizeError (FactorizationError mg u n)
+    = FactorizeError (PolySolveError mg u n)
     | FunctionCallErr SubstitutionError
     | FunctionNotDefined
     | InvalidArguments

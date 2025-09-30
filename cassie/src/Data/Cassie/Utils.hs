@@ -2,6 +2,7 @@
 module Data.Cassie.Utils
     ( first'
     , insertAt
+    , realInt
     , second'
     , third
     , throwErr
@@ -12,6 +13,7 @@ import safe Control.Arrow
 import safe Control.Monad
 import safe Control.Monad.Trans (lift, MonadTrans)
 import safe Control.Monad.Except (throwError, ExceptT)
+import safe GHC.Float (int2Double)
 
 insertAt :: a -> Int -> [a] -> [a]
 insertAt x idx xs = (take idx xs) ++ (x:(drop idx xs))
@@ -52,3 +54,13 @@ second' f (x, y, z) = (x, f y, z)
 --   but works on the final item in a 3-tuple.
 third :: (t -> c) -> (a, b, t) -> (a, b, c)
 third f (x, y, z) = (x, y, f z)
+
+realInt :: Double -> Maybe Int
+realInt x = 
+    let 
+        intX = round x
+    in if x == int2Double intX then
+        Just intX
+    else 
+        Nothing
+            
