@@ -30,6 +30,7 @@ module Data.Cassie.Structures
     ) where
 
 import safe Data.Cassie.Structures.Instances.Complex
+import safe Data.Cassie.Structures.Instances.Linalg
 import safe Data.Cassie.Structures.Instances.Real
 import safe Data.Cassie.Structures.Internal
 import safe Data.Cassie.Structures.Magmas
@@ -75,3 +76,5 @@ instance ( Num n
          , Eq n
          , Ord n
          ) => AlgebraicStructure ComplexMagma ComplexUnary n
+
+instance AlgebraicStructure MixedMagma MixedUnary Mixed

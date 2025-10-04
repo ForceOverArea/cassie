@@ -12,5 +12,8 @@
             "name": "Frontend",
             "path": "cassie-cli/src/CassieCLI"
         },
+        {
+            "path": "cassie"
+        }
     ]
 }
