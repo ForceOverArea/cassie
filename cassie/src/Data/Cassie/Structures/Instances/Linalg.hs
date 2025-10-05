@@ -6,10 +6,12 @@ module Data.Cassie.Structures.Instances.Linalg
     , MixedUnary(..)
     ) where
 
+import safe Control.Exception
 import safe Data.Cassie.Structures.Magmas
 import safe Data.Cassie.Structures.UnarySystems
 import safe Data.Cassie.Utils
 import Numeric.LinearAlgebra as NLA
+import System.IO.Unsafe
 
 type DoesNotExistReason = String
 
@@ -85,7 +87,21 @@ instance Num Mixed where
 
 instance Fractional Mixed where
     recip (Sclr x) = Sclr $ recip x
-    recip (Mtrx x) = Mtrx $ recip x
+
+    {-  "...I need a way to harness his power and I think 
+        I've found a way: that's right, we're gonna cheat."
+        - AVGN
+
+        Shoutout to hmatrix for only utilizing impure exceptions
+        as their error-handling method of choice. As such, we
+        need to undo that here. Let's catch the exception in a 
+        small IO action and return DNE when inversion fails.
+    -}
+    recip (Mtrx x)
+        | rows x /= cols x = DNE "only square matrices can be inverted"
+        | det x == 0 = DNE "only matrices with a non-zero determinant can be inverted"
+        | otherwise = Mtrx $ inv x
+
     recip x = x
 
     fromRational = Sclr . fromRational

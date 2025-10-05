@@ -200,7 +200,7 @@ cancelTermsLeft2Right :: [AlgStruct mg u n]
                       -> [AlgStruct mg u n]
                       -> Isolate mg u n [AlgStruct mg u n]
 cancelTermsLeft2Right []     _cancelOp = pure
-cancelTermsLeft2Right (x:xs) cancelOp  = cancelTermsLeft2Right xs cancelOp . (x:)
+cancelTermsLeft2Right (x:xs) cancelOp  = cancelTermsLeft2Right xs cancelOp . (cancelOp x:)
 
 cancelTermsRight2Left :: [AlgStruct mg u n] 
                       -> (AlgStruct mg u n -> AlgStruct mg u n)
