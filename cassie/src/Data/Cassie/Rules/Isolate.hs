@@ -52,6 +52,11 @@ data IsolateError mg u n
     | WrongSymbolSomehow
     deriving (Show, Eq, Ord)
 
+data IsolatedSemigroup mg u n = IsolatedSemigroup { leftTerms :: [AlgStruct mg u n]
+                                                  , rightTerms :: [AlgStruct mg u n]
+                                                  , isolatedTerm :: AlgStruct mg u n
+                                                  }
+
 isolate :: AlgebraicStructure mg u n => Context mg u n -> Equation mg u n -> Symbol -> Either (IsolateError mg u n) (Equation mg u n, Steps)
 isolate ctx eqn target = runExcept $ execRWST isolateMain (target, ctx) eqn
 
@@ -94,8 +99,13 @@ isolateAdditive terms =
                 pure
                 (factorize target $ Additive ts)
     in do 
-        wrapperTerms <- Additive <$> isolatePolyTerms terms 
-        modifyRhs $ \rhs' -> rhs' - wrapperTerms
+        wrapperTerms <- isolatePolyTerms terms 
+        setLhs . Additive . pure . isolatedTerm $ wrapperTerms
+        cancelLeft <- cancelTermsLeft2Right (leftTerms wrapperTerms) Negated []
+        cancelRight <- cancelTermsRight2Left (rightTerms wrapperTerms) Negated []
+        modifyRhs 
+            $ (Additive cancelLeft +) 
+            . (+ Additive cancelRight)
         isolateMain
     `catchError` \err -> do
         when (err /= NeedsPolySolve) $ throwErr err
@@ -105,8 +115,13 @@ isolateAdditive terms =
 
 isolateMultiplicative :: AlgebraicStructure mg u n => NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n ()
 isolateMultiplicative factors = do
-    wrapperTerms <- Multiplicative <$> isolatePolyTerms factors
-    modifyRhs (/ wrapperTerms)
+    wrapperTerms <- isolatePolyTerms factors
+    setLhs . Multiplicative . pure . isolatedTerm $ wrapperTerms
+    cancelLeft <- cancelTermsLeft2Right (leftTerms wrapperTerms) Inverse []
+    cancelRight <- cancelTermsRight2Left (rightTerms wrapperTerms) Inverse []
+    modifyRhs 
+        $ (Multiplicative cancelLeft *) 
+        . (* Multiplicative cancelRight)
     isolateMain
 
 negateRhs :: AlgebraicStructure mg u n => AlgStruct mg u n -> Isolate mg u n ()
@@ -162,14 +177,36 @@ isolateN_ary name args = do
             Right x  -> setLhs x
     isolateMain
 
-isolatePolyTerms :: NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n (NE.NonEmpty (AlgStruct mg u n))
-isolatePolyTerms terms = do
-    target <- asks fst
-    let (wrapped, wrapper) = NE.partition (target ~?) terms
-    case wrapped of
-        [x] -> setLhs x >> (return $ NE.fromList wrapper)
-        []  -> throwErr SymbolNotFound
-        _   -> throwErr NeedsPolySolve
+isolatePolyTerms :: NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n (IsolatedSemigroup mg u n)
+isolatePolyTerms neTerms = 
+    let
+        terms = NE.toList neTerms
+    in do
+        target <- asks fst
+        (i, term) <- case filter ((target ~?) . snd) $ zip [1..] terms of
+            [targetTerm] -> pure targetTerm
+            []           -> throwErr SymbolNotFound
+            _            -> throwErr NeedsPolySolve
+        let (leftTerms', rightTerms') = second (drop 1) $ splitAt (i - 1) terms 
+        return $ IsolatedSemigroup { leftTerms  = leftTerms'
+                                   , rightTerms = rightTerms'
+                                   , isolatedTerm = term
+                                   }
+
+cancelTermsLeft2Right :: [AlgStruct mg u n]
+                      -> (AlgStruct mg u n -> AlgStruct mg u n)
+                      -> [AlgStruct mg u n]
+                      -> Isolate mg u n (NE.NonEmpty (AlgStruct mg u n))
+cancelTermsLeft2Right []     _cancelOp = return . NE.fromList
+cancelTermsLeft2Right (x:xs) cancelOp  = cancelTermsLeft2Right xs cancelOp . (x:)
+
+cancelTermsRight2Left :: [AlgStruct mg u n] 
+                      -> (AlgStruct mg u n -> AlgStruct mg u n)
+                      -> [AlgStruct mg u n]
+                      -> Isolate mg u n (NE.NonEmpty (AlgStruct mg u n))
+cancelTermsRight2Left terms cancelOp acc 
+    = NE.reverse <$> cancelTermsLeft2Right (reverse terms) cancelOp acc
+
 
 modifyRhs :: (AlgStruct mg u n -> AlgStruct mg u n) -> Isolate mg u n ()
 modifyRhs f = do
