@@ -103,9 +103,10 @@ isolateAdditive terms =
         setLhs . Additive . pure . isolatedTerm $ wrapperTerms
         cancelLeft <- cancelTermsLeft2Right (leftTerms wrapperTerms) Negated []
         cancelRight <- cancelTermsRight2Left (rightTerms wrapperTerms) Negated []
-        modifyRhs 
-            $ (Additive cancelLeft +) 
-            . (+ Additive cancelRight)
+        when (cancelLeft /= [])
+            $ modifyRhs ((Additive $ NE.fromList cancelLeft) *)
+        when (cancelRight /= [])
+            $ modifyRhs (* (Additive $ NE.fromList cancelRight))
         isolateMain
     `catchError` \err -> do
         when (err /= NeedsPolySolve) $ throwErr err
@@ -116,12 +117,13 @@ isolateAdditive terms =
 isolateMultiplicative :: AlgebraicStructure mg u n => NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n ()
 isolateMultiplicative factors = do
     wrapperTerms <- isolatePolyTerms factors
-    setLhs . Multiplicative . pure . isolatedTerm $ wrapperTerms
+    setLhs $ isolatedTerm wrapperTerms
     cancelLeft <- cancelTermsLeft2Right (leftTerms wrapperTerms) Inverse []
     cancelRight <- cancelTermsRight2Left (rightTerms wrapperTerms) Inverse []
-    modifyRhs 
-        $ (Multiplicative cancelLeft *) 
-        . (* Multiplicative cancelRight)
+    when (cancelLeft /= [])
+        $ modifyRhs ((Multiplicative $ NE.fromList cancelLeft) *)
+    when (cancelRight /= [])
+        $ modifyRhs (* (Multiplicative $ NE.fromList cancelRight))
     isolateMain
 
 negateRhs :: AlgebraicStructure mg u n => AlgStruct mg u n -> Isolate mg u n ()
@@ -196,16 +198,16 @@ isolatePolyTerms neTerms =
 cancelTermsLeft2Right :: [AlgStruct mg u n]
                       -> (AlgStruct mg u n -> AlgStruct mg u n)
                       -> [AlgStruct mg u n]
-                      -> Isolate mg u n (NE.NonEmpty (AlgStruct mg u n))
-cancelTermsLeft2Right []     _cancelOp = return . NE.fromList
+                      -> Isolate mg u n [AlgStruct mg u n]
+cancelTermsLeft2Right []     _cancelOp = pure
 cancelTermsLeft2Right (x:xs) cancelOp  = cancelTermsLeft2Right xs cancelOp . (x:)
 
 cancelTermsRight2Left :: [AlgStruct mg u n] 
                       -> (AlgStruct mg u n -> AlgStruct mg u n)
                       -> [AlgStruct mg u n]
-                      -> Isolate mg u n (NE.NonEmpty (AlgStruct mg u n))
-cancelTermsRight2Left terms cancelOp acc 
-    = NE.reverse <$> cancelTermsLeft2Right (reverse terms) cancelOp acc
+                      -> Isolate mg u n [AlgStruct mg u n]
+cancelTermsRight2Left terms cancelOp acc = reverse 
+    <$> cancelTermsLeft2Right (reverse terms) cancelOp acc
 
 
 modifyRhs :: (AlgStruct mg u n -> AlgStruct mg u n) -> Isolate mg u n ()
