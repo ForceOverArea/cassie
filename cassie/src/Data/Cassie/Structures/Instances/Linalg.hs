@@ -1,7 +1,9 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE InstanceSigs #-}
 module Data.Cassie.Structures.Instances.Linalg
-    ( Mixed(..)
+    ( toMatrix
+    , Mixed(..)
     , MixedAlgStruct
     , MixedMagma(..)
     , MixedUnary(..)
@@ -11,13 +13,14 @@ import safe Data.Cassie.Structures.Internal
 import safe Data.Cassie.Structures.Magmas
 import safe Data.Cassie.Structures.UnarySystems
 import safe Data.Cassie.Utils
+import safe Data.List as List
 import Numeric.LinearAlgebra as NLA
 
 type DoesNotExistReason = String
 
 type MixedAlgStruct = AlgStruct MixedMagma MixedUnary Mixed
 
-type MixedElem = Double
+type MixedElem = R
 
 -- | A type for an "algebraic structure" over both 
 --   matrices and scalars (just like engineering school).
@@ -28,7 +31,7 @@ data Mixed
     = Mtrx { mtrx :: (Matrix MixedElem) }
     | Sclr { sclr :: MixedElem }
     | DNE DoesNotExistReason
-    deriving (Show, Eq)
+    deriving Eq
 
 data MixedMagma 
     = MixedExpn
@@ -43,7 +46,18 @@ data MixedUnary
     | SclrTrig TrigUnary
     deriving (Show, Eq, Ord)
 
--- instance Show Mixed where
+instance Show Mixed where
+    show (DNE reason) = "DOES NOT EXIST: '" ++ reason ++ "'"
+    show (Sclr x) = show x
+    show (Mtrx x) = 
+        let 
+            mtrxRows = toLists x
+            formatRow = intercalate ", " . map show
+        in ('[' :) 
+            . (++ "]") 
+            . intercalate "; " 
+            . map formatRow 
+            $ mtrxRows
 
 instance Ord Mixed where
     Sclr x <= Sclr y = x <= y
@@ -207,3 +221,6 @@ scalarOnly1 _f err _ = DNE err
 scalarOnly2 :: (MixedElem -> MixedElem -> MixedElem) -> DoesNotExistReason -> Mixed -> Mixed -> Mixed
 scalarOnly2 f _err (Sclr x) (Sclr y) = (Sclr $ f x y)
 scalarOnly2 _f err _ _ = DNE err
+
+toMatrix :: Int -> [MixedElem] -> Mixed
+toMatrix n = Mtrx . matrix n

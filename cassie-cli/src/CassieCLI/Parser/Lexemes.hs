@@ -20,6 +20,7 @@ module CassieCLI.Parser.Lexemes
     ) where
 
 import safe Prelude hiding (exponent, logBase, product, sum)
+import safe Control.Monad
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Solver (Symbols) 
@@ -29,7 +30,9 @@ import safe Text.Parsec.Language (haskell)
 import safe Text.Parsec.Token (GenTokenParser(..)) 
 
 -- | Parser type for reading algebraic structures from plain text
-type CassieParser = Parsec String Symbols MixedAlgStruct
+type CassieParser = CassieParserInternal MixedAlgStruct
+
+type CassieParserInternal = Parsec String Symbols
 
 parseExpression :: String -> Either ParseError (MixedAlgStruct, Symbols)
 parseExpression expr = 
@@ -114,9 +117,38 @@ parenthetical = whiteSpace haskell
     >> parens haskell expression 
     <?> "grouped expression"
 
+matrix :: CassieParser
+matrix = 
+    let
+        matrixRow = commaSep1 haskell numberLiteral
+    in do
+        whiteSpace haskell
+        rows <- (brackets haskell $ matrixRow `sepBy1` char ';') <?> "matrix"
+        n <- case rows of 
+            [] -> unexpected
+                $ "expected at least one row when parsing matrix. "
+                ++ "report this issue at: https://github.com/ForceOverArea/cassie/issues"
+            [row] -> pure $ length row
+            (row:others) -> let 
+                    expectedNumCols = length row
+                    sameNumberOfCols = flip $ (&&) . ((==) expectedNumCols . length)
+                in if expectedNumCols == 0 then 
+                    unexpected $ "expected at least one column when parsing matrix. "
+                            ++ "report this issue at: https://github.com/ForceOverArea/cassie/issues"
+                else if foldl' sameNumberOfCols True others then
+                    pure expectedNumCols
+                else
+                    unexpected $ "expected all rows of matrix to have " 
+                            ++ show expectedNumCols
+                            ++ " elements"
+        return . Nullary . toMatrix n $ join rows
+
 -- | Parses an identifier (haskell definition) and returns an @AlgStruct.Symbol@
 value :: CassieParser 
-value = Nullary . Sclr <$> try (float haskell) 
+value = Nullary . Sclr <$> numberLiteral
+
+numberLiteral :: CassieParserInternal Double
+numberLiteral = try (float haskell) 
     <|> fromInteger <$> integer haskell 
     <?> "value"
 
@@ -147,4 +179,4 @@ p1Term :: CassieParser
 p1Term = try logarithm <|> p0Term
 
 p0Term :: CassieParser 
-p0Term = try function <|> try parenthetical <|> try symb <|> value
+p0Term = try function <|> try parenthetical <|> try symb <|> try matrix <|> value
