@@ -23,15 +23,15 @@ import safe Prelude hiding (exponent, logBase, product, sum)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Solver (Symbols) 
-import safe Data.Cassie.Structures (AlgStruct(..), ExpnMagma(..), RealMagma(..), RealAlgStruct)
+import safe Data.Cassie.Structures
 import safe Text.Parsec
 import safe Text.Parsec.Language (haskell)
 import safe Text.Parsec.Token (GenTokenParser(..)) 
 
 -- | Parser type for reading algebraic structures from plain text
-type CassieParser = Parsec String Symbols RealAlgStruct
+type CassieParser = Parsec String Symbols MixedAlgStruct
 
-parseExpression :: String -> Either ParseError (RealAlgStruct, Symbols)
+parseExpression :: String -> Either ParseError (MixedAlgStruct, Symbols)
 parseExpression expr = 
     let 
         bundleFoundSyms struct = do
@@ -82,14 +82,14 @@ exponent :: CassieParser
 exponent = do 
     expBase <- p1Term 
     _ <- char '^'
-    Magma (RealMagma Expn) expBase 
+    Magma (MixedExpn) expBase 
         <$> p1Term 
         <?> "exponent"
 
 logarithm :: CassieParser 
 logarithm = whiteSpace haskell
     >> string "log"
-    >> Magma (RealMagma Logm) 
+    >> Magma (MixedLogm) 
         <$> angles haskell expression
         <*> parens haskell expression 
         <?> "logarithm"
@@ -97,7 +97,7 @@ logarithm = whiteSpace haskell
 root :: CassieParser 
 root = whiteSpace haskell
     >> string "root"
-    >> Magma (RealMagma Root) 
+    >> Magma (MixedRoot) 
         <$> angles haskell expression
         <*> parens haskell expression 
         <?> "root"
@@ -116,7 +116,7 @@ parenthetical = whiteSpace haskell
 
 -- | Parses an identifier (haskell definition) and returns an @AlgStruct.Symbol@
 value :: CassieParser 
-value = Nullary <$> try (float haskell) 
+value = Nullary . Sclr <$> try (float haskell) 
     <|> fromInteger <$> integer haskell 
     <?> "value"
 

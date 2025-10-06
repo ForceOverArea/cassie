@@ -2,16 +2,20 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Cassie.Structures.Instances.Linalg
     ( Mixed(..)
+    , MixedAlgStruct
     , MixedMagma(..)
     , MixedUnary(..)
     ) where
 
+import safe Data.Cassie.Structures.Internal
 import safe Data.Cassie.Structures.Magmas
 import safe Data.Cassie.Structures.UnarySystems
 import safe Data.Cassie.Utils
 import Numeric.LinearAlgebra as NLA
 
 type DoesNotExistReason = String
+
+type MixedAlgStruct = AlgStruct MixedMagma MixedUnary Mixed
 
 type MixedElem = Double
 
