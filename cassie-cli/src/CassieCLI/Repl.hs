@@ -37,13 +37,15 @@ instance Monoid CassieReplState where
 cursor :: String
 cursor = ">>> "
 
-cassieReplMain :: (MonadVirtIO m, MonadVirtIO m, MonadIO m) => [String] -> m ()
+cassieReplMain :: (MonadVirtIO m, MonadIO m) => [String] -> m ()
 cassieReplMain _argv = do
     liftIO $ hSetBuffering stdout NoBuffering
+    vPutStrLn "Welcome to the CASsie v0.1.0.0 REPL!"
+    vPutStrLn "Enter \'help\' for more info or \'quit\' to leave."
     evalStateT cassieRepl mempty
     return ()
 
-cassieRepl :: (MonadVirtIO m, MonadVirtIO m, MonadIO m) => CassieRepl m ()
+cassieRepl :: (MonadVirtIO m, MonadIO m) => CassieRepl m ()
 cassieRepl = 
     let
         -- | Adds a semicolon to the lexeme, reparses it, and 
