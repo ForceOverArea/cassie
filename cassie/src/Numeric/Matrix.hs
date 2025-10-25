@@ -9,7 +9,7 @@ module Numeric.Matrix
     , dot'
     , fromList
     , ident
-    , luDecomp
+    , lupDecompose
     , matrixInv
     , matrixProd
     , matrixSum

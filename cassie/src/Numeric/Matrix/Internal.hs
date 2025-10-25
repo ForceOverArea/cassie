@@ -107,7 +107,7 @@ matrixProd a b =
     let 
         m = rows a
         n = cols b
-        indices = (\x y -> (x, y)) <$> [0..m - 1] <*> [0..n - 1]
+        indices = (,) <$> [0..m - 1] <*> [0..n - 1]
         vectors = ((`row'` a) *** (`column'` b)) <$> indices
     in if rows b == cols a then
         Just . fromList n $ uncurry dot' <$> vectors
