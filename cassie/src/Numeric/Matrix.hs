@@ -10,7 +10,7 @@ module Numeric.Matrix
     , fromList
     , ident
     , lupDecompose
-    , matrixInv
+    , lupDet
     , matrixProd
     , matrixSum
     , matrixTranspose

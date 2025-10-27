@@ -10,7 +10,7 @@ module Numeric.Matrix.Internal
     , dot'
     , fromList
     , ident
-    , matrixInv
+    , mapIndices
     , matrixProd
     , matrixSum
     , matrixTranspose
@@ -26,8 +26,10 @@ import safe Control.Arrow
 import safe Control.Monad
 import safe Data.List
 import safe Data.Maybe
+import safe qualified Data.Set as Set
 import qualified Data.Vector as V
-import GHC.Base (quotInt, remInt)
+
+type MatIdx = (Int, Int)
 
 data Matrix a = Matrix { cols    :: Int 
                        , rows    :: Int
@@ -114,29 +116,6 @@ matrixProd a b =
     else 
         Nothing
 
-matrixInv :: Fractional a => Matrix a -> Matrix a
-matrixInv = error ""
-
--- -- | Reduces a matrix to be left-triangular
--- lupDecompose :: Matrix a -> Matrix a 
--- matrixReduce a = 
---     let 
---         colIndices = [0..rows a `min` cols a]
---         -- factorMap = 
-
---         reduceCol n = if 
---     in error "TODO"
-
--- reduceColumn :: Int -> Matrix a -> Matrix a
--- reduceColumn j a = 
---     let 
---         targetCol = column j a  
-
---         factors = 
-
---         scaleRow = 
---     in
-
 matrixTranspose :: Matrix a -> Matrix a
 matrixTranspose (Matrix 0 b c) = (Matrix b 0 c)
 matrixTranspose (Matrix a 0 c) = (Matrix 0 a c)
@@ -182,12 +161,37 @@ a `cross` b =
     else
         Nothing
 
+-- | Allows one to apply a function @f@ to a subset of a matrix 
+--   indicated by a list of indices. This yields a new matrix 
+--   by iterating over all the original elements once.
+mapIndices :: [MatIdx] -> (MatIdx -> a) -> Matrix a -> Matrix a
+mapIndices idxs f a = 
+    let 
+        flattenIdx (i, j) = cols a * i + j
+        
+        unflattenIdx 0 = (0, 0)
+        unflattenIdx k = (`quot` cols a) &&& (`rem` cols a) $ k
+
+        flatIdxs = Set.fromList $ map flattenIdx idxs
+        
+        flatA = flatten a
+
+        n = V.length flatA - 1
+
+        piecewise i
+            | i `elem` flatIdxs = f' i 
+            | otherwise         = flatA V.! i
+            where 
+                f' = f . unflattenIdx
+
+    in toMatrix' (cols a) . V.map piecewise $ V.fromList [0..n]
+
 -- | Create row'-rank @Matrix a@ with @n@ columns from a @Data.Vector.Vector a@
 toMatrix :: Int -> V.Vector a -> Maybe (Matrix a)
 toMatrix n v 
     | n == 0 && V.length v == 0     = Just $ Matrix 0 0 v
     | n == 0                        = Nothing
-    | V.length v `remInt` n == 0    = Just $ Matrix n (V.length v `quotInt` n) v
+    | V.length v `rem` n == 0    = Just $ Matrix n (V.length v `quot` n) v
     | otherwise                     = Nothing
 
 -- | Partial matrix construction
@@ -203,7 +207,7 @@ fromList :: Int -> [a] -> Matrix a
 fromList n = toMatrix' n . V.fromList
 
 -- | Non-partial matrix indexing
-(!?) :: Matrix a -> (Int, Int) -> Maybe a
+(!?) :: Matrix a -> MatIdx -> Maybe a
 a !? (i, j) = 
     if i < rows a && j < cols a then
         Just $ (flatten a) V.! (cols a * i + j)
@@ -211,7 +215,7 @@ a !? (i, j) =
         Nothing 
         
 -- | Partial matrix indexing
-(!) :: Matrix a -> (Int, Int) -> a
+(!) :: Matrix a -> MatIdx -> a
 a ! (i, j) = 
     maybe
         (error $ "index out of bounds: '" ++ show (i, j) ++ "'")
