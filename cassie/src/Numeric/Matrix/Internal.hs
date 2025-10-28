@@ -26,7 +26,6 @@ import safe Control.Arrow
 import safe Control.Monad
 import safe Data.List
 import safe Data.Maybe
-import safe qualified Data.Set as Set
 import qualified Data.Vector as V
 
 type MatIdx = (Int, Int)
@@ -153,46 +152,34 @@ a `dot'` b = V.sum $ V.zipWith (*) a b
 -- | Non-partial vector cross product
 cross :: Num a => V.Vector a -> V.Vector a -> Maybe (V.Vector a)
 a `cross` b = 
-    if V.length a == 3 && V.length b == 3 then
+    if V.length a /= 3 || V.length b /= 3 then
+        Nothing
+    else
         Just $ V.fromList [ (a V.! 1) * (b V.! 2) - (a V.! 2) * (b V.! 1)
                           , (a V.! 2) * (b V.! 0) - (a V.! 0) * (b V.! 2)
                           , (a V.! 0) * (b V.! 1) - (a V.! 1) * (b V.! 0)
                           ]
-    else
-        Nothing
 
 -- | Allows one to apply a function @f@ to a subset of a matrix 
 --   indicated by a list of indices. This yields a new matrix 
 --   by iterating over all the original elements once.
-mapIndices :: [MatIdx] -> (MatIdx -> a) -> Matrix a -> Matrix a
-mapIndices idxs f a = 
+mapIndices :: (MatIdx -> a) -> Matrix a -> Matrix a
+mapIndices f a = 
     let 
-        flattenIdx (i, j) = cols a * i + j
-        
+        n = rows a * cols a - 1
+
         unflattenIdx 0 = (0, 0)
         unflattenIdx k = (`quot` cols a) &&& (`rem` cols a) $ k
-
-        flatIdxs = Set.fromList $ map flattenIdx idxs
         
-        flatA = flatten a
-
-        n = V.length flatA - 1
-
-        piecewise i
-            | i `elem` flatIdxs = f' i 
-            | otherwise         = flatA V.! i
-            where 
-                f' = f . unflattenIdx
-
-    in toMatrix' (cols a) . V.map piecewise $ V.fromList [0..n]
+    in fromList (cols a) $ (f . unflattenIdx) <$> [0..n]
 
 -- | Create row'-rank @Matrix a@ with @n@ columns from a @Data.Vector.Vector a@
 toMatrix :: Int -> V.Vector a -> Maybe (Matrix a)
 toMatrix n v 
-    | n == 0 && V.length v == 0     = Just $ Matrix 0 0 v
-    | n == 0                        = Nothing
-    | V.length v `rem` n == 0    = Just $ Matrix n (V.length v `quot` n) v
-    | otherwise                     = Nothing
+    | n == 0 && V.length v == 0 = Just $ Matrix 0 0 v
+    | n == 0                    = Nothing
+    | V.length v `rem` n == 0   = Just $ Matrix n (V.length v `quot` n) v
+    | otherwise                 = Nothing
 
 -- | Partial matrix construction
 toMatrix' :: Int -> V.Vector a -> Matrix a

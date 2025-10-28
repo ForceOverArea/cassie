@@ -11,6 +11,7 @@ module Numeric.Matrix
     , ident
     , lupDecompose
     , lupDet
+    , mapIndices
     , matrixProd
     , matrixSum
     , matrixTranspose
