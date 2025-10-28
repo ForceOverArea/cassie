@@ -13,3 +13,6 @@ src/wasi
 
 # VSCodeCounter output
 .VSCodeCounter
+
+# notes
+.notes
