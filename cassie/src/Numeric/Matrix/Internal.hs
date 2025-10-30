@@ -19,6 +19,7 @@ module Numeric.Matrix.Internal
     , size
     , toMatrix
     , toMatrix'
+    , MatIdx
     , Matrix(..)
     ) where
 
