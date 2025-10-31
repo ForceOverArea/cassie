@@ -79,7 +79,7 @@ lupDet' = do
 lupInv' :: (Fractional a, Ord a, Monad m) => LUPDecompT a m ()
 lupInv' = do
     n <- gets $ (+ (- 1)) . cols . lu 
-    solveForYAndX `mapM_` [0..n]
+    (\i -> solveForY i >> solveForX i) `mapM_` [0..n]
 
 -- | Pivots if the matrix needs to be pivoted to reduce the @i@th column.
 pivot :: (Num a, Ord a, Monad m) => Int -> LUPDecompT a m ()
@@ -130,21 +130,36 @@ reduceRows i =
                      , permutationCount = permutationCount lup
                      }
 
-solveForYAndX :: (Num a, Monad m) => Int -> LUPDecompT a m ()
-solveForYAndX j = 
+solveForY :: (Num a, Monad m) => Int -> LUPDecompT a m ()
+solveForY j = 
     let 
         lowerTriIndices n = 
             let
                 lowerTriCols i = ((,) i) <$> [0..i - 1]
             in lowerTriCols <$> [0..n]
+    in do
+        n <- gets $ (+ (-1)) . cols . lu 
+        mapM_ (modifyRow j) $ lowerTriIndices n
 
+solveForX :: (Fractional a, Monad m) => Int -> LUPDecompT a m ()
+solveForX j = 
+    let
         upperTriIndices n = 
             let 
                 upperTriCols i = ((,) i) <$> [i + 1..n]
             in upperTriCols <$> reverse [0..n]
+
+        tagRows rows' = 
+            let 
+                f x y = [Right y, Left x]
+            in concat $ zipWith f [0..] rows'
+
+        g = Kleisli $ endOfRow j
+        h = Kleisli $ modifyRow j
+
     in do
-        n <- gets $ (+ (-1)) . cols . lu 
-        mapM_ (modifyRow j) $ lowerTriIndices n ++ upperTriIndices n
+        n <- gets $ (+ (-1)) . cols . lu
+        mapM_ (runKleisli $ g +++ h) . tagRows $ upperTriIndices n 
 
 modifyRow :: (Num a, Monad m) => Int -> [MatIdx] -> LUPDecompT a m ()
 modifyRow j rowIdxs = 
@@ -152,6 +167,16 @@ modifyRow j rowIdxs =
         reduceIdx a ia (i, k) 
             | (i, j) `elem` rowIdxs = ia ! (i, j) - a ! (i, k) * ia ! (k, j)
             | otherwise             = ia ! (i, j)
+    in do
+        (a, ia) <- gets $ lu &&& p
+        modifyP . mapIndices $ reduceIdx a ia 
+
+endOfRow :: (Fractional a, Monad m) => Int -> Int -> LUPDecompT a m ()
+endOfRow j i = 
+    let 
+        reduceIdx a ia (i', j')
+            | (i', j') == (i, j) = ia ! (i, j) / a ! (i, i)
+            | otherwise          = ia ! (i', j')
     in do
         (a, ia) <- gets $ lu &&& p
         modifyP . mapIndices $ reduceIdx a ia
