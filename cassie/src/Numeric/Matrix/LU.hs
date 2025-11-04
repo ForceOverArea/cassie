@@ -1,196 +1,136 @@
-{-# LANGUAGE Safe #-}
-module Numeric.Matrix.LU
+{-# LANGUAGE Trustworthy #-}
+module Numeric.Matrix.LU 
     ( lupDecompose
     , lupDet
     , lupDetInv
     , lupInv
     ) where
 
-import safe Control.Arrow
 import safe Control.Monad
 import safe Control.Monad.Except
-import safe Control.Monad.Identity
-import safe Control.Monad.State
-import safe Data.List as List
+import safe Control.Monad.ST
+import safe Control.Monad.Trans
+import safe Data.STRef
+import qualified Data.Vector.Unboxed.Mutable as MV
 import safe Numeric.Matrix.Internal
 
-type LUPDecompT a m = StateT (LUP a) (ExceptT LUPDecomposeError m)
+type LUPDecomp s = ExceptT LUPDecomposeError (ST s)
 
-data LUP a = LUP { lu :: Matrix a
-                 , p  :: Matrix a
-                 , permutationCount :: Int
-                 } 
-                 deriving Show
+data LUPDecomposeError = NotSquare | Degenerate | NotInvertible deriving (Eq, Ord)
 
-data LUPDecomposeError = NotSquare | Degenerate deriving (Eq, Ord)
+data LUP s a = LUP { lu :: MV.MVector s a
+                   , _p  :: MV.MVector s a
+                   , _nRowChanges :: STRef s Int
+                   }
 
 instance Show LUPDecomposeError where
     show NotSquare  = "the given matrix is not square"
     show Degenerate = "the given matrix is degenerate"
+    show NotInvertible = "the given matrix has no inverse"
 
-lupDecompose :: (Fractional a, Ord a) => Matrix a -> Either LUPDecomposeError (Matrix a, Matrix a)
-lupDecompose a = runIdentity 
-               . runExceptT 
-               $ evalStateT 
-                    (lupDecompose' >> gets (lu &&& p))
-                    (initState a)
-
-lupDet :: (Fractional a, Ord a) => Matrix a -> Either LUPDecomposeError a
-lupDet a = runIdentity 
-         . runExceptT 
-         $ evalStateT 
-            (lupDecompose' >> lupDet') 
-            (initState a)
-
-lupInv :: (Fractional a, Ord a) => Matrix a -> Either LUPDecomposeError (Matrix a)
-lupInv a = runIdentity 
-         . runExceptT 
-         $ evalStateT 
-            (lupDecompose' >> lupInv' >> (gets $ p)) 
-            (initState a)
-
-lupDetInv :: (Fractional a, Ord a) => Matrix a -> Either LUPDecomposeError (a, Matrix a)
-lupDetInv a = 
-    let 
-        f = Kleisli . const $ lupDet'
-        g = Kleisli . const $ lupInv' >> (gets $ p)
-        lupDetInv' = runKleisli (f &&& g) ()
-    in do 
-        runIdentity 
-            . runExceptT 
-            $ evalStateT 
-                (lupDecompose' >> lupDetInv')
-                (initState a)
-
-lupDecompose' :: (Fractional a, Ord a, Monad m) => LUPDecompT a m ()
-lupDecompose' = do
-    n <- gets $ (+ (- 1)) . cols . lu  
-    (\j -> pivot j >> reduceRows j) `mapM_` [0..n]
-
-lupDet' :: (Num a, Monad m) => LUPDecompT a m a
-lupDet' = do
-    (a, permCount) <- gets $ (lu &&& permutationCount) 
-    let det = product $ (a !) <$> join zip [0..cols a - 1]
-    if permCount - cols a `rem` 2 == 0 then
-        return det
+lupDecompose :: (Fractional a, Ord a, MV.Unbox a)
+             => Matrix a 
+             -> Either LUPDecomposeError (Matrix a)
+lupDecompose a = 
+    if rows a == cols a then
+        runST $ runExceptT 
+              $ lupDecomposeMain a 
+              >>= fromMVector (cols a) . lu
     else 
-        return $ -det
+        Left NotSquare
 
-lupInv' :: (Fractional a, Ord a, Monad m) => LUPDecompT a m ()
-lupInv' = do
-    n <- gets $ (+ (- 1)) . cols . lu 
-    (\i -> solveForY i >> solveForX i) `mapM_` [0..n]
+lupDet :: Fractional a 
+       => Matrix a 
+       -> Either LUPDecomposeError a
+lupDet _a = error "TODO"
 
--- | Pivots if the matrix needs to be pivoted to reduce the @i@th column.
-pivot :: (Num a, Ord a, Monad m) => Int -> LUPDecompT a m ()
-pivot i = 
-    let 
-        -- Determine which row should be the pivot:
-        pivotRow a = 
-            let 
-                absA k = abs $ a ! (k, i)
-                compare' = curry $ uncurry compare . join (***) absA
-                imax = maximumBy compare' $ reverse [i..(cols a) - 1] -- reverse here prevents tie cases from screwing up results
-            in pure imax
+lupInv :: Fractional a 
+       => Matrix a 
+       -> Either LUPDecomposeError (Matrix a)
+lupInv _a = error "TODO"
 
-        swapRows' i1 i2 a = 
-            let 
-                swapElem (i', j)
-                    | i' == i2  = a ! (i1, j)
-                    | i' == i1  = a ! (i2, j)
-                    | otherwise = a ! (i', j)
-            in mapIndices swapElem a
-    in do
-        (LUP lu' p' permutationCount') <- get
-        imax <- pivotRow lu'
-        when (i /= imax) 
-            . modify
-            . const 
-            $ LUP { lu = swapRows' i imax lu'
-                  , p  = swapRows' i imax p'
-                  , permutationCount = permutationCount' + 1
-                  }
+lupDetInv :: (Fractional a, MV.Unbox a)
+          => Matrix a 
+          -> Either LUPDecomposeError (a, Matrix a)
+lupDetInv _a = error "TODO"
 
--- | Reduces the rows of the LU matrix for a given column.
-reduceRows :: (Fractional a, Monad m) => Int -> LUPDecompT a m ()
-reduceRows i = 
-    let 
-        reduceIdx col a (i', j) 
-            | col >= i'  = a ! (i', j) -- ignores rows that have already been reduced
-            | col == j  = pivotA     
-            | col < j   = a ! (i', j) - pivotA * a ! (col, j)
-            | otherwise = a ! (i', j)
-            where
-                pivotA = a ! (i', col) / a ! (col, col)
-    in do
-        (a, lup) <- gets $ (lu &&& id) 
-        modify . const 
-               $ LUP { lu = mapIndices (reduceIdx i a) a
-                     , p  = p lup
-                     , permutationCount = permutationCount lup
-                     }
-
-solveForY :: (Num a, Monad m) => Int -> LUPDecompT a m ()
-solveForY j = 
-    let 
-        lowerTriIndices n = 
-            let
-                lowerTriCols i = ((,) i) <$> [0..i - 1]
-            in lowerTriCols <$> [0..n]
-    in do
-        n <- gets $ (+ (-1)) . cols . lu 
-        mapM_ (modifyRow j) $ lowerTriIndices n
-
-solveForX :: (Fractional a, Monad m) => Int -> LUPDecompT a m ()
-solveForX j = 
+lupDecomposeMain :: (Fractional a, Ord a, MV.Unbox a)
+                 => Matrix a 
+                 -> LUPDecomp s (LUP s a)
+lupDecomposeMain a = 
     let
-        upperTriIndices n = 
-            let 
-                upperTriCols i = ((,) i) <$> [i + 1..n]
-            in upperTriCols <$> reverse [0..n]
+        n = cols a - 1
+        _N = cols a
+        nElems = rows a * cols a
 
-        tagRows rows' = 
-            let 
-                f x y = [Right y, Left x]
-            in concat $ zipWith f [0..] rows'
-
-        g = Kleisli $ endOfRow j
-        h = Kleisli $ modifyRow j
-
+        f i | i == 0 || i `quot` nElems == i `rem` nElems = 1
+            | otherwise = 0 
     in do
-        n <- gets $ (+ (-1)) . cols . lu
-        mapM_ (runKleisli $ g +++ h) . tagRows $ upperTriIndices n 
+        lup <- lift $ LUP <$> MV.new nElems 
+                          <*> MV.generate nElems f
+                          <*> newSTRef 0
+                          
+        forM_ [0..n] $ \i -> do
+            _maxA <- pivot i n lup
+            
+            -- when (maxA < 1E-12) $ throwError Degenerate -- FIXME: parametrize this magic number
 
-modifyRow :: (Num a, Monad m) => Int -> [MatIdx] -> LUPDecompT a m ()
-modifyRow j rowIdxs = 
-    let 
-        reduceIdx a ia (i, k) 
-            | (i, j) `elem` rowIdxs = ia ! (i, j) - a ! (i, k) * ia ! (k, j)
-            | otherwise             = ia ! (i, j)
+            forM_ [i + 1..n] $ \j -> do
+                let a' = lu lup
+                
+                flip (MV.modifyM a') (_N -! (j, i))
+                    $ \x -> (x /) <$> (a' !- _N $ (i, i))
+
+                forM_ [i + 1..n] $ \k -> do
+                    flip (MV.modifyM a') (_N -! (j, k))
+                        $ \x -> do
+                            prod <- (*) <$> (a' !- _N $ (j, i)) 
+                                        <*> (a' !- _N $ (i, k))
+                            pure $ x - prod
+        pure lup
+        
+pivot :: (Fractional a, Ord a, MV.Unbox a)
+      => Int 
+      -> Int
+      -> LUP s a 
+      -> LUPDecomp s a
+pivot col n lup = 
+    let
+        _N = (n + 1)
+
+        findMax (iMax, maxA) i = do
+            absA <- fmap abs $ MV.read (lu lup) $ (_N -! (i, col))
+            if absA > maxA then
+                pure (i, absA)
+            else 
+                pure (iMax, maxA)
     in do
-        (a, ia) <- gets $ lu &&& p
-        modifyP . mapIndices $ reduceIdx a ia 
+        (iMax, absA) <- foldM findMax (0, 0) [0..n]
+        when (iMax /= col) $ 
+            forM_ [0..n] $ \j -> do
+                MV.swap (lu lup) (_N -! (col, j)) (_N -! (iMax, j))
+        pure absA
 
-endOfRow :: (Fractional a, Monad m) => Int -> Int -> LUPDecompT a m ()
-endOfRow j i = 
-    let 
-        reduceIdx a ia (i', j')
-            | (i', j') == (i, j) = ia ! (i, j) / a ! (i, i)
-            | otherwise          = ia ! (i', j')
-    in do
-        (a, ia) <- gets $ lu &&& p
-        modifyP . mapIndices $ reduceIdx a ia
+-- | Alias for @flattenIdx@.
+(-!) :: Int -> MatIdx -> Int
+n -! ij = flattenIdx n ij
 
-modifyP :: Monad m => (Matrix a -> Matrix a) -> LUPDecompT a m ()
-modifyP f = do 
-    (LUP lu' p' permCount) <- get
-    modify . const $ LUP lu' (f p') permCount
+-- | Alias for @Data.Vector.Unboxed.Mutable.read@ that incorporates the functionality of @(-!)@ with it.
+--   (The @-@ always points towards the edge length of the matrix.)
+(!-) :: (MV.PrimMonad m, MV.Unbox a) => MV.MVector (MV.PrimState m) a -> Int -> MatIdx -> m a
+mv !- n = MV.read mv . (n -!)
 
-initState :: Num a => Matrix a -> LUP a
-initState a = 
-    let 
-        edgeLen = rows a
-    in LUP { lu = a
-           , p  = ident edgeLen
-           , permutationCount = edgeLen
-           }
+fromMVector :: MV.Unbox a => Int -> MV.MVector s a -> LUPDecomp s (Matrix a)
+fromMVector nCols mv = 
+    let
+        prependToListM xs = pure . (:xs)
+    in fromList nCols <$> MV.foldM prependToListM [] mv 
+
+-- | Maps from a 2D @Matrix@ index to a @Data.Vector@ (or @MVector@) index.
+flattenIdx :: Int -> MatIdx -> Int
+flattenIdx edgeLen (i, j) = edgeLen * i + j
+
+-- -- | Maps from a @Data.Vector@ (or @MVector@) index to a 2D @Matrix@ index.
+-- unflattenIdx :: Int -> Int -> MatIdx
+-- unflattenIdx _ 0 = (0, 0)
+-- unflattenIdx edgeLen k = (`quot` edgeLen) &&& (`rem` edgeLen) $ k
