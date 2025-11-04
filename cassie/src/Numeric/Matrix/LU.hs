@@ -6,11 +6,13 @@ module Numeric.Matrix.LU
     , lupInv
     ) where
 
+import safe Control.Arrow
 import safe Control.Monad
 import safe Control.Monad.Except
 import safe Control.Monad.ST
 import safe Control.Monad.Trans
 import safe Data.STRef
+import Data.Vector (iforM_)
 import qualified Data.Vector.Unboxed.Mutable as MV
 import safe Numeric.Matrix.Internal
 
@@ -18,9 +20,10 @@ type LUPDecomp s = ExceptT LUPDecomposeError (ST s)
 
 data LUPDecomposeError = NotSquare | Degenerate | NotInvertible deriving (Eq, Ord)
 
-data LUP s a = LUP { lu :: MV.MVector s a
-                   , _p  :: MV.MVector s a
-                   , _nRowChanges :: STRef s Int
+data LUP s a = LUP { edgeLen     :: Int
+                   , lu          :: MV.MVector s a
+                   , p           :: MV.MVector s a
+                   , nRowChanges :: STRef s Int
                    }
 
 instance Show LUPDecomposeError where
@@ -31,32 +34,21 @@ instance Show LUPDecomposeError where
 lupDecompose :: (Fractional a, Ord a, MV.Unbox a)
              => Matrix a 
              -> Either LUPDecomposeError (Matrix a)
-lupDecompose a = 
-    if rows a == cols a then
-        runST $ runExceptT 
-              $ lupDecomposeMain a 
-              >>= fromMVector (cols a) . lu
-    else 
-        Left NotSquare
+lupDecompose a = runST 
+               $ runExceptT 
+               $ lupDecomposeMain a 
+               >>= fromMVector (cols a) . lu
 
-lupDet :: Fractional a 
-       => Matrix a 
-       -> Either LUPDecomposeError a
-lupDet _a = error "TODO"
+lupDet :: (Fractional a, Ord a, MV.Unbox a) => Matrix a -> Either LUPDecomposeError a
+lupDet a = runST $ runExceptT $ lupDecomposeMain a >>= lupDetMain 
 
-lupInv :: Fractional a 
-       => Matrix a 
-       -> Either LUPDecomposeError (Matrix a)
-lupInv _a = error "TODO"
+lupInv :: (Fractional a, Ord a, MV.Unbox a) => Matrix a -> Either LUPDecomposeError (Matrix a)
+lupInv a = runST $ runExceptT $ lupDecomposeMain a >>= lupInvMain 
 
-lupDetInv :: (Fractional a, MV.Unbox a)
-          => Matrix a 
-          -> Either LUPDecomposeError (a, Matrix a)
-lupDetInv _a = error "TODO"
+lupDetInv :: (Fractional a, Ord a, MV.Unbox a) => Matrix a -> Either LUPDecomposeError (a, Matrix a)
+lupDetInv a = runST $ runExceptT $ lupDecomposeMain a >>= runKleisli (Kleisli lupDetMain &&& Kleisli lupInvMain)
 
-lupDecomposeMain :: (Fractional a, Ord a, MV.Unbox a)
-                 => Matrix a 
-                 -> LUPDecomp s (LUP s a)
+lupDecomposeMain :: (Fractional a, Ord a, MV.Unbox a) => Matrix a -> LUPDecomp s (LUP s a)
 lupDecomposeMain a = 
     let
         n = cols a - 1
@@ -66,14 +58,16 @@ lupDecomposeMain a =
         f i | i == 0 || i `quot` nElems == i `rem` nElems = 1
             | otherwise = 0 
     in do
-        lup <- lift $ LUP <$> MV.new nElems 
-                          <*> MV.generate nElems f
-                          <*> newSTRef 0
+        when (rows a /= cols a) $ throwError NotSquare
+
+        lup <- lift $ LUP _N <$> toMVector a 
+                             <*> MV.generate nElems f
+                             <*> newSTRef 0
                           
         forM_ [0..n] $ \i -> do
-            _maxA <- pivot i n lup
+            maxA <- pivot i lup
             
-            -- when (maxA < 1E-12) $ throwError Degenerate -- FIXME: parametrize this magic number
+            when (maxA < 1E-9) $ throwError Degenerate -- FIXME: parametrize this magic number
 
             forM_ [i + 1..n] $ \j -> do
                 let a' = lu lup
@@ -89,14 +83,58 @@ lupDecomposeMain a =
                             pure $ x - prod
         pure lup
         
-pivot :: (Fractional a, Ord a, MV.Unbox a)
-      => Int 
-      -> Int
-      -> LUP s a 
-      -> LUPDecomp s a
-pivot col n lup = 
+
+lupDetMain :: (Fractional a, MV.Unbox a) => LUP s a -> LUPDecomp s a
+lupDetMain lup = lift $ do
+    let a = lu lup
+    let _N = edgeLen lup
+    let n = _N - 1
+    rowChanges <- readSTRef $ nRowChanges lup
+    det <- newSTRef =<< (a !- _N $ (0, 0))
+
+    forM_ [0..n] $ \i -> do
+        x <- a !- _N $ (i, i)
+        modifySTRef det (* x)
+
+    if rowChanges `rem` 2 == 0 then
+        readSTRef det
+    else
+        negate <$> readSTRef det
+
+lupInvMain :: (Fractional a, MV.Unbox a) => LUP s a -> LUPDecomp s (Matrix a)
+lupInvMain lup = 
     let
-        _N = (n + 1)
+        a = lu lup
+        ia = p lup
+        _N = edgeLen lup
+        n = _N - 1 
+    in (fromMVector _N =<<) . lift $ do
+        forM_ [0..n] $ \j -> do
+            forM_ [0..n] $ \i -> do
+                forM_ [0..i] $ \k -> do
+                    flip (MV.modifyM ia) (_N -! (i, j)) 
+                        $ \x -> do
+                            prod <- (*) <$> ( a !- _N $ (i, k)) 
+                                        <*> (ia !- _N $ (k, j))
+                            pure $ x - prod
+
+            forM_ (reverse [0..n]) $ \i -> do
+                forM_ [0..i] $ \k -> do
+                    flip (MV.modifyM ia) (_N -! (i, j)) 
+                        $ \x -> do
+                            prod <- (*) <$> ( a !- _N $ (i, k)) 
+                                        <*> (ia !- _N $ (k, j))
+                            pure $ x - prod
+                
+                flip (MV.modifyM ia) (_N -! (i, j)) 
+                    $ \x -> (x /) <$> (a !- _N $ (i, i))
+        pure ia 
+
+pivot :: (Fractional a, Ord a, MV.Unbox a) => Int -> LUP s a -> LUPDecomp s a
+pivot col lup = 
+    let
+        _N = edgeLen lup
+        n = _N - 1
 
         findMax (iMax, maxA) i = do
             absA <- fmap abs $ MV.read (lu lup) $ (_N -! (i, col))
@@ -106,7 +144,8 @@ pivot col n lup =
                 pure (iMax, maxA)
     in do
         (iMax, absA) <- foldM findMax (0, 0) [0..n]
-        when (iMax /= col) $ 
+        when (iMax /= col) $ do
+            lift $ modifySTRef (nRowChanges lup) (+ 1)
             forM_ [0..n] $ \j -> do
                 MV.swap (lu lup) (_N -! (col, j)) (_N -! (iMax, j))
         pure absA
@@ -120,6 +159,12 @@ n -! ij = flattenIdx n ij
 (!-) :: (MV.PrimMonad m, MV.Unbox a) => MV.MVector (MV.PrimState m) a -> Int -> MatIdx -> m a
 mv !- n = MV.read mv . (n -!)
 
+toMVector :: (MV.Unbox a, Monad m, MV.PrimMonad m) => Matrix a -> m (MV.MVector (MV.PrimState m) a)
+toMVector a = do
+    ma <- MV.new (rows a * cols a)
+    iforM_ (flatten a) $ MV.write ma
+    pure ma
+
 fromMVector :: MV.Unbox a => Int -> MV.MVector s a -> LUPDecomp s (Matrix a)
 fromMVector nCols mv = 
     let
@@ -128,9 +173,4 @@ fromMVector nCols mv =
 
 -- | Maps from a 2D @Matrix@ index to a @Data.Vector@ (or @MVector@) index.
 flattenIdx :: Int -> MatIdx -> Int
-flattenIdx edgeLen (i, j) = edgeLen * i + j
-
--- -- | Maps from a @Data.Vector@ (or @MVector@) index to a 2D @Matrix@ index.
--- unflattenIdx :: Int -> Int -> MatIdx
--- unflattenIdx _ 0 = (0, 0)
--- unflattenIdx edgeLen k = (`quot` edgeLen) &&& (`rem` edgeLen) $ k
+flattenIdx _N (i, j) = _N * i + j
