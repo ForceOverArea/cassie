@@ -104,7 +104,7 @@ cassieJSONSchemaSource = "{\n\
 \}"
 
 noLogger :: MonadIO m => Logger m
-noLogger _ = return ()
+noLogger _ = pure ()
 
 consoleLogger :: MonadVirtIO m => Logger m
 consoleLogger = vPutStrLn

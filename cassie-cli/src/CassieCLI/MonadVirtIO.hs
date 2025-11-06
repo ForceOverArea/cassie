@@ -28,7 +28,7 @@ class (Monad m) => MonadVirtIO m where
         if fileExists then
             Just <$> vReadFile fp
         else 
-            return Nothing
+            pure Nothing
 
     vGetLine :: m String
 

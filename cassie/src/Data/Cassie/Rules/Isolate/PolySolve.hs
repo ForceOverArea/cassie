@@ -63,7 +63,7 @@ factorize sym src =
     else do
         let commonFactorsOfInterest = Set.toList cfs'
         factored <- foldM factorOut src $ commonFactorsOfInterest
-        return . Multiplicative . NE.fromList $ factored:commonFactorsOfInterest
+        pure . Multiplicative . NE.fromList $ factored:commonFactorsOfInterest
 
 -- | Given a @target@ structure to try and factor out of another @src@
 --   structure, this function returns the modified @src@ as if the given 
@@ -84,7 +84,7 @@ factorOut src target =
                 newProd = case NE.filter (/= target) fs of
                     [single] -> single
                     multiple -> Multiplicative $ NE.fromList multiple
-            in return newProd
+            in pure newProd
         _ -> reportError
 
 commonFactors :: (AlgebraicStructure mg u n, Ord mg, Ord u, Ord n)

@@ -83,7 +83,7 @@ lupDecomposeMain tol a =
         forM_ [0..n] $ \i -> do
             maxA <- pivot i lup
 
-            when (maxA < tol) $ throwError Degenerate -- FIXME: parametrize this magic number
+            when (maxA < tol) $ throwError Degenerate
 
             forM_ [i + 1..n] $ \j -> do
                 let a' = lu lup

@@ -80,7 +80,7 @@ isolateMain = do
         Nullary _               -> throwErr IsolatedConstantSomehow
         Symbol s
             -> if s == target then
-                return () 
+                pure () 
             else
                 throwErr WrongSymbolSomehow
 
@@ -143,11 +143,11 @@ isolateMagma op lOperand rOperand =
     let 
         isolateLeft = do
             setLhs lOperand
-            return $ isolateLeftOperand op rOperand
+            pure $ isolateLeftOperand op rOperand
 
         isolateRight = do
             setLhs rOperand
-            return $ isolateRightOperand op lOperand
+            pure $ isolateRightOperand op lOperand
     in do
         target <- asks fst
         cancelOp <- truthTable2 (target ~?) lOperand rOperand
@@ -190,7 +190,7 @@ isolatePolyTerms neTerms =
             []           -> throwErr SymbolNotFound
             _            -> throwErr NeedsPolySolve
         let (leftTerms', rightTerms') = second (drop 1) $ splitAt (i - 1) terms 
-        return $ IsolatedSemigroup { leftTerms  = leftTerms'
+        pure $ IsolatedSemigroup { leftTerms  = leftTerms'
                                    , rightTerms = rightTerms'
                                    , isolatedTerm = term
                                    }
@@ -224,7 +224,7 @@ getFn :: String -> Isolate mg u n ([Symbol], AlgStruct mg u n)
 getFn fnName = do
     ctx <- asks snd
     case fnName `Map.lookup` ctx of
-        Just (Func syms expanded _) -> return (syms, expanded)
+        Just (Func syms expanded _) -> pure (syms, expanded)
         Just (Known _ _)            -> throwErr NotAFunction
         Nothing                     -> throwErr FunctionNotDefined
 

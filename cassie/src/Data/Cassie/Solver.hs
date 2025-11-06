@@ -32,6 +32,6 @@ solveCassieSystemT :: (AlgebraicStructure mg u n, Monad m)
     -> m (Either (CassieError mg u n) (Solution mg u n, EquationPool mg u n))
 solveCassieSystemT ctx presolved equations = do 
     ans <- runExceptT $ execRWST solveConstrainedMain ctx (presolved, equations)
-    return $ fst <$> ans 
+    pure $ fst <$> ans 
     -- Note: this may need to be a more complicated arrow if the system solver 
     --       picks up a @Writer@ context to log the order of solutions.

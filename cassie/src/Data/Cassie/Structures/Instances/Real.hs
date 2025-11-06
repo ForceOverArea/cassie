@@ -47,7 +47,7 @@ instance Polynomial (AlgStruct RealMagma RealUnary Double) where
                 -> do 
                     yi <- realInt y 
                     xi <- degree sym x 
-                    return $ yi * xi
+                    pure $ yi * xi
             _ -> Nothing
 
 instance CancelUnary RealUnary where

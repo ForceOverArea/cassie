@@ -75,14 +75,14 @@ data XorMagma = Xor deriving (Show, Eq, Ord)
 isolateRightOperand :: CancelMagma mg => mg -> AlgStruct mg u n -> Maybe (AlgStruct mg u n -> AlgStruct mg u n)
 isolateRightOperand op l = do
     cancellativeOp <- lCancel op
-    return $ case cancellativeOp of
+    pure $ case cancellativeOp of
         Left op'  -> Magma op' l
         Right op' -> \x -> Magma op' x l
 
 isolateLeftOperand :: CancelMagma mg => mg -> AlgStruct mg u n -> Maybe (AlgStruct mg u n -> AlgStruct mg u n)
 isolateLeftOperand op r = do
     cancellativeOp <- rCancel op
-    return $ case cancellativeOp of 
+    pure $ case cancellativeOp of 
         Left op'  -> Magma op' r
         Right op' -> \x -> Magma op' x r
 

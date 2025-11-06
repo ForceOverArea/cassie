@@ -39,7 +39,7 @@ parseExpression expr =
     let 
         bundleFoundSyms struct = do
             syms <- getState
-            return (struct, syms)
+            pure (struct, syms)
     in runParser (expression >>= bundleFoundSyms) Set.empty expr expr
 
 expression :: CassieParser 
@@ -51,7 +51,7 @@ sum = do
     elements <- NE.fromList 
         <$> p5Term `sepBy1` char '+' 
         <?> "sum"
-    return $ case elements of
+    pure $ case elements of
         [x] -> x
         _   -> foldl (+) (NE.head elements) (NE.tail elements)
 
@@ -69,7 +69,7 @@ product = do
     elements <- NE.fromList 
         <$> p3Term `sepBy1` char '*' 
         <?> "product"
-    return $ case elements of
+    pure $ case elements of
         [x] -> x
         _   -> foldl (*) (NE.head elements) (NE.tail elements)
 
@@ -141,7 +141,7 @@ matrix =
                     unexpected $ "expected all rows of matrix to have " 
                             ++ show expectedNumCols
                             ++ " elements"
-        return . Nullary . toMatrix n $ join rows
+        pure . Nullary . toMatrix n $ join rows
 
 -- | Parses an identifier (haskell definition) and returns an @AlgStruct.Symbol@
 value :: CassieParser 
@@ -159,7 +159,7 @@ symb = do
         >> identifier haskell 
         <?> "symbol"
     modifyState $ Set.insert sym 
-    return $ Symbol sym
+    pure $ Symbol sym
 
 -- Private functions for establishing priority of different lexemes
 

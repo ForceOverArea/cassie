@@ -78,7 +78,7 @@ parseEquation' eqn =
         [lText, rText] -> do
             (lhs', lSyms) <- left FailedToParse $ parseExpression lText
             (rhs', rSyms) <- left FailedToParse $ parseExpression rText
-            return $ (Equation lhs' rhs', lSyms `Set.union` rSyms)
+            pure $ (Equation lhs' rhs', lSyms `Set.union` rSyms)
         []      -> Left $ FoundNone eqn
         [_]     -> Left $ FoundExpression eqn
         (_:_:_) -> Left $ FoundMultiple eqn
@@ -96,7 +96,7 @@ parseFunction ctx funcDef =
         if deps `Set.difference` knowns /= Set.empty then
             Left PoorlyDefinedError
         else
-            return $ Map.insert name funcObj ctx
+            pure $ Map.insert name funcObj ctx
 
 cassieFile :: CassieLang [Phrase]
 cassieFile = manyTill phrase eof
@@ -129,7 +129,7 @@ constant = do
     syms <- getSymsAndReset
     _ <- semi haskell 
         <?> "constant"
-    return (name, Known expr syms)
+    pure (name, Known expr syms)
 
 equation :: CassieLang (ParsedEqn, Symbols)
 equation = do
@@ -139,7 +139,7 @@ equation = do
     syms <- getSymsAndReset
     _ <- semi haskell 
         <?> "equation"
-    return (eqn, syms)
+    pure (eqn, syms)
 
 functionDef :: CassieLang (Symbol, ParsedCtxItem)
 functionDef = do
@@ -153,7 +153,7 @@ functionDef = do
     syms <- (`Set.difference` Set.fromList argNames) 
         <$> (semi haskell >> getSymsAndReset)
         <?> "function definition"
-    return (name, Func argNames impl syms)
+    pure (name, Func argNames impl syms)
 
 importStatement :: CassieLang (String, Symbols)
 importStatement = do
@@ -164,7 +164,7 @@ importStatement = do
     imports <- Set.fromList
         <$> parens haskell (commaSep1 haskell $ identifier haskell) 
         <?> "import statement"
-    return (intercalate "/" pathSegments, imports)
+    pure (intercalate "/" pathSegments, imports)
 
 -- Language-specific utility functions
 
@@ -187,4 +187,4 @@ getSymsAndReset :: CassieLang Symbols
 getSymsAndReset = do
     parsedSyms <- getState
     putState Set.empty
-    return parsedSyms
+    pure parsedSyms
