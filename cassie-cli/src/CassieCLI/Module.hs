@@ -72,7 +72,7 @@ solveModularSystem dependentModules accumCtx accumSoln (localModule, localExport
             assertConstrained unsolved
             tell [ "Exports: ", show (exports localCtx, exports localSoln) ]
             tell $ "Solution: ":solnLog
-            return ( (exports localCtx) `Map.union` accumCtx
+            pure ( (exports localCtx) `Map.union` accumCtx
                    , (exports localSoln) `Map.union` accumSoln
                    )
         else do
@@ -88,7 +88,7 @@ solveModularSystem dependentModules accumCtx accumSoln (localModule, localExport
             ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain importedCtx' (importedSoln', localEqns)
             assertConstrained unsolved
             tell solnLog
-            return ( accumCtx `Map.union` exports importedCtx'
+            pure ( accumCtx `Map.union` exports importedCtx'
                    , accumSoln `Map.union` (importedSoln' `exportUnion` localSoln)
                    ) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
 
@@ -110,7 +110,7 @@ tryBuildModuleCtx :: MonadVirtIO m
 tryBuildModuleCtx fp 
     = buildGlobalCtx fp 
     <$> tryGetModuleSource fp
-    >>= throwError ||| return
+    >>= throwError ||| pure
 
 -- | Tries to read a source file (or map entry), returning its source
 --   if the file exists or throwing a @FileDoesNotExist@ error if it
@@ -122,7 +122,7 @@ tryGetModuleSource fp
     = (lift .lift $ vTryReadFile fp) 
     >>= maybe 
         (throwError . ImportError . show $ FileDoesNotExist fp) 
-        return
+        pure
 
 -- | Builds the global context of a system prior to solving it. This 
 --   consists of 3 things:

@@ -22,7 +22,7 @@ cassieSolveMain _argv = do
     vPutStrLn $ "solving from entry point: " ++ ep
     (_, _, solutionLog) <- runRWST cassieCliMain cassieJSON ()
     vWriteFile (ep ++ ".soln.md") $ intercalate "\n" solutionLog
-    return ()
+    pure ()
 
 cassieCliMain :: (MonadFail m, MonadVirtIO m) => CassieCLI m ()
 cassieCliMain = do 
@@ -37,7 +37,7 @@ cassieCliMain = do
     maybeSoln <- lift $ do
         (maybeSoln, showSteps) <- solveModular entryModule keySolutions
         mapM_ vPutStrLn showSteps
-        return maybeSoln
+        pure maybeSoln
     let (_ctx, soln) = unwrapEither maybeSoln
     renderSymbolicSolns soln 
     lift $ vSetCurrentDirectory pwd

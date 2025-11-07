@@ -68,9 +68,9 @@ renderConstrained soln k = do
 keySolutions :: MonadVirtIO m => ParsedSoln -> [Symbol] -> CassieCLI m [Symbol]
 keySolutions soln importList = do
     if wildCardOnly == importList then 
-        return $ Map.keys soln
+        pure $ Map.keys soln
     else 
-        return importList
+        pure importList
 
 logLn :: MonadVirtIO m => String -> CassieCLI m ()
 logLn = tell . pure

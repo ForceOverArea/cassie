@@ -20,23 +20,26 @@ module CassieCLI.Parser.Lexemes
     ) where
 
 import safe Prelude hiding (exponent, logBase, product, sum)
+import safe Control.Monad
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
 import safe Data.Cassie.Solver (Symbols) 
-import safe Data.Cassie.Structures (AlgStruct(..), ExpnMagma(..), RealMagma(..), RealAlgStruct)
+import safe Data.Cassie.Structures
 import safe Text.Parsec
 import safe Text.Parsec.Language (haskell)
 import safe Text.Parsec.Token (GenTokenParser(..)) 
 
 -- | Parser type for reading algebraic structures from plain text
-type CassieParser = Parsec String Symbols RealAlgStruct
+type CassieParser = CassieParserInternal MixedAlgStruct
 
-parseExpression :: String -> Either ParseError (RealAlgStruct, Symbols)
+type CassieParserInternal = Parsec String Symbols
+
+parseExpression :: String -> Either ParseError (MixedAlgStruct, Symbols)
 parseExpression expr = 
     let 
         bundleFoundSyms struct = do
             syms <- getState
-            return (struct, syms)
+            pure (struct, syms)
     in runParser (expression >>= bundleFoundSyms) Set.empty expr expr
 
 expression :: CassieParser 
@@ -48,7 +51,7 @@ sum = do
     elements <- NE.fromList 
         <$> p5Term `sepBy1` char '+' 
         <?> "sum"
-    return $ case elements of
+    pure $ case elements of
         [x] -> x
         _   -> foldl (+) (NE.head elements) (NE.tail elements)
 
@@ -66,7 +69,7 @@ product = do
     elements <- NE.fromList 
         <$> p3Term `sepBy1` char '*' 
         <?> "product"
-    return $ case elements of
+    pure $ case elements of
         [x] -> x
         _   -> foldl (*) (NE.head elements) (NE.tail elements)
 
@@ -82,14 +85,14 @@ exponent :: CassieParser
 exponent = do 
     expBase <- p1Term 
     _ <- char '^'
-    Magma (RealMagma Expn) expBase 
+    Magma (MixedExpn) expBase 
         <$> p1Term 
         <?> "exponent"
 
 logarithm :: CassieParser 
 logarithm = whiteSpace haskell
     >> string "log"
-    >> Magma (RealMagma Logm) 
+    >> Magma (MixedLogm) 
         <$> angles haskell expression
         <*> parens haskell expression 
         <?> "logarithm"
@@ -97,7 +100,7 @@ logarithm = whiteSpace haskell
 root :: CassieParser 
 root = whiteSpace haskell
     >> string "root"
-    >> Magma (RealMagma Root) 
+    >> Magma (MixedRoot) 
         <$> angles haskell expression
         <*> parens haskell expression 
         <?> "root"
@@ -114,9 +117,38 @@ parenthetical = whiteSpace haskell
     >> parens haskell expression 
     <?> "grouped expression"
 
+matrix :: CassieParser
+matrix = 
+    let
+        matrixRow = commaSep1 haskell numberLiteral
+    in do
+        whiteSpace haskell
+        rows <- (brackets haskell $ matrixRow `sepBy1` char ';') <?> "matrix"
+        n <- case rows of 
+            [] -> unexpected
+                $ "expected at least one row when parsing matrix. "
+                ++ "report this issue at: https://github.com/ForceOverArea/cassie/issues"
+            [row] -> pure $ length row
+            (row:others) -> let 
+                    expectedNumCols = length row
+                    sameNumberOfCols = flip $ (&&) . ((==) expectedNumCols . length)
+                in if expectedNumCols == 0 then 
+                    unexpected $ "expected at least one column when parsing matrix. "
+                            ++ "report this issue at: https://github.com/ForceOverArea/cassie/issues"
+                else if foldl' sameNumberOfCols True others then
+                    pure expectedNumCols
+                else
+                    unexpected $ "expected all rows of matrix to have " 
+                            ++ show expectedNumCols
+                            ++ " elements"
+        pure . Nullary . toMixedMatrix n $ join rows
+
 -- | Parses an identifier (haskell definition) and returns an @AlgStruct.Symbol@
 value :: CassieParser 
-value = Nullary <$> try (float haskell) 
+value = Nullary . Sclr <$> numberLiteral
+
+numberLiteral :: CassieParserInternal Double
+numberLiteral = try (float haskell) 
     <|> fromInteger <$> integer haskell 
     <?> "value"
 
@@ -127,7 +159,7 @@ symb = do
         >> identifier haskell 
         <?> "symbol"
     modifyState $ Set.insert sym 
-    return $ Symbol sym
+    pure $ Symbol sym
 
 -- Private functions for establishing priority of different lexemes
 
@@ -147,4 +179,4 @@ p1Term :: CassieParser
 p1Term = try logarithm <|> p0Term
 
 p0Term :: CassieParser 
-p0Term = try function <|> try parenthetical <|> try symb <|> value
+p0Term = try function <|> try parenthetical <|> try symb <|> try matrix <|> value

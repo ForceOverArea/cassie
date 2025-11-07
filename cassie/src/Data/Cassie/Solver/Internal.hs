@@ -75,7 +75,7 @@ solveConstrainedMain = do
     if madeProgress then
         solveConstrainedMain
     else
-        return ()
+        pure ()
         -- TODO: put subsystem solver call here 
 
 -- | Solves equations that only have one DOF when
@@ -88,7 +88,7 @@ solveSingleUnknowns =
     in do
         (cnstrnd, remaining) <- getConstrained
         if cnstrnd == [] then
-            return False
+            pure False
         else do
             allKnownValues <- getKnowns
             isoSolutions <- throwErr . IsolationError ||| pure 
@@ -97,7 +97,7 @@ solveSingleUnknowns =
             totalCtx <- Map.union allKnownValues . fromSolution <$> getSolved
             modifySoln . Map.union . Map.fromList . getSolnData totalCtx $ isoSolutions
             modifyEqns $ const remaining
-            return True
+            pure True
 
 getConstrained :: Monad m => CassieT mg u n m (EquationPool mg u n, EquationPool mg u n)
 getConstrained = (partition $ (== 1) . Set.size . snd) <$> getEqns

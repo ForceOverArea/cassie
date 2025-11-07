@@ -91,13 +91,13 @@ traverseTowards s struct =
     case struct of
         Additive ts         -> traverseTowardsPlural s struct $ NE.toList ts
         Multiplicative fs   -> traverseTowardsPlural s struct $ NE.toList fs
-        Negated x           -> pushCrumb Negate >> return [x]
-        Inverse x           -> pushCrumb Invert >> return [x]
+        Negated x           -> pushCrumb Negate >> pure [x]
+        Inverse x           -> pushCrumb Invert >> pure [x]
         Magma m l r         -> traverseTowardsMagmaOp s m l r
         Unary u x           -> (:[]) <$> traverseTowardsUnaryOp u x
         N_ary _ args        -> traverseTowardsPlural s struct args 
-        Nullary _           -> return []
-        Symbol s'           -> if s == s' then return [Symbol s'] else return []
+        Nullary _           -> pure []
+        Symbol s'           -> if s == s' then pure [Symbol s'] else pure []
 
 traverseTowardsPlural :: AlgebraicStructure mg u n => Symbol -> AlgStruct mg u n -> [AlgStruct mg u n]-> Substitute mg u n [AlgStruct mg u n]
 traverseTowardsPlural s k terms = 
@@ -107,32 +107,32 @@ traverseTowardsPlural s k terms =
         let (has, doesnt) = partition (s ~?) terms
         let hasIndices = concat $ getArgPositionMap has
         pushCrumb $ Plural k doesnt hasIndices
-        return has
+        pure has
 
 traverseTowardsMagmaOp :: Symbol -> mg -> AlgStruct mg u n -> AlgStruct mg u n -> Substitute mg u n [AlgStruct mg u n]
 traverseTowardsMagmaOp s k l r = 
     let 
-        both      = pushCrumb (MagmaOp k Nothing False) >> return [l, r]
+        both      = pushCrumb (MagmaOp k Nothing False) >> pure [l, r]
         neither   = throwErr BinaryStructureContainsNone
-        leftOnly  = pushCrumb (MagmaOp k (Just r) False) >> return [l]
-        rightOnly = pushCrumb (MagmaOp k (Just l) True) >> return [r]
+        leftOnly  = pushCrumb (MagmaOp k (Just r) False) >> pure [l]
+        rightOnly = pushCrumb (MagmaOp k (Just l) True) >> pure [r]
     in truthTable2 (s ~?) l r both neither leftOnly rightOnly
 
 traverseTowardsUnaryOp :: u -> AlgStruct mg u n -> Substitute mg u n (AlgStruct mg u n)
-traverseTowardsUnaryOp k x = (pushCrumb $ UnaryOp k) >> return x
+traverseTowardsUnaryOp k x = (pushCrumb $ UnaryOp k) >> pure x
 
 rebuildOnto :: [AlgStruct mg u n] -> Substitute mg u n (AlgStruct mg u n)
 rebuildOnto structures = do
     crumb <- popCrumb
     case (crumb, structures) of
-        (Nothing, [x]) -> return x
+        (Nothing, [x]) -> pure x
         (Just crumbKind, x:_) -> do
             newBase <- case crumbKind of
                 Plural k terms idxs       -> rebuildPlural structures k terms idxs
                 MagmaOp k possTerm isLeft -> rebuildMagmaOp structures k possTerm isLeft
                 UnaryOp k                 -> rebuildUnaryOp structures k x
-                Negate                    -> return $ Negated x
-                Invert                    -> return $ Inverse x
+                Negate                    -> pure $ Negated x
+                Invert                    -> pure $ Inverse x
             rebuildOnto $ pure newBase
         _ -> error $ show MalformedStructure
 
@@ -147,36 +147,36 @@ rebuildPlural baseTerms structKind structTerms idxs =
             throwErr $ IncorrectNumOfTermsToRebuild numIdxs numTerms
         else do
             f <- constructOnePlural structKind
-            return $ f terms
+            pure $ f terms
 
 rebuildMagmaOp :: [AlgStruct mg u n] -> mg -> Maybe (AlgStruct mg u n) -> Bool -> Substitute mg u n (AlgStruct mg u n)
 rebuildMagmaOp baseArgs structKind possTerm isLeft = do
     f <- constructOneMagmaOp structKind
     case (possTerm, baseArgs) of
-        (Nothing, [x, y]) -> return $ f x y
+        (Nothing, [x, y]) -> pure $ f x y
         (Just term, [x])
-            | isLeft    -> return $ f term x
-            | otherwise -> return $ f x term
+            | isLeft    -> pure $ f term x
+            | otherwise -> pure $ f x term
         _ -> throwErr $ IncorrectNumOfTermsToRebuild 2 0 -- expected <= 2, found 0
 
 rebuildUnaryOp :: [AlgStruct mg u n] -> u -> AlgStruct mg u n -> Substitute mg u n (AlgStruct mg u n)
 rebuildUnaryOp _ structKind term = do
     f <- constructOneUnaryOp structKind 
-    return $ f term
+    pure $ f term
 
 constructOnePlural :: AlgStruct mg u n -> Substitute mg u n ([AlgStruct mg u n] -> AlgStruct mg u n)
 constructOnePlural x = 
     case x of
-        Additive _          -> return $ Additive . NE.fromList
-        Multiplicative _    -> return $ Multiplicative . NE.fromList
-        N_ary name _        -> return $ N_ary name
+        Additive _          -> pure $ Additive . NE.fromList
+        Multiplicative _    -> pure $ Multiplicative . NE.fromList
+        N_ary name _        -> pure $ N_ary name
         _ -> throwErr StructureIsNotSemigroup
 
 constructOneMagmaOp :: mg -> Substitute mg u n (AlgStruct mg u n -> AlgStruct mg u n -> AlgStruct mg u n)
-constructOneMagmaOp x = return (Magma x)
+constructOneMagmaOp x = pure (Magma x)
 
 constructOneUnaryOp :: u -> Substitute mg u n (AlgStruct mg u n -> AlgStruct mg u n)
-constructOneUnaryOp x = return (Unary x)
+constructOneUnaryOp x = pure (Unary x)
 
 pushCrumb :: AlgCrumb mg u n -> Substitute mg u n ()
 pushCrumb c = get >>= put . (c:)
@@ -185,7 +185,7 @@ popCrumb :: Substitute mg u n (Maybe (AlgCrumb mg u n))
 popCrumb = do
     ccs <- get
     case uncons ccs of
-        Nothing -> return Nothing
+        Nothing -> pure Nothing
         Just (c, cs) -> do
             put cs 
-            return $ Just c
+            pure $ Just c

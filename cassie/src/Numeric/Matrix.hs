@@ -1,0 +1,31 @@
+module Numeric.Matrix 
+    ( (!)
+    , (!?)
+    , augment
+    , column
+    , column'
+    , cross
+    , dot
+    , dot'
+    , fromList
+    , ident
+    , lupDecompose
+    , lupDet
+    , lupDetInv
+    , lupInv
+    , matrixProd
+    , matrixSum
+    , matrixTranspose
+    , row
+    , row'
+    , scalar
+    , size
+    , sumElements
+    , toMatrix
+    , toMatrix'
+    , LUPDecomposeError(..)
+    , Matrix(rows, cols, flatten)
+    ) where
+
+import Numeric.Matrix.Internal
+import Numeric.Matrix.LU

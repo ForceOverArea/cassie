@@ -37,13 +37,15 @@ instance Monoid CassieReplState where
 cursor :: String
 cursor = ">>> "
 
-cassieReplMain :: (MonadVirtIO m, MonadVirtIO m, MonadIO m) => [String] -> m ()
+cassieReplMain :: (MonadVirtIO m, MonadIO m) => [String] -> m ()
 cassieReplMain _argv = do
     liftIO $ hSetBuffering stdout NoBuffering
+    vPutStrLn "Welcome to the CASsie v0.1.0.0 REPL!"
+    vPutStrLn "Enter \'help\' for more info or \'quit\' to leave."
     evalStateT cassieRepl mempty
-    return ()
+    pure ()
 
-cassieRepl :: (MonadVirtIO m, MonadVirtIO m, MonadIO m) => CassieRepl m ()
+cassieRepl :: (MonadVirtIO m, MonadIO m) => CassieRepl m ()
 cassieRepl = 
     let
         -- | Adds a semicolon to the lexeme, reparses it, and 
@@ -60,7 +62,7 @@ cassieRepl =
     _ <- liftIO $ putStr cursor 
     command <- lift $ vGetLine
     case command of 
-        "quit" -> return ()
+        "quit" -> pure ()
         "show" -> do
             solved <$> get >>= showSolution
             cassieRepl
@@ -68,12 +70,12 @@ cassieRepl =
             parseError <- case parsePhrase lexeme of 
                 Right (ParsedImport (path, syms)) 
                     -> importSource path syms
-                    >> return Nothing
+                    >> pure Nothing
                 Right parsedItem
                     -> processReplState parsedItem
-                    >> return Nothing
+                    >> pure Nothing
                 Left err 
-                    -> return $ Just err
+                    -> pure $ Just err
             catchMissingSemicolonError lexeme parseError
             cassieRepl
 
@@ -95,8 +97,8 @@ processReplState phrs = do
             modify . unsolved' $ (eqPoolEntry :)
             showSolnWhenSolvingEquation
         -- Do not handle import statements as they should be handled by a separate branch of control flow
-        _                       -> return ()
-    return ()
+        _                       -> pure ()
+    pure ()
 
 showSolnWhenSolvingEquation :: (MonadVirtIO m, MonadIO m) => CassieRepl m ()
 showSolnWhenSolvingEquation = 
@@ -112,7 +114,7 @@ showSolnWhenSolvingEquation =
                     put (CassieReplState ctx soln' eqPool')
                 else 
                     liftIO $ vPutStrLn "equation not solvable... yet"
-                return ()
+                pure ()
 
 showSolution :: (MonadVirtIO m, MonadIO m) => ParsedSoln -> CassieRepl m ()
 showSolution solutionMap = 

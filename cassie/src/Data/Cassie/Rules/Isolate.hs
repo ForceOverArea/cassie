@@ -28,7 +28,7 @@ import safe Control.Monad.Except (catchError, runExcept, Except)
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Map as Map
 import safe Data.Cassie.Rules.Evaluate
-import safe Data.Cassie.Rules.Isolate.PolySolve (factorize, FactorizationError)
+import safe Data.Cassie.Rules.Isolate.PolySolve (factorize, PolySolveError)
 import safe Data.Cassie.Rules.Substitute
 import safe Data.Cassie.Structures
 import safe Data.Cassie.Utils
@@ -39,7 +39,7 @@ type Isolate mg u n = RWST (Symbol, Context mg u n) Steps (Equation mg u n) (Exc
 type Steps = [String]
 
 data IsolateError mg u n
-    = FactorizeError (FactorizationError mg u n)
+    = FactorizeError (PolySolveError mg u n)
     | FunctionCallErr SubstitutionError
     | FunctionNotDefined
     | InvalidArguments
@@ -51,6 +51,11 @@ data IsolateError mg u n
     | SymbolNotFound
     | WrongSymbolSomehow
     deriving (Show, Eq, Ord)
+
+data IsolatedSemigroup mg u n = IsolatedSemigroup { leftTerms :: [AlgStruct mg u n]
+                                                  , rightTerms :: [AlgStruct mg u n]
+                                                  , isolatedTerm :: AlgStruct mg u n
+                                                  }
 
 isolate :: AlgebraicStructure mg u n => Context mg u n -> Equation mg u n -> Symbol -> Either (IsolateError mg u n) (Equation mg u n, Steps)
 isolate ctx eqn target = runExcept $ execRWST isolateMain (target, ctx) eqn
@@ -75,7 +80,7 @@ isolateMain = do
         Nullary _               -> throwErr IsolatedConstantSomehow
         Symbol s
             -> if s == target then
-                return () 
+                pure () 
             else
                 throwErr WrongSymbolSomehow
 
@@ -94,8 +99,14 @@ isolateAdditive terms =
                 pure
                 (factorize target $ Additive ts)
     in do 
-        wrapperTerms <- Additive <$> isolatePolyTerms terms 
-        modifyRhs $ \rhs' -> rhs' - wrapperTerms
+        wrapperTerms <- isolatePolyTerms terms 
+        setLhs . Additive . pure . isolatedTerm $ wrapperTerms
+        cancelLeft <- cancelTermsLeft2Right (leftTerms wrapperTerms) Negated []
+        cancelRight <- cancelTermsRight2Left (rightTerms wrapperTerms) Negated []
+        when (cancelLeft /= [])
+            $ modifyRhs ((Additive $ NE.fromList cancelLeft) *)
+        when (cancelRight /= [])
+            $ modifyRhs (* (Additive $ NE.fromList cancelRight))
         isolateMain
     `catchError` \err -> do
         when (err /= NeedsPolySolve) $ throwErr err
@@ -105,8 +116,14 @@ isolateAdditive terms =
 
 isolateMultiplicative :: AlgebraicStructure mg u n => NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n ()
 isolateMultiplicative factors = do
-    wrapperTerms <- Multiplicative <$> isolatePolyTerms factors
-    modifyRhs (/ wrapperTerms)
+    wrapperTerms <- isolatePolyTerms factors
+    setLhs $ isolatedTerm wrapperTerms
+    cancelLeft <- cancelTermsLeft2Right (leftTerms wrapperTerms) Inverse []
+    cancelRight <- cancelTermsRight2Left (rightTerms wrapperTerms) Inverse []
+    when (cancelLeft /= [])
+        $ modifyRhs ((Multiplicative $ NE.fromList cancelLeft) *)
+    when (cancelRight /= [])
+        $ modifyRhs (* (Multiplicative $ NE.fromList cancelRight))
     isolateMain
 
 negateRhs :: AlgebraicStructure mg u n => AlgStruct mg u n -> Isolate mg u n ()
@@ -126,11 +143,11 @@ isolateMagma op lOperand rOperand =
     let 
         isolateLeft = do
             setLhs lOperand
-            return $ isolateLeftOperand op rOperand
+            pure $ isolateLeftOperand op rOperand
 
         isolateRight = do
             setLhs rOperand
-            return $ isolateRightOperand op lOperand
+            pure $ isolateRightOperand op lOperand
     in do
         target <- asks fst
         cancelOp <- truthTable2 (target ~?) lOperand rOperand
@@ -162,14 +179,36 @@ isolateN_ary name args = do
             Right x  -> setLhs x
     isolateMain
 
-isolatePolyTerms :: NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n (NE.NonEmpty (AlgStruct mg u n))
-isolatePolyTerms terms = do
-    target <- asks fst
-    let (wrapped, wrapper) = NE.partition (target ~?) terms
-    case wrapped of
-        [x] -> setLhs x >> (return $ NE.fromList wrapper)
-        []  -> throwErr SymbolNotFound
-        _   -> throwErr NeedsPolySolve
+isolatePolyTerms :: NE.NonEmpty (AlgStruct mg u n) -> Isolate mg u n (IsolatedSemigroup mg u n)
+isolatePolyTerms neTerms = 
+    let
+        terms = NE.toList neTerms
+    in do
+        target <- asks fst
+        (i, term) <- case filter ((target ~?) . snd) $ zip [1..] terms of
+            [targetTerm] -> pure targetTerm
+            []           -> throwErr SymbolNotFound
+            _            -> throwErr NeedsPolySolve
+        let (leftTerms', rightTerms') = second (drop 1) $ splitAt (i - 1) terms 
+        pure $ IsolatedSemigroup { leftTerms  = leftTerms'
+                                   , rightTerms = rightTerms'
+                                   , isolatedTerm = term
+                                   }
+
+cancelTermsLeft2Right :: [AlgStruct mg u n]
+                      -> (AlgStruct mg u n -> AlgStruct mg u n)
+                      -> [AlgStruct mg u n]
+                      -> Isolate mg u n [AlgStruct mg u n]
+cancelTermsLeft2Right []     _cancelOp = pure
+cancelTermsLeft2Right (x:xs) cancelOp  = cancelTermsLeft2Right xs cancelOp . (cancelOp x:)
+
+cancelTermsRight2Left :: [AlgStruct mg u n] 
+                      -> (AlgStruct mg u n -> AlgStruct mg u n)
+                      -> [AlgStruct mg u n]
+                      -> Isolate mg u n [AlgStruct mg u n]
+cancelTermsRight2Left terms cancelOp acc = reverse 
+    <$> cancelTermsLeft2Right (reverse terms) cancelOp acc
+
 
 modifyRhs :: (AlgStruct mg u n -> AlgStruct mg u n) -> Isolate mg u n ()
 modifyRhs f = do
@@ -185,7 +224,7 @@ getFn :: String -> Isolate mg u n ([Symbol], AlgStruct mg u n)
 getFn fnName = do
     ctx <- asks snd
     case fnName `Map.lookup` ctx of
-        Just (Func syms expanded _) -> return (syms, expanded)
+        Just (Func syms expanded _) -> pure (syms, expanded)
         Just (Known _ _)            -> throwErr NotAFunction
         Nothing                     -> throwErr FunctionNotDefined
 

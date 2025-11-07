@@ -9,6 +9,7 @@ module Data.Cassie.Structures.Magmas
     , ExpnMagma(..)
     , MagmaMock(..)
     , ShowMagma(..)
+    , XorMagma(..)
     ) where
 
 import safe Data.Cassie.Structures.Internal
@@ -21,7 +22,9 @@ class MagmaMock m n where
 -- | Typeclass for values that represent a set of binary operations that form 
 --   a magma along with elements of type @n@.
 class CancelMagma m where
-    -- | Given a magma operation and a left operand, this function yields a
+    -- | Read as "cancel the left operand out"
+    --
+    --   Given a magma operation and a left operand, this function yields a
     --   token that indicates what partially applied binary operation isolates 
     --   the right-hand operand in a given structure.
     --  
@@ -40,7 +43,9 @@ class CancelMagma m where
     --   i.e. because left-applied logarithms can cancel left-applied exponents
     lCancel :: m -> Maybe (Either m m)
     
-    -- | Given a magma operation and a left operand, this function yields a
+    -- | Read as "cancel the left operand out"
+    --   
+    --   Given a magma operation and a left operand, this function yields a
     --   token that indicates what partially applied binary operation isolates 
     --   the right-hand operand in a given structure.
     --  
@@ -65,17 +70,19 @@ class Show m => ShowMagma m where
 
 data ExpnMagma = Expn | Logm | Root deriving (Show, Eq, Ord)
 
+data XorMagma = Xor deriving (Show, Eq, Ord)
+
 isolateRightOperand :: CancelMagma mg => mg -> AlgStruct mg u n -> Maybe (AlgStruct mg u n -> AlgStruct mg u n)
 isolateRightOperand op l = do
     cancellativeOp <- lCancel op
-    return $ case cancellativeOp of
+    pure $ case cancellativeOp of
         Left op'  -> Magma op' l
         Right op' -> \x -> Magma op' x l
 
 isolateLeftOperand :: CancelMagma mg => mg -> AlgStruct mg u n -> Maybe (AlgStruct mg u n -> AlgStruct mg u n)
 isolateLeftOperand op r = do
     cancellativeOp <- rCancel op
-    return $ case cancellativeOp of 
+    pure $ case cancellativeOp of 
         Left op'  -> Magma op' r
         Right op' -> \x -> Magma op' x r
 
@@ -101,3 +108,14 @@ instance ShowMagma ExpnMagma where
     showMagma Expn = \x y -> show x ++ "^" ++ show y
     showMagma Logm = \x y -> "log<" ++ show x ++ ">(" ++ show y ++ ")"
     showMagma Root = \x y -> "root<" ++ show x ++ ">(" ++ show y ++ ")"
+
+instance Integral a => MagmaMock XorMagma a where 
+    evalMagma Xor = (^)
+
+instance CancelMagma XorMagma where
+    lCancel = Just . Left
+    
+    rCancel = Just . Right
+
+instance ShowMagma XorMagma where
+    showMagma Xor = \x y -> show x ++ " ^ " ++ show y

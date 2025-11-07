@@ -7,8 +7,10 @@ module Data.Cassie.Structures
     , isolateLeftOperand
     , isolateRightOperand
     , showAlgStruct
+    , toMixedMatrix
     , AlgebraicStructure
     , AlgStruct(..)
+    , BoolRing(..)
     , CancelMagma(..)
     , CancelUnary(..)
     , ComplexAlgStruct
@@ -18,6 +20,11 @@ module Data.Cassie.Structures
     , Equation(..)
     , ExpnMagma(..)
     , MagmaMock(..)
+    , Mixed(..)
+    , MixedAlgStruct
+    , MixedEqn
+    , MixedMagma(..)
+    , MixedUnary(..)
     , RealAlgStruct
     , RealEqn
     , RealMagma(..)
@@ -29,7 +36,9 @@ module Data.Cassie.Structures
     , UnaryMock(..)
     ) where
 
+import safe Data.Cassie.Structures.Instances.Boolean
 import safe Data.Cassie.Structures.Instances.Complex
+import safe Data.Cassie.Structures.Instances.Linalg
 import safe Data.Cassie.Structures.Instances.Real
 import safe Data.Cassie.Structures.Internal
 import safe Data.Cassie.Structures.Magmas
@@ -61,6 +70,8 @@ data Equation mg u n = Equation { lhs :: AlgStruct mg u n
 
 type ComplexEqn = Equation ComplexMagma ComplexUnary (Complex Double)
 
+type MixedEqn = Equation MixedMagma MixedUnary Mixed
+
 type RealEqn = Equation RealMagma RealUnary Double
 
 instance (ShowMagma mg, ShowUnary u, Show n, Num n) => Show (Equation mg u n) where
@@ -75,3 +86,5 @@ instance ( Num n
          , Eq n
          , Ord n
          ) => AlgebraicStructure ComplexMagma ComplexUnary n
+
+instance AlgebraicStructure MixedMagma MixedUnary Mixed

@@ -1,0 +1,19 @@
+{
+    "folders": [
+        {
+            "name": "Instances",
+            "path": "cassie/src/Data/Cassie/Structures/Instances"
+        },
+        {
+            "name": "Backend",
+            "path": "cassie/src/Data"
+        },
+        {
+            "name": "Frontend",
+            "path": "cassie-cli/src/CassieCLI"
+        },
+        {
+            "path": "cassie"
+        }
+    ]
+}

@@ -32,6 +32,6 @@ type ParsedSoln = Solution ParsedMagma ParsedUnary ParsedElement
 {-
     Below types can be changed to alter what data is parsed from Cassie syntax 
 -}
-type ParsedMagma = RealMagma
-type ParsedUnary = RealUnary
-type ParsedElement = Double
+type ParsedMagma = MixedMagma
+type ParsedUnary = MixedUnary
+type ParsedElement = Mixed

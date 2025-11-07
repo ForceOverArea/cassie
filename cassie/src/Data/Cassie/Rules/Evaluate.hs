@@ -94,12 +94,12 @@ evaluateMain y = case y of
     Magma op l r      -> do 
         l' <- evaluateMain l 
         r' <- evaluateMain r
-        return $ evalMagma op l' r'
+        pure $ evalMagma op l' r'
     Unary op x        -> do
         x' <- evaluateMain x
-        return $ evalUnary op x'
+        pure $ evalUnary op x'
     N_ary n a         -> evaluateFunction n a
-    Nullary n         -> return n
+    Nullary n         -> pure n
     Symbol s          -> getConst s >>= evaluateMain
 
 -- | Control flow for evaluating a function with a number of arguments.
@@ -120,7 +120,7 @@ getConst :: String -> Evaluate mg u n (AlgStruct mg u n)
 getConst s = do
     cst <- asks (Map.lookup s)
     case cst of
-        Just (Known v _) -> return v
+        Just (Known v _) -> pure v
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Fetches a function with the given name from the @Context@. 
@@ -128,7 +128,7 @@ getFunc :: String -> Evaluate mg u n ([Symbol], AlgStruct mg u n)
 getFunc s = do
     fn <- asks (Map.lookup s)
     case fn of
-        Just (Func c f _) -> return (c, f)
+        Just (Func c f _) -> pure (c, f)
         _ -> lift . throwError $ SymbolNotDefined s
 
 -- | Indicates whether a given @CtxItem@ is a @Known@-constructor value.
