@@ -141,7 +141,7 @@ matrix =
                     unexpected $ "expected all rows of matrix to have " 
                             ++ show expectedNumCols
                             ++ " elements"
-        pure . Nullary . toMatrix n $ join rows
+        pure . Nullary . toMixedMatrix n $ join rows
 
 -- | Parses an identifier (haskell definition) and returns an @AlgStruct.Symbol@
 value :: CassieParser 

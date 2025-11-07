@@ -7,7 +7,7 @@ module Data.Cassie.Structures
     , isolateLeftOperand
     , isolateRightOperand
     , showAlgStruct
-    , toMatrix
+    , toMixedMatrix
     , AlgebraicStructure
     , AlgStruct(..)
     , BoolRing(..)

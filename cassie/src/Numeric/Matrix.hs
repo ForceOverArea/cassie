@@ -13,15 +13,17 @@ module Numeric.Matrix
     , lupDet
     , lupDetInv
     , lupInv
-    , mapIndices
     , matrixProd
     , matrixSum
     , matrixTranspose
     , row
     , row'
+    , scalar
     , size
+    , sumElements
     , toMatrix
     , toMatrix'
+    , LUPDecomposeError(..)
     , Matrix(rows, cols, flatten)
     ) where
 

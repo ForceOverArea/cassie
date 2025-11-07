@@ -8,6 +8,7 @@ module Numeric.Matrix.LU
     , lupDetInvTol
     , lupInv
     , lupInvTol
+    , LUPDecomposeError(..)
     ) where
 
 import safe Control.Arrow

@@ -41,7 +41,7 @@ library
                         Numeric.Matrix.LU,
     build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 
                         containers  >= 0.6.5.1,
-                        hmatrix     >= 0.20.2,
+                        -- hmatrix     >= 0.20.2,
                         mtl         >= 2.2.2,
                         text        >= 2.1.2,
                         vector      >= 0.13.2.0,

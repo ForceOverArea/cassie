@@ -10,13 +10,14 @@ module Numeric.Matrix.Internal
     , dot'
     , fromList
     , ident
-    , mapIndices
     , matrixProd
     , matrixSum
     , matrixTranspose
     , row
     , row'
+    , scalar
     , size
+    , sumElements
     , toMatrix
     , toMatrix'
     , MatIdx
@@ -82,11 +83,14 @@ instance Num a => Num (Matrix a) where
     fromInteger = toMatrix' 1 . V.singleton . fromInteger
 
 ident :: Num a => Int -> Matrix a
-ident n = 
+ident n = scalar n 1
+
+scalar :: Num a => Int -> a -> Matrix a
+scalar n x = 
     let
         lasti = n ^ (2 :: Int) - 1
 
-        f i | i == 0 || i `quot` n == i `rem` n = 1
+        f i | i == 0 || i `quot` n == i `rem` n = x
             | otherwise = 0
     in fromList n $ f <$> [0..lasti]
 
@@ -161,18 +165,9 @@ a `cross` b =
                           , (a V.! 0) * (b V.! 1) - (a V.! 1) * (b V.! 0)
                           ]
 
--- | Allows one to apply a function @f@ to a subset of a matrix 
---   indicated by a list of indices. This yields a new matrix 
---   by iterating over all the original elements once.
-mapIndices :: (MatIdx -> a) -> Matrix a -> Matrix a
-mapIndices f a = 
-    let 
-        n = rows a * cols a - 1
-
-        unflattenIdx 0 = (0, 0)
-        unflattenIdx k = (`quot` cols a) &&& (`rem` cols a) $ k
-        
-    in fromList (cols a) $ (f . unflattenIdx) <$> [0..n]
+-- | Sums all elements in the given matrix
+sumElements :: Num a => Matrix a -> a 
+sumElements = sum . flatten
 
 -- | Create row'-rank @Matrix a@ with @n@ columns from a @Data.Vector.Vector a@
 toMatrix :: Int -> V.Vector a -> Maybe (Matrix a)

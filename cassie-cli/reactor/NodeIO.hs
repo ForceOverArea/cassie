@@ -19,7 +19,7 @@ instance Applicative m => Applicative (NodeIOT m) where
     NodeIOT x <*> NodeIOT y = NodeIOT $ x <*> y
 
 instance Monad m => Monad (NodeIOT m) where
-    pure = pure
+    return = pure
 
     NodeIOT action >>= f = NodeIOT $ do
         result <- action

@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
 module Data.Cassie.Structures.Instances.Linalg
-    ( toMatrix
+    ( toMixedMatrix
     , Mixed(..)
     , MixedAlgStruct
     , MixedMagma(..)
@@ -14,13 +14,14 @@ import safe Data.Cassie.Structures.Magmas
 import safe Data.Cassie.Structures.UnarySystems
 import safe Data.Cassie.Utils
 import safe Data.List as List
-import Numeric.LinearAlgebra as NLA
+import qualified Data.Vector as V
+import safe Numeric.Matrix
 
 type DoesNotExistReason = String
 
 type MixedAlgStruct = AlgStruct MixedMagma MixedUnary Mixed
 
-type MixedElem = R
+type MixedElem = Double
 
 -- | A type for an "algebraic structure" over both 
 --   matrices and scalars (just like engineering school).
@@ -51,7 +52,8 @@ instance Show Mixed where
     show (Sclr x) = show x
     show (Mtrx x) = 
         let 
-            mtrxRows = toLists x
+            n = rows x - 1
+            mtrxRows = V.toList . (`row'` x) <$> [0..n]
             formatRow = intercalate ", " . map show
         in ('[' :) 
             . (++ "]") 
@@ -74,14 +76,14 @@ instance Num Mixed where
     _ + _ = DNE "addends must be of the same type"
 
     Sclr x * Sclr y = Sclr $ x * y
-    Sclr x * Mtrx y = Mtrx $ scalar x * y
-    Mtrx x * Sclr y = Mtrx $ scalar y * x
+    Sclr x * Mtrx y = Mtrx $ scalar (rows y) x * y
+    Mtrx x * Sclr y = Mtrx $ x * scalar (cols x) y
     Mtrx x * Mtrx y =
         let 
             xCols = cols x
             yRows = rows y
         in if xCols == yRows then
-                Mtrx $ x NLA.<> y
+                Mtrx $ x * y
             else 
                 DNE "the left operand's columns must equal the right operand's rows"
     DNE r * _ = DNE r
@@ -104,10 +106,16 @@ instance Num Mixed where
 instance Fractional Mixed where
     recip (Sclr x) = Sclr $ recip x
 
-    recip (Mtrx x)
-        | rows x /= cols x = DNE "only square matrices can be inverted"
-        | det x == 0 = DNE "only matrices with a non-zero determinant can be inverted"
-        | otherwise = Mtrx $ inv x
+    recip (Mtrx x) = 
+        case lupDetInv x of
+            Left NotSquare -> DNE "only square matrices can be inverted"
+            Left Degenerate -> DNE $ "the given matrix is degenerate: " ++ show x
+            Right (det, inv) 
+                | det == 0 -> DNE "only matrices with a non-zero determinant can be inverted"
+                | otherwise -> Mtrx $ inv
+        -- | rows x /= cols x = DNE "only square matrices can be inverted"
+        -- | det x == 0 = DNE "only matrices with a non-zero determinant can be inverted"
+        -- | otherwise = Mtrx $ inv x
 
     recip x = x
 
@@ -137,16 +145,9 @@ instance Floating Mixed where
         else 
             maybe 
                 (DNE "matrices can only be raised to an integral power")
-                (Mtrx . foldl' (NLA.<>) x . (flip replicate x) . (-) 1)
+                (Mtrx . foldl' (*) x . (flip replicate x) . (-) 1)
                 $ realInt y
     _ ** _ = DNE "exponents can only be evaluated over scalars"
-
-instance Transposable Mixed Mixed where
-    tr (Mtrx m) = Mtrx $ tr m 
-    tr _ = DNE "cannot conjugate transpose a scalar"
-
-    tr' (Mtrx m) = Mtrx $ tr' m
-    tr' _ = DNE "cannot transpose a scalar"
 
 instance MagmaMock MixedMagma Mixed where
     evalMagma MixedExpn = mixedExp
@@ -176,7 +177,7 @@ instance ShowMagma MixedMagma where
     showMagma CrossProd = \x y -> show x ++ " >< " ++ show y
 
 instance UnaryMock MixedUnary Mixed where
-    evalUnary MtrxTrans = tr'
+    evalUnary MtrxTrans = mixedTranspose
     evalUnary (MtrxGet gr gc) = getMtrxIndex gr gc
     evalUnary (SclrTrig trigOp) = evalUnary trigOp
 
@@ -192,26 +193,25 @@ instance ShowUnary MixedUnary where
 
 mixedCross :: Mixed -> Mixed -> Mixed
 Mtrx x `mixedCross` Mtrx y = 
-    let
-        i = flatten x
-        j = flatten y
-        n = size i
-    in if n == size j && n == 3 then 
-        Mtrx . asColumn $ i `cross` j
-    else 
-        DNE "cross product is only defined for 3-element vectors"
+    case flatten x `cross` flatten y of
+        Just p -> Mtrx $ toMatrix' 1 p
+        Nothing -> DNE "cross product is only defined for 3-element vectors"
 mixedCross _ _ = DNE "cross product is only defined for 3-element vectors"
 
 mixedExp :: Mixed -> Mixed -> Mixed
 Sclr x `mixedExp` Sclr y = Sclr $ x ** y
 Mtrx x `mixedExp` Sclr y = 
     case realInt y of
-        Just n' -> Mtrx $ x ^^ n'
+        Just _ -> Mtrx x ** Sclr y
         Nothing -> DNE "matrix can only be raised to an integral power"
 mixedExp _ _ = DNE "exponentiation only defined between real scalars or matrices and integers"
 
+mixedTranspose :: Mixed -> Mixed
+mixedTranspose (Mtrx x) = Mtrx $ matrixTranspose x
+mixedTranspose _ = DNE "only matrices can be transposed"
+
 getMtrxIndex :: Int -> Int -> Mixed -> Mixed
-getMtrxIndex i j (Mtrx x) = Sclr $ x ! i ! j
+getMtrxIndex i j (Mtrx x) = Sclr $ x ! (i, j)
 getMtrxIndex _ _ _ = DNE "only matrices can be indexed"
 
 scalarOnly1 :: (MixedElem -> MixedElem) -> DoesNotExistReason -> Mixed -> Mixed
@@ -222,5 +222,5 @@ scalarOnly2 :: (MixedElem -> MixedElem -> MixedElem) -> DoesNotExistReason -> Mi
 scalarOnly2 f _err (Sclr x) (Sclr y) = (Sclr $ f x y)
 scalarOnly2 _f err _ _ = DNE err
 
-toMatrix :: Int -> [MixedElem] -> Mixed
-toMatrix n = Mtrx . matrix n
+toMixedMatrix :: Int -> [MixedElem] -> Mixed
+toMixedMatrix n = Mtrx . fromList n
