@@ -1,19 +1,23 @@
 {-# LANGUAGE Safe #-}
 module CassieCLI.Solve 
     ( cassieSolveMain
+    , cassieWebMain
     ) where
 
 import safe Control.Arrow
-import safe Control.Monad.RWS (asks, runRWST)
-import safe Control.Monad.Trans (lift)
-import safe CassieCLI.Module (solveModular, relPathDir, relPathFile)
+import safe Control.Monad
+import safe Control.Monad.Except
+import safe Control.Monad.RWS
+import safe Data.Cassie.Solver
 import safe Data.List as List
 import safe qualified Data.Set as Set
-import safe CassieCLI.Solve.Formatting (renderSymbolicSolns)
-import safe CassieCLI.Solve.Internal (CassieCLI)
-import safe CassieCLI.MonadVirtIO (MonadVirtIO(..))
-import safe CassieCLI.Solve.Settings (constrained', numeric', parseCassieJSON, CassieJSON(..))
-import safe Control.Monad.IO.Class (MonadIO(..))
+import safe CassieCLI.Module
+import safe CassieCLI.MonadVirtIO
+import safe CassieCLI.Parser.Lang
+import safe CassieCLI.Parser.ParsedTypes
+import safe CassieCLI.Solve.Formatting
+import safe CassieCLI.Solve.Internal
+import safe CassieCLI.Solve.Settings
 
 cassieSolveMain :: (MonadFail m, MonadIO m, MonadVirtIO m) => [String] -> m ()
 cassieSolveMain _argv = do
@@ -41,6 +45,14 @@ cassieCliMain = do
     let (_ctx, soln) = unwrapEither maybeSoln
     renderSymbolicSolns soln 
     lift $ vSetCurrentDirectory pwd
+
+cassieWebMain :: String -> Either ParsedCassieError ParsedSoln
+cassieWebMain source = do
+    (_imports, context, equationPool) <- left (ParserError . show) 
+        $ parseCassiePhrases "system" source
+    (soln, unsolved) <- solveCassieSystem context mempty equationPool
+    when ([] /= unsolved) $ throwError FailedToFullySolve
+    pure soln
 
 -- | Retrieves the @Right@-constructed value from an @Either@, calling 
 --   @error . show@ on the @Left@-constructed value.

@@ -3,16 +3,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import safe CassieCLI.Init (cassieInitMain)
-import safe CassieCLI.Internal (ensureConfigDirectoryExists, consoleLogger)
-import safe CassieCLI.Repl (cassieReplMain)
-import safe CassieCLI.Solve (cassieSolveMain)
-import safe Control.Monad.Trans (lift)
-import safe System.Environment (getArgs)
-import safe NodeIO (NodeIOT(runNodeIOT))
+import safe CassieCLI.Init
+import safe CassieCLI.Internal
+import safe CassieCLI.Repl
+import safe CassieCLI.Solve
+import safe Control.Monad.Trans
+import safe System.Environment
+import safe NodeIO
 
 main :: IO ()
-main = error "no main can provided in a WASI reactor build due to GHC linker behavior"
+main = error "no main can be provided in a WASI reactor build due to GHC linker behavior"
 
 mainJS :: IO ()
 mainJS = runNodeIOT $ 
