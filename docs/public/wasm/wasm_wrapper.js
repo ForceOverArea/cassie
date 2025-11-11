@@ -2,7 +2,7 @@ import { WASI } from 'https://cdn.jsdelivr.net/npm/@runno/wasi@0.7.0/dist/wasi.j
 import ghc_wasm_jsffi from './ghc_wasm_jsffi.js';
 
 // the naming is bad here because we're dynamically fetching from our own page... yeah...
-const WASM_MODULE_PATH = '/cassie/public/wasm/cassie-wasm.wasm';
+const WASM_MODULE_PATH = '/cassie/public/wasm/web.wasm';
 const jsffiExports = {};
 const wasi = new WASI({});
 
