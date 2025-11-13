@@ -41,20 +41,22 @@ export async function init() {
 }
 
 const haskellStringCleanup = (x) => { 
+  console.log(x);
   return x
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('\\\\n', '<br>')
-    .replaceAll('\\"', '"')
+    .replaceAll('\\\"', '"')
     .slice(1, -1);
 }
 
 async function solveSystem(systemText) {
   let result;
 
-  const sanitized = haskellStringCleanup(
-    await wasi.instance.exports.solveSystemHs(systemText)
-  );
+  console.info(systemText);
+
+  const raw = await wasi.instance.exports.mainDOM(systemText);
+  const sanitized = haskellStringCleanup(raw);
 
   try {
     result = JSON.parse(sanitized);

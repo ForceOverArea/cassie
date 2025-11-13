@@ -1,7 +1,6 @@
 {-# LANGUAGE Trustworthy #-}
 module CassieCLI.Solve.Formatting.Web
     ( stringifyPossSolution
-    , stringifySolution
     , JsonSolution(..)
     ) where
 
@@ -9,8 +8,10 @@ import safe Control.Arrow
 import Data.Aeson 
 import Data.Aeson.Key
 import Data.Aeson.KeyMap
+import Data.Aeson.Text
 import safe Data.Cassie
 import safe qualified Data.Map as Map
+import safe qualified Data.Text.Lazy as Text
 
 newtype JsonSolution mg u n = JsonSolution { unJson :: Solution mg u n }
 
@@ -48,8 +49,5 @@ instance (AlgebraicStructure mg u n, Show a) => ToJSON (PossJsonSoln a mg u n) w
 instance Show n => ToJSON (JsonParsedElem n) where
     toJSON = toJSON . show . unJsonElem
 
-stringifySolution :: (AlgebraicStructure mg u n) => Solution mg u n -> String
-stringifySolution = show . encode . JsonSolution
-
 stringifyPossSolution :: (AlgebraicStructure mg u n, Show a) => Either a (Solution mg u n) -> String
-stringifyPossSolution = show . encode . PossJsonSoln
+stringifyPossSolution = Text.unpack . encodeToLazyText . PossJsonSoln

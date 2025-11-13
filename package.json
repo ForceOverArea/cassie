@@ -10,7 +10,8 @@
     "cassiejs": "./dist/main.js"
   },
   "scripts": {
-    "repl": "node ./dist/main.js repl"
+    "repl": "node ./dist/main.js repl",
+    "serve": "npx serve docs"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
   "homepage": "https://github.com/ForceOverArea/cassie#readme",
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "serve": "^14.2.5",
     "typescript": "^5.9.2"
   }
 }
