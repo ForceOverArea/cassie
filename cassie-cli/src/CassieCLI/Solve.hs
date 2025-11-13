@@ -14,8 +14,8 @@ import safe qualified Data.Set as Set
 import safe CassieCLI.Module
 import safe CassieCLI.MonadVirtIO
 import safe CassieCLI.Parser.Lang
-import safe CassieCLI.Parser.ParsedTypes
 import safe CassieCLI.Solve.Formatting
+import safe CassieCLI.Solve.Formatting.Web
 import safe CassieCLI.Solve.Internal
 import safe CassieCLI.Solve.Settings
 
@@ -46,8 +46,8 @@ cassieCliMain = do
     renderSymbolicSolns soln 
     lift $ vSetCurrentDirectory pwd
 
-cassieWebMain :: String -> Either ParsedCassieError ParsedSoln
-cassieWebMain source = do
+cassieWebMain :: String -> String
+cassieWebMain source = stringifyPossSolution $ do
     (_imports, context, equationPool) <- left (ParserError . show) 
         $ parseCassiePhrases "system" source
     (soln, unsolved) <- solveCassieSystem context mempty equationPool

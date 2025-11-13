@@ -27,6 +27,7 @@ library
                         CassieCLI.Repl,
                         CassieCLI.Solve,
                         CassieCLI.Solve.Formatting,
+                        CassieCLI.Solve.Formatting.Web,
                         CassieCLI.Solve.Internal,
                         CassieCLI.Solve.Settings,
                         CassieCLI.Module,

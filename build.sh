@@ -32,7 +32,7 @@ cp $CABAL_REACTOR_PATH $DIST_REACTOR_DIR
 echo "[7/$NUM_STEPS] Building Haskell project for web..."
 wasm32-wasi-cabal build web
 
-echo "[8/$NUM_STEPS] Generating FFI bindings..."
+echo "[8/$NUM_STEPS] Generating web FFI bindings..."
 $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i $CABAL_WEB_PATH -o $DIST_WEB_DIR/ghc_wasm_jsffi.js
 
 echo "[9/$NUM_STEPS] Copying Haskell reactor module for web to 'docs' directory..."
