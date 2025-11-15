@@ -1,0 +1,18 @@
+.article-container {
+    display: flex;
+    justify-content: center;
+
+    width: 100%;
+}
+
+.article {
+    position: absolute;
+    background-color: #D0D0D0;
+    color: black;
+
+    font-family: 'TeXGyreHeros';
+
+    width: 50%;
+    top: 50vh;
+    padding: 30px;
+}

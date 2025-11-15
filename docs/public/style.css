@@ -1,7 +1,8 @@
+@import './article-style.css';
+
 :root {
     color: white;
-    /* background-image: url('assets/images/abstract-white-wave-or-wavy-line-background-and-texture-vector-1307380358.jpg'); */
-    background-color: white;
+    background-color: black;
 }
 
 @font-face {
@@ -9,8 +10,18 @@
     src: url('assets/fonts/FiraCode-SemiBold.ttf');
 }
 
+@font-face {
+    font-family: 'TeXGyreHeros';
+    src: url('assets/fonts/texgyreheros-regular.otf');
+}
+
 [contenteditable] {
     outline: 0px solid transparent;
+}
+
+a {
+    text-decoration: inherit;
+    color: inherit;
 }
 
 .outermost {
@@ -27,41 +38,73 @@
     justify-content: center;
     text-align: left;
 
-    background-color: #808080B0;
+    /* background-color: #808080B0; */
+}
+
+.titlebar-container {
+    position: sticky;
+    top: 30px;
+
+    display: flex;
+    justify-content: center;
+
+    z-index: 1;
 }
 
 .titlebar {
     /* size */
-    height: 80px;
-    width: 100%;
+    height: 60px;
+    width: 80%;
     /* alignment */
-    /* padding-top: 15px; */
-    background-color: #5E5184;
-    filter: drop-shadow(0px 5px 15px black);
+    top: 15px;
+    background-color: #3F3F3FCC;
+    border-radius: 15px;
+
+    display: flex;
+    align-items: center;
+    padding-left: 15px;
 }
 
 .title-inner {
-    padding-top: 7px;
-    padding-left: 30px;
-
-    filter: drop-shadow(2px 2px 3px black);
+    display: flex;
+    align-items: center;
 }
 
 .title {
     /* cool font */
-    font-family: 'Times New Roman';
-    font-size: 60px;
+    font-family: 'TeXGyreHeros';
+    font-size: 30px;
     /* alignment */
     padding-left: 7px;
 }
 
-.title-alt {
-    /* text color for CAS in CASsie */
-    color: #daa3ff;
+.navbar {
+    font-family: 'TeXGyreHeros';
+    font-size: 25px;
+
+    margin-left: auto;
+    order: 2;
+}
+
+.navbar span {
+    color: white;
+
+    padding-right: 15px;
+    padding-left: 15px;
+
+    background: linear-gradient(to right, #b7ff3b 50%, #00000000 50%);
+    background-size: 200% 100%;
+    background-position: right bottom;
+    transition: all 0.15s ease;
+}
+
+.navbar span:hover {
+    color: #3F3F3F;
+    background-position: left bottom;
 }
 
 .version-tag {
-    font-size: 20px;
+    font-size: 15px;
 }
 
 .app-view {
@@ -71,120 +114,9 @@
 
     font-family: 'FiraCode';
     color: #D0D0D0;
-    /* background-color: black; */
+    background-color: black;
     padding-top: 30px;
     padding-bottom: 30px;
-}
-
-.editor-border {
-    /* size */
-    width: 60%;
-    /* alignment */
-    padding-left: 30px;
-    padding-right: 30px;
-}
-
-.editor-pane {
-    font-size: 16pt;
-
-    color: #D0D0D0;
-    background-color: #202028C0;
-
-    height: 100%;
-}
-
-.soln-border {
-    flex: 1;
-    display: flex;
-    flex-flow: column;
-
-    padding-right: 30px;
-}
-
-.soln-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    font-size: 16pt;
-    flex-basis: 80%;
-    flex-shrink: 0;
-    
-    color: #D0D0D0;
-    background-color: #202028C0;
-}
-
-.toggle-border {
-    flex: 1;
-    display: flex;
-}
-
-.soln-toggle {
-    flex: 1;
-    display: flex;
-    flex-direction: row;
-
-    padding-top: 30px;
-}
-
-.soln-header {
-    display: flex;
-    align-items: left baseline;
-    width: 100%;
-}
-
-.toggle-option-border {
-    flex: 1;
-    display: flex;
-
-    width: 48%;
-}
-
-.toggle-option-border.l {
-    padding-right: 15px;
-}
-
-.toggle-option-border.r {
-    padding-left: 15px;
-}
-
-.toggle-option {
-    /* alignment */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* size */
-    width: 100%;
-    /* coloring */
-    background: linear-gradient(to right, #D0D0D0 50%, #202028C0 50%);
-    /* border: 1px solid #D0D0D0; */
-}
-
-.toggle-option:hover {
-    color: #202028;
-}
-
-.sym-soln-entry {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    background: linear-gradient(to right, #D0D0D0 50%, #00000000 50%);
-    transition: all 0.2s ease;
-}
-
-.sym-soln-entry:hover {
-    color: #202028;
-}
-
-.quick-fill {
-    background-size: 200% 100%;
-    background-position: right bottom;
-    transition: all 0.15s ease;
-}
-
-.quick-fill:hover {
-    background-position: left bottom;
 }
 
 .clickable {

@@ -41,12 +41,11 @@ export async function init() {
 }
 
 const haskellStringCleanup = (x) => { 
-  console.log(x);
   return x
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
-    .replaceAll('\\\\n', '<br>')
-    .replaceAll('\\\"', '"')
+    .replaceAll('\\n', '<br>')
+    .replaceAll('\\"', '"')
     .slice(1, -1);
 }
 

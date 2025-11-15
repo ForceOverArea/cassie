@@ -13,18 +13,20 @@ const SYM_SOLN_CLASSLIST = [
 export function renderSymbolic(cassieSoln) {
   const symSolns = [];
 
+  console.log(JSON.stringify(cassieSoln.solution));
+
   // Generate list of equations to add to HTML
-  for (const { equation } of cassieSoln.solution) {
-    symSolns.push(wrapWithSolutionTag(equation, symSolns.length));
+  for (const [_, soln] of Object.entries(cassieSoln.solution)) {
+    symSolns.push(wrapWithSolutionTag(soln.constrained, symSolns.length));
   }
 
   // Add eqns to HTML
-  SOLN_PANE.innerHTML = renderContext(cassieSoln.context) 
-    + `<br>&nbsp;<br>${solnHeader('Solution:')}<br>`
-    + symSolns.join('<br>');
+  // SOLN_PANE.innerHTML = renderContext(cassieSoln.context) 
+  //   + `<br>&nbsp;<br>${solnHeader('Solution:')}<br>`
+  //   + symSolns.join('<br>');
 
   // Add onclick events to new tags
-  for (const [i, { steps, symbol }] of cassieSoln.solution.entries()) {
+  for (const [i, { steps, symbol }] of Object.entries(cassieSoln.solution)) {
     const elem = document.getElementById(SYM_SOLN_ID_PREFIX + i);
     elem.onclick = () => {
       SOLN_PANE.innerHTML = solnHeader(`Showing steps to solve for ${symbol}:`) 
@@ -43,9 +45,9 @@ export function renderNumeric(cassieSoln) {
     numSolns.push(`${symbol} = ${maybeValue}`);
   }
 
-  SOLN_PANE.innerHTML = renderContext(cassieSoln.context)
-    + `<br>&nbsp;<br>${solnHeader('Solution:')}<br>`
-    + numSolns.join('<br>');
+  // SOLN_PANE.innerHTML = renderContext(cassieSoln.context)
+  //   + `<br>&nbsp;<br>${solnHeader('Solution:')}<br>`
+  //   + numSolns.join('<br>');
 } 
 
 /**
