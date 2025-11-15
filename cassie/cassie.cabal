@@ -26,6 +26,7 @@ library
                         Data.Cassie.Rules.Isolate,
                         Data.Cassie.Rules.Isolate.PolySolve,
                         Data.Cassie.Rules.Substitute,
+                        Data.Cassie.Solver.CtxEval,
                         Data.Cassie.Solver.Internal,
                         Data.Cassie.Structures.Polynomial,
                         Data.Cassie.Structures.Instances.Boolean,

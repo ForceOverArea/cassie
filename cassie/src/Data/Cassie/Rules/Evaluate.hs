@@ -37,7 +37,6 @@ type Context mg u n = Map.Map String (CtxItem mg u n)
 data EvalError 
     = SymbolNotDefined String
     | InvalidArguments' Int Int
-    | ZeroOrSingleTermPolynomial
     | FailedToCallFunction SubstitutionError
     deriving Eq
 
@@ -68,9 +67,6 @@ instance Show EvalError where
         ++ ", actual " 
         ++ show actual
         ++ ")"
-
-    show ZeroOrSingleTermPolynomial
-        = "found a structure representing a polynomial expression that had only one term"
 
     show (FailedToCallFunction err)
         = "failed to evaluate function with arguments: " ++ show err

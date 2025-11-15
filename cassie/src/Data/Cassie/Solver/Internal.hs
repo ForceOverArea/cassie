@@ -59,6 +59,7 @@ data CassieError mg u n
     | ImportsNotAllowed
     | ImportNotFound (String, [Symbols])
     | IsolationError (IsolateError mg u n)
+    | ContextMissingFor [Symbol]
     {-  Errors on or below this line are thrown by the module system only.
         This is confusing, but allows @solveConstrainedMain@ to be called 
         directly within the module-importing code since both actions use
