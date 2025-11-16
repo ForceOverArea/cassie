@@ -1,18 +1,32 @@
+.playground-container {
+    display: flex;
+    width: 80%;
+}
+
 .editor-border {
     /* size */
     width: 60%;
     /* alignment */
+    padding-top: 30px;
     padding-left: 30px;
     padding-right: 30px;
 }
 
 .editor-pane {
-    font-size: 16pt;
-
-    color: #D0D0D0;
-    background-color: #202028C0;
-
     height: 100%;
+
+    border: 1px solid #404040;
+    transition: all 0.5s ease;
+}
+
+.editor-pane:focus {
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.editor-pane:hover {
+    border: 1px solid transparent;
+    transition: all 0.5s ease;
 }
 
 .soln-border {
@@ -30,11 +44,11 @@
     align-items: center;
 
     font-size: 16pt;
-    flex-basis: 80%;
+    flex-basis: 90%;
     flex-shrink: 0;
     
     color: #D0D0D0;
-    background-color: #202028C0;
+    /* background-color: #202028C0; */
 }
 
 .toggle-border {
@@ -47,7 +61,6 @@
     display: flex;
     flex-direction: row;
 
-    padding-top: 30px;
 }
 
 .soln-header {
@@ -78,12 +91,19 @@
     justify-content: center;
     /* size */
     width: 100%;
+
     /* coloring */
-    background: linear-gradient(to right, #D0D0D0 50%, #202028C0 50%);
+    background: linear-gradient(to right, #D0D0D0 50%, #00000000 50%);
+    background-size: 300% 100%;
+    background-position: right bottom;
+    transition: all 0.45s ease;
+
+    border: 1px solid #404040;
 }
 
 .toggle-option:hover {
     color: #202028;
+    background-position: left bottom;
 }
 
 .sym-soln-entry {

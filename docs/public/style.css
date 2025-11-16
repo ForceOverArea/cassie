@@ -1,4 +1,5 @@
 @import './article-style.css';
+@import './playground-style.css';
 
 :root {
     color: white;
@@ -72,7 +73,8 @@ a {
 
 .title {
     /* cool font */
-    font-family: 'TeXGyreHeros';
+    /* font-family: 'TeXGyreHeros'; */
+    font-family: 'Times New Roman';
     font-size: 30px;
     /* alignment */
     padding-left: 7px;
@@ -93,9 +95,9 @@ a {
     padding-left: 15px;
 
     background: linear-gradient(to right, #b7ff3b 50%, #00000000 50%);
-    background-size: 200% 100%;
+    background-size: 300% 100%;
     background-position: right bottom;
-    transition: all 0.15s ease;
+    transition: all 0.45s ease;
 }
 
 .navbar span:hover {
@@ -117,6 +119,8 @@ a {
     background-color: black;
     padding-top: 30px;
     padding-bottom: 30px;
+
+    justify-content: center;
 }
 
 .clickable {
