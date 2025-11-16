@@ -46,9 +46,14 @@ const haskellStringCleanup = (x) => {
     .replaceAll('>', '&gt;')
     .replaceAll('\\n', '<br>')
     .replaceAll('\\"', '"')
+    .replaceAll('\\', '')
     .slice(1, -1);
 }
 
+/**
+ * @param {string} systemText 
+ * @returns {object}
+ */
 async function solveSystem(systemText) {
   let result;
 
@@ -59,7 +64,7 @@ async function solveSystem(systemText) {
 
   try {
     result = JSON.parse(sanitized);
-    console.debug(JSON.stringify(result, null, 2));
+    // console.debug(JSON.stringify(result, null, 2));
   } catch (err) {
     result = sanitized;
     console.error(err);

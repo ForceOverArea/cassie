@@ -9,7 +9,11 @@ const SolnShowStates = {
 
 let solnShowState_global = SolnShowStates.SYMBOLIC;
 const wasmImports = {
-  solveSystem() {}
+  /**
+   * @param {string} _ 
+   * @returns {object}
+   */
+  solveSystem(_) {}
 };
 
 function onInitialization() {
@@ -34,7 +38,7 @@ function main() {
 async function trySolveSystem() { 
   const soln = await wasmImports.solveSystem(EDITOR.innerText);
   
-  if ('string' === typeof soln) {
+  if (typeof soln === 'string') { // just print out errors. TODO: fix 'show' implementations for error types
     SOLN_PANE.innerHTML = soln;
   } else if (SolnShowStates.SYMBOLIC === solnShowState_global) {
     renderSymbolic(soln);

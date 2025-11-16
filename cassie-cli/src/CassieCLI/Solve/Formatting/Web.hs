@@ -53,4 +53,6 @@ instance Show n => ToJSON (JsonParsedElem n) where
     toJSON = toJSON . show . unJsonElem
 
 stringifyCtxAndSolution :: (AlgebraicStructure mg u n, Show a) => Either a (Context mg u n, Solution mg u n) -> String
-stringifyCtxAndSolution = Text.unpack . encodeToLazyText . (show +++ (JsonCtx *** JsonSolution))
+stringifyCtxAndSolution = Text.unpack 
+    . (encodeToLazyText ||| encodeToLazyText) 
+    . (show +++ (JsonCtx *** JsonSolution))

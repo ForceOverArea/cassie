@@ -34,6 +34,7 @@
     display: flex;
     flex-flow: column;
 
+    padding-top: 30px;
     padding-right: 30px;
 }
 
@@ -43,7 +44,7 @@
     flex-direction: column;
     align-items: center;
 
-    font-size: 16pt;
+    /* font-size: 16pt; */
     flex-basis: 90%;
     flex-shrink: 0;
     
@@ -60,7 +61,6 @@
     flex: 1;
     display: flex;
     flex-direction: row;
-
 }
 
 .soln-header {
@@ -111,9 +111,12 @@
     justify-content: center;
     width: 100%;
     background: linear-gradient(to right, #D0D0D0 50%, #00000000 50%);
-    transition: all 0.2s ease;
+    background-size: 300% 100%;
+    background-position: right bottom;
+    transition: all 0.45s ease;
 }
 
 .sym-soln-entry:hover {
     color: #202028;
+    background-position: left bottom;
 }
