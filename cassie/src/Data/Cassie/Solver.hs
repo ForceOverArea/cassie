@@ -3,6 +3,8 @@ module Data.Cassie.Solver
     ( solveCassieSystem
     , solveCassieSystemT
     , solveConstrainedMain
+    , strictEvalCtx
+    , strictEvalCtxT
     , CassieError(..)
     , EquationPool
     , Solution
@@ -33,7 +35,7 @@ solveCassieSystemT :: (AlgebraicStructure mg u n, Monad m)
     -> m (Either (CassieError mg u n) (Solution mg u n, EquationPool mg u n))
 solveCassieSystemT ctx presolved equations = do 
     ans <- runExceptT $ do
-        concreteCtx <- strictEvalCtx ctx 
+        concreteCtx <- strictEvalCtxT ctx 
         execRWST solveConstrainedMain concreteCtx (presolved, equations)
     pure $ fst <$> ans 
     -- Note: this may need to be a more complicated arrow if the system solver 

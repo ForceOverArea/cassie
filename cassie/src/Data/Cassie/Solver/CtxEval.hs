@@ -1,16 +1,21 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Solver.CtxEval
     ( strictEvalCtx
+    , strictEvalCtxT
     ) where
 
 import safe Control.Monad.Except
+import safe Control.Monad.Identity
 import safe Data.Cassie.Rules
 import safe Data.Cassie.Solver.Internal
 import safe Data.Cassie.Structures
 import safe qualified Data.Map as Map
 
-strictEvalCtx :: (Monad m, AlgebraicStructure mg u n) => Context mg u n -> ExceptT (CassieError mg u n) m (Context mg u n)
-strictEvalCtx = strictEvalCtxHelper 0
+strictEvalCtxT :: (Monad m, AlgebraicStructure mg u n) => Context mg u n -> ExceptT (CassieError mg u n) m (Context mg u n)
+strictEvalCtxT = strictEvalCtxHelper 0
+
+strictEvalCtx :: AlgebraicStructure mg u n => Context mg u n -> Either (CassieError mg u n) (Context mg u n)
+strictEvalCtx ctx = runIdentity . runExceptT $ strictEvalCtxHelper 0 ctx
 
 -- | Ensures that the context being referenced by a solution is self-sufficient. 
 --   If this step is not completed prior to attempting a solution, then the 
