@@ -2,7 +2,7 @@ import { WASI } from 'https://cdn.jsdelivr.net/npm/@runno/wasi@0.7.0/dist/wasi.j
 import ghc_wasm_jsffi from './ghc_wasm_jsffi.js';
 
 // the naming is bad here because we're dynamically fetching from our own page... yeah...
-const WASM_MODULE_PATH = '/cassie/public/wasm/cassie-wasm.wasm';
+const WASM_MODULE_PATH = '/cassie/public/wasm/web.wasm';
 const jsffiExports = {};
 const wasi = new WASI({});
 
@@ -44,21 +44,27 @@ const haskellStringCleanup = (x) => {
   return x
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
-    .replaceAll('\\\\n', '<br>')
+    .replaceAll('\\n', '<br>')
     .replaceAll('\\"', '"')
+    .replaceAll('\\', '')
     .slice(1, -1);
 }
 
+/**
+ * @param {string} systemText 
+ * @returns {object}
+ */
 async function solveSystem(systemText) {
   let result;
 
-  const sanitized = haskellStringCleanup(
-    await wasi.instance.exports.solveSystemHs(systemText)
-  );
+  console.info(systemText);
+
+  const raw = await wasi.instance.exports.mainDOM(systemText);
+  const sanitized = haskellStringCleanup(raw);
 
   try {
     result = JSON.parse(sanitized);
-    console.debug(JSON.stringify(result, null, 2));
+    // console.debug(JSON.stringify(result, null, 2));
   } catch (err) {
     result = sanitized;
     console.error(err);
