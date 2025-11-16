@@ -31,6 +31,8 @@ strictEvalCtxHelper count ctx =
                 case evaluate ctxAcc $ numeric expr of
                     Left _err -> ctxAcc -- ignore things we can't know yet
                     Right ans -> Map.insert sym (Known (Nullary ans) mempty) ctxAcc
+            else if not $ isConst expr then
+                Map.insert sym expr ctxAcc
             else -- no need to evaluate functions or values we already know
                 ctxAcc
 
