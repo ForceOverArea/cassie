@@ -19,7 +19,7 @@ module CassieCLI.Parser.Lexemes
     , Symbols
     ) where
 
-import safe Prelude hiding (exponent, logBase, product, sum)
+import safe Prelude hiding (exponent, logBase, product, sum, sin, cos, tan, asin, acos, atan)
 import safe Control.Monad
 import safe qualified Data.List.NonEmpty as NE
 import safe qualified Data.Set as Set
@@ -105,6 +105,42 @@ root = whiteSpace haskell
         <*> parens haskell expression 
         <?> "root"
 
+sin :: CassieParser
+sin = whiteSpace haskell 
+    >> string "sin"
+    >> Unary (SclrTrig Sin) 
+        <$> parens haskell expression
+
+cos :: CassieParser
+cos = whiteSpace haskell 
+    >> string "cos"
+    >> Unary (SclrTrig Cos) 
+        <$> parens haskell expression
+
+tan :: CassieParser
+tan = whiteSpace haskell 
+    >> string "tan"
+    >> Unary (SclrTrig Tan) 
+        <$> parens haskell expression
+
+asin :: CassieParser
+asin = whiteSpace haskell 
+    >> string "asin"
+    >> Unary (SclrTrig ASin) 
+        <$> parens haskell expression
+
+acos :: CassieParser
+acos = whiteSpace haskell 
+    >> string "acos"
+    >> Unary (SclrTrig ACos) 
+        <$> parens haskell expression
+
+atan :: CassieParser
+atan = whiteSpace haskell 
+    >> string "atan"
+    >> Unary (SclrTrig ATan) 
+        <$> parens haskell expression
+
 function :: CassieParser 
 function = whiteSpace haskell
     >> N_ary 
@@ -176,7 +212,14 @@ p2Term :: CassieParser
 p2Term = try exponent <|> try root <|> p1Term
 
 p1Term :: CassieParser 
-p1Term = try logarithm <|> p0Term
+p1Term = try logarithm 
+    <|> try sin
+    <|> try cos
+    <|> try tan
+    <|> try asin
+    <|> try acos
+    <|> try atan
+    <|> p0Term
 
 p0Term :: CassieParser 
 p0Term = try function <|> try parenthetical <|> try symb <|> try matrix <|> value
