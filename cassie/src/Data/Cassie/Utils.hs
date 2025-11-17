@@ -1,7 +1,6 @@
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Utils
     ( first'
-    , insertAt
     , realInt
     , second'
     , third
@@ -14,9 +13,6 @@ import safe Control.Monad
 import safe Control.Monad.Trans (lift, MonadTrans)
 import safe Control.Monad.Except (throwError, ExceptT)
 import safe GHC.Float (int2Double)
-
-insertAt :: a -> Int -> [a] -> [a]
-insertAt x idx xs = (take idx xs) ++ (x:(drop idx xs))
 
 throwErr :: (MonadTrans t, Monad m) => e -> t (ExceptT e m) a
 throwErr = lift . throwError 
