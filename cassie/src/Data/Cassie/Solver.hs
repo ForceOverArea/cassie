@@ -5,6 +5,7 @@ module Data.Cassie.Solver
     , solveConstrainedMain
     , strictEvalCtx
     , strictEvalCtxT
+    , captureFunctionDepsT
     , CassieError(..)
     , EquationPool
     , Solution

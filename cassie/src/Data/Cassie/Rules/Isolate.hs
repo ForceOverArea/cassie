@@ -100,13 +100,13 @@ isolateAdditive terms =
                 (factorize target $ Additive ts)
     in do 
         wrapperTerms <- isolatePolyTerms terms 
-        setLhs . Additive . pure . isolatedTerm $ wrapperTerms
+        setLhs $ isolatedTerm wrapperTerms
         cancelLeft <- cancelTermsLeft2Right (leftTerms wrapperTerms) Negated []
         cancelRight <- cancelTermsRight2Left (rightTerms wrapperTerms) Negated []
         when (cancelLeft /= [])
-            $ modifyRhs ((Additive $ NE.fromList cancelLeft) *)
+            $ modifyRhs ((Additive $ NE.fromList cancelLeft) +)
         when (cancelRight /= [])
-            $ modifyRhs (* (Additive $ NE.fromList cancelRight))
+            $ modifyRhs (+ (Additive $ NE.fromList cancelRight))
         isolateMain
     `catchError` \err -> do
         when (err /= NeedsPolySolve) $ throwErr err
@@ -175,7 +175,7 @@ isolateN_ary name args = do
         throwErr InvalidArguments
     else 
         case substituteFnArgs expanded argNames args of
-            Left err -> throwErr $ FunctionCallErr err
+            Left err -> throwErr $ FunctionCallErr err -- NOTE: this branch will never run. See substitute module for more info.
             Right x  -> setLhs x
     isolateMain
 

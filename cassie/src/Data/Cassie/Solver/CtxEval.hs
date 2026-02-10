@@ -1,9 +1,16 @@
+{-
+    Helper module for tweaking context before attempting a solution 
+    or before exporting context from a locally solved module.
+-}
 {-# LANGUAGE Safe #-}
 module Data.Cassie.Solver.CtxEval
     ( strictEvalCtx
     , strictEvalCtxT
+    , captureFunctionDepsT
     ) where
 
+import safe Control.Arrow
+import safe Control.Monad
 import safe Control.Monad.Except
 import safe Control.Monad.Identity
 import safe Data.Cassie.Rules
@@ -21,7 +28,13 @@ strictEvalCtx ctx = runIdentity . runExceptT $ strictEvalCtxHelper 0 ctx
 --   If this step is not completed prior to attempting a solution, then the 
 --   algorithm may return an error for context items who have an undetected
 --   dependency on an undefined symbol. 
-strictEvalCtxHelper :: (Monad m, AlgebraicStructure mg u n) => Int -> Context mg u n -> ExceptT (CassieError mg u n) m (Context mg u n)
+-- 
+--   TODO: this function should be rewritten to evaluate consts as they are
+--   needed according to the root value's dep tree.
+strictEvalCtxHelper :: (Monad m, AlgebraicStructure mg u n) 
+                    => Int 
+                    -> Context mg u n 
+                    -> ExceptT (CassieError mg u n) m (Context mg u n)
 strictEvalCtxHelper count ctx = 
     let
         concreteCtx = Map.foldlWithKey addConcreteValueToCtx mempty ctx
@@ -42,3 +55,42 @@ strictEvalCtxHelper count ctx =
         pure concreteCtx
     else
         strictEvalCtxHelper (count + 1) $ concreteCtx `Map.union` ctx
+
+-- | Substitutes all function implementations in a given context to capture 
+--   constants pulled in from imported solutions and locally evaluated context.
+captureFunctionDepsT :: (Monad m, AlgebraicStructure mg u n) 
+                    => Solution mg u n 
+                    -> Context mg u n 
+                    -> ExceptT (CassieError mg u n) m (Context mg u n)
+captureFunctionDepsT importedSoln ctx = 
+    let 
+        -- | Captures values from context and subs them into local function implementations
+        captureValuesFor f =
+            let 
+                args = arguments f
+                impl = implementation f
+                deps = dependencies f
+                
+                tryCaptureDependency impl' x = do
+                    capture <- captureValue x
+                    pure $ pureSubstitute x capture impl'
+
+            in if isConst f then -- meaning not a function
+                Right f
+            else
+                (\x -> Func args x mempty) 
+                <$> (foldM tryCaptureDependency impl deps)
+
+        -- | Pulls values from context or imported solutions by name (TODO: these errors can be more specific on what exactly the context is missing)
+        captureValue val
+            | val `Map.member` importedSoln = 
+                case possVal $ importedSoln Map.! val of
+                    Right x -> Right $ Nullary x
+                    _ -> Left $ ContextMissingFor [val]
+            | val `Map.member` ctx = 
+                case ctx Map.! val of
+                    Known (Nullary x) _ -> Right $ Nullary x
+                    _ -> Left $ ContextMissingFor [val]
+            | otherwise = Left $ ContextMissingFor [val]
+
+    in (throwError ||| pure) $ mapM captureValuesFor ctx 
