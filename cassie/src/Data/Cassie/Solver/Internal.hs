@@ -68,6 +68,7 @@ data CassieError mg u n
     | ImportError String
     deriving (Show, Eq)
 
+-- | 
 solveConstrainedMain :: (Monad m, AlgebraicStructure mg u n) => CassieT mg u n m ()
 solveConstrainedMain = do
     get >>= tell . (:[]) . show

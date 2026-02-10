@@ -39,62 +39,64 @@ type ParsedCassieError = CassieError ParsedMagma ParsedUnary ParsedElement
 --   @MonadVirtIO@), this function recursively solves a chain of 
 --   dependent systems of equations.
 solveModular :: MonadVirtIO m 
-    => FilePath
-    -> Symbols
-    -> m (Either ParsedCassieError ((ParsedCtx, ParsedSoln)), [String])
+             => FilePath
+             -> Symbols
+             -> m (Either ParsedCassieError ((ParsedCtx, ParsedSoln)), [String])
 solveModular thisModule keySolutions = runWriterT . runExceptT 
-    $ solveModularSystem mempty mempty mempty (thisModule, keySolutions)
+    $ solveModularSystem mempty (mempty, mempty) (thisModule, keySolutions)
 
 -- | Builds a context from parsing imported modules.
 --   
 --   
 --   This is effectively @main@ for the CASsie CLI.
 solveModularSystem :: MonadVirtIO m
-    => Set.Set String 
-    -> ParsedCtx
-    -> ParsedSoln
-    -> (String, Symbols) 
-    -> CassieModuleT m (ParsedCtx, ParsedSoln)
-solveModularSystem dependentModules accumCtx accumSoln (localModule, localExports) = 
+                   => Set.Set String 
+                   -> (ParsedCtx, ParsedSoln)
+                   -> (String, Symbols) 
+                   -> CassieModuleT m (ParsedCtx, ParsedSoln)
+solveModularSystem dependentModules (accumCtx, accumSoln) (localModule, localExports) = 
     let 
         exportWildcard = (Set.size localExports == 1 && Set.findMin localExports == "*")
         exports = Map.filterWithKey $ \x _ -> x `Set.member` localExports || exportWildcard
         exportUnion x = exports . (x `Map.union`) 
-        foldChildImports = uncurry 
-            $ solveModularSystem 
-            $ localModule `Set.insert` dependentModules
+        
+        -- Add local module to the set of preceding dependent modules and recurse over  
+        foldChildImports = solveModularSystem $ localModule `Set.insert` dependentModules
     in do
         moduleFilePath <- getModuleOrBaseLibrary localModule
         (localDependencies, localCtx, localEqns) <- tryBuildModuleCtx moduleFilePath
-        tell ["local context for " ++ moduleFilePath ++ ": ", show localCtx, "local equations: ", show localEqns]
+        localCtx' <- strictEvalCtxT localCtx -- evaluate constants' values up-front 
+        tell ["local context for " ++ moduleFilePath ++ ": ", show localCtx', "local equations: ", show localEqns]
         if localDependencies == [] then do
-            ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain localCtx (Map.empty, localEqns)
+            localCtxWCaptures <- captureFunctionDepsT mempty localCtx'
+            ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain localCtxWCaptures (mempty, localEqns)
             assertConstrained unsolved
             tell [ "Exports: ", show (exports localCtx, exports localSoln) ]
             tell $ "Solution: ":solnLog
             pure ( (exports localCtx) `Map.union` accumCtx
-                   , (exports localSoln) `Map.union` accumSoln
-                   )
+                 , (exports localSoln) `Map.union` accumSoln
+                 )
         else do
             checkForRecursion dependentModules localDependencies
-            (importedCtx', importedSoln') <- foldM 
-                foldChildImports 
-                (localCtx `Map.union` accumCtx, accumSoln) -- TODO: should this union be here? 
-                localDependencies
+            (importedCtx, importedSoln) <- foldM foldChildImports -- solve all branches of modules that this module depends on 
+                                                 (localCtx' `Map.union` accumCtx, accumSoln) -- TODO: should this union be here? 
+                                                 localDependencies
+            importedCtxWCaptures <- captureFunctionDepsT importedSoln importedCtx
             tell $ [ ""
-                   , "imported context post-fold for " ++ moduleFilePath ++ ": ", show importedCtx'
-                   , "imported solution post-fold for " ++ moduleFilePath ++ ": ", show importedSoln'
+                   , "imported context post-fold for " ++ moduleFilePath ++ ": ", show importedCtxWCaptures
+                   , "imported solution post-fold for " ++ moduleFilePath ++ ": ", show importedSoln
                    ]
-            ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain importedCtx' (importedSoln', localEqns)
+            -- with the imported information gathered, we can solve the local module
+            ((localSoln, unsolved), solnLog) <- execRWST solveConstrainedMain importedCtx (importedSoln, localEqns)
             assertConstrained unsolved
             tell solnLog
-            pure ( accumCtx `Map.union` exports importedCtx'
-                   , accumSoln `Map.union` (importedSoln' `exportUnion` localSoln)
-                   ) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
+            pure ( accumCtx `Map.union` exports importedCtx
+                 , accumSoln `Map.union` (importedSoln `exportUnion` localSoln)
+                 ) -- NOTE: this return statement governs whether child imports vs local symbols ONLY are re-exported 
 
 getModuleOrBaseLibrary :: MonadVirtIO m 
-    => String 
-    -> CassieModuleT m String
+                       => String 
+                       -> CassieModuleT m String
 getModuleOrBaseLibrary localModule = 
     let
         baseModuleRelPath = intercalate "/" . drop 1 $ splitStrAt '/' localModule
@@ -105,8 +107,8 @@ getModuleOrBaseLibrary localModule =
             (++ "/" ++ localModule ++ cassieFileExt) <$> vGetCurrentDirectory
 
 tryBuildModuleCtx :: MonadVirtIO m 
-    => FilePath 
-    -> CassieModuleT m ([Import], ParsedCtx, ParsedEqPool)
+                  => FilePath 
+                  -> CassieModuleT m ([Import], ParsedCtx, ParsedEqPool)
 tryBuildModuleCtx fp 
     = buildGlobalCtx fp 
     <$> tryGetModuleSource fp
@@ -116,8 +118,8 @@ tryBuildModuleCtx fp
 --   if the file exists or throwing a @FileDoesNotExist@ error if it
 --   does not.
 tryGetModuleSource :: MonadVirtIO m
-    => FilePath 
-    -> CassieModuleT m String
+                   => FilePath 
+                   -> CassieModuleT m String
 tryGetModuleSource fp 
     = (lift .lift $ vTryReadFile fp) 
     >>= maybe 
@@ -130,16 +132,18 @@ tryGetModuleSource fp
 --   1. A list of imported modules that the file (may) depend on
 --   2. A @Context@ map structure of symbols to functions or constant values
 --   3. A pool of equations parsed out in the system. 
-buildGlobalCtx :: FilePath -> String -> Either (CassieError mg u n) ([Import], ParsedCtx, ParsedEqPool)
+buildGlobalCtx :: FilePath 
+               -> String 
+               -> Either (CassieError mg u n) ([Import], ParsedCtx, ParsedEqPool)
 buildGlobalCtx = curry (left (ParserError . show) . uncurry parseCassiePhrases)
 
 -- | Checks a given import for recursive dependencies, 
 --   throwing @FoundRecursiveImport@ when a recursive
 --   dependency is found.
 checkForRecursion :: Monad m 
-    => Set.Set String 
-    -> [(String, Symbols)] 
-    -> CassieModuleT m ()
+                  => Set.Set String 
+                  -> [(String, Symbols)] 
+                  -> CassieModuleT m ()
 checkForRecursion parentPaths childImports = 
     let 
         recursiveImports = parentPaths `Set.intersection` (Set.fromList $ map fst childImports)
@@ -147,5 +151,7 @@ checkForRecursion parentPaths childImports =
         $ throwError . ImportError . show $ FoundRecursiveImport
 
 -- | Throws a @FailedToConstrain@ error when the given equation pool is not empty.
-assertConstrained :: Monad m => ParsedEqPool -> CassieModuleT m ()
+assertConstrained :: Monad m 
+                  => ParsedEqPool 
+                  -> CassieModuleT m ()
 assertConstrained x = when ([] /= x) . throwError . FailedToConstrain $ x

@@ -4,6 +4,7 @@ module Data.Cassie.Rules
     , isConst
     , isolate
     , substitute
+    , pureSubstitute
     , Context
     , CtxItem(..)
     , EvalError
