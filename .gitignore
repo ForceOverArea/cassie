@@ -16,3 +16,6 @@ src/wasi
 
 # notes
 .notes
+
+# Direnv
+.direnv
