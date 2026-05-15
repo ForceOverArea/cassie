@@ -138,16 +138,8 @@ instance Floating Mixed where
     acosh = scalarOnly1 acosh "acosh only defined for scalars"
     atanh = scalarOnly1 atanh "atanh only defined for scalars"
 
-    Sclr x ** Sclr y = Sclr $ x ** y
-    Mtrx x ** Sclr y = 
-        if rows x /= cols x then
-            DNE "only square matrices can be raised to a power"
-        else 
-            maybe 
-                (DNE "matrices can only be raised to an integral power")
-                (Mtrx . foldl' (*) x . (flip replicate x) . (-) 1)
-                $ realInt y
-    _ ** _ = DNE "exponents can only be evaluated over scalars"
+    (**) = mixedExp
+        
 
 instance MagmaMock MixedMagma Mixed where
     evalMagma MixedExpn = mixedExp
@@ -200,10 +192,14 @@ mixedCross _ _ = DNE "cross product is only defined for 3-element vectors"
 
 mixedExp :: Mixed -> Mixed -> Mixed
 Sclr x `mixedExp` Sclr y = Sclr $ x ** y
-Mtrx x `mixedExp` Sclr y = 
-    case realInt y of
-        Just _ -> Mtrx x ** Sclr y
-        Nothing -> DNE "matrix can only be raised to an integral power"
+Mtrx x `mixedExp` Sclr y =
+    if rows x /= cols x then
+        DNE "only square matrices can be raised to a power"
+    else 
+        maybe 
+            (DNE "matrices can only be raised to an integral power")
+            (Mtrx . foldl' (*) x . flip replicate x . pred)
+            $ realInt y
 mixedExp _ _ = DNE "exponentiation only defined between real scalars or matrices and integers"
 
 mixedTranspose :: Mixed -> Mixed
