@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
-CABAL_REACTOR_PATH=dist-newstyle/build/wasm32-wasi/ghc-9.12.2.20250327/cassie-cli-0.1.0.0/x/reactor/opt/build/reactor/reactor.wasm
+CABAL_REACTOR_PATH=dist-newstyle/build/wasm32-wasi/ghc-9.14.1.20260330/cassie-cli-0.1.0.0/x/reactor/opt/build/reactor/reactor.wasm
 DIST_REACTOR_DIR=dist/wasi
-CABAL_WEB_PATH=dist-newstyle/build/wasm32-wasi/ghc-9.12.2.20250327/cassie-cli-0.1.0.0/x/web/opt/build/web/web.wasm
+CABAL_WEB_PATH=dist-newstyle/build/wasm32-wasi/ghc-9.14.1.20260330/cassie-cli-0.1.0.0/x/web/opt/build/web/web.wasm
 DIST_WEB_DIR=docs/public/wasm
 SRC_REACTOR_DIR=src/wasi
 NUM_STEPS=9
