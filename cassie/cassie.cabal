@@ -40,7 +40,7 @@ library
                         Data.Cassie.Utils,
                         Numeric.Matrix.Internal,
                         Numeric.Matrix.LU,
-    build-depends:      base        >= 4.16.4.0 && <= 4.21.0.0, 
+    build-depends:      base        >= 4.16.4.0 && <= 4.22.0.0, 
                         containers  >= 0.6.5.1,
                         -- hmatrix     >= 0.20.2,
                         mtl         >= 2.2.2,
