@@ -99,7 +99,7 @@ parseFunction ctx funcDef =
             pure $ Map.insert name funcObj ctx
 
 cassieFile :: CassieLang [Phrase]
-cassieFile = manyTill phrase eof
+cassieFile = whiteSpace haskell >> manyTill phrase eof
 
 parsePhrase :: String -> Either ParseError Phrase
 parsePhrase =  runParser phrase Set.empty "repl" 

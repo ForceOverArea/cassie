@@ -48,8 +48,9 @@ cassieCliMain = do
 
 cassieWebMain :: String -> String
 cassieWebMain source = stringifyCtxAndSolution $ do
-    (_imports, context, equationPool) <- left (ParserError . show) 
+    (imports, context, equationPool) <- left (ParserError . show) 
         $ parseCassiePhrases "system" source
+    when ([] /= imports) $ throwError ImportsNotAllowed
     concreteCtx <- strictEvalCtx context
     (soln, unsolved) <- solveCassieSystem concreteCtx mempty equationPool
     when ([] /= unsolved) $ throwError FailedToFullySolve
