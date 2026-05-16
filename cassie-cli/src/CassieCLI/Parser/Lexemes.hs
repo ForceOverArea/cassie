@@ -141,6 +141,16 @@ atan = whiteSpace haskell
     >> Unary (SclrTrig ATan) 
         <$> parens haskell expression
 
+getMatElem :: CassieParser
+getMatElem = do
+    whiteSpace haskell
+    _ <- string "get"
+    (r, c) <- angles haskell $ (,) 
+            <$> integer haskell 
+            <*> (comma haskell >> integer haskell)
+    Unary (MtrxGet (fromInteger r) (fromInteger c)) 
+        <$> parens haskell expression
+
 function :: CassieParser 
 function = whiteSpace haskell
     >> N_ary 
@@ -219,6 +229,7 @@ p1Term = try logarithm
     <|> try asin
     <|> try acos
     <|> try atan
+    <|> try getMatElem
     <|> p0Term
 
 p0Term :: CassieParser 
