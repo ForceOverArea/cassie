@@ -5,6 +5,7 @@ stdenv.mkDerivation (with pkgs; {
     cabal-install
     ghc
     haskell-language-server
+    nodejs
   ];
   buildInputs = [
     zlib
