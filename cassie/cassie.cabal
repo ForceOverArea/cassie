@@ -25,6 +25,7 @@ library
     other-modules:      Data.Cassie.Rules.Evaluate,
                         Data.Cassie.Rules.Isolate,
                         Data.Cassie.Rules.Isolate.PolySolve,
+                        Data.Cassie.Rules.Simplify,
                         Data.Cassie.Rules.Substitute,
                         Data.Cassie.Solver.CtxEval,
                         Data.Cassie.Solver.Internal,
